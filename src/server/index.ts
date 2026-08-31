@@ -1,7 +1,7 @@
 // PartyKit server for Flag remote multiplayer
 
 import type * as Party from "partykit/server";
-import type { GameState, GameAction } from "../engine/types";
+import { facedownRack } from "../engine/game";
 
 // Server-side game state
 interface RoomState {
@@ -129,11 +129,11 @@ export default class FlagServer implements Party.Server {
     if (isP1) {
       sanitized.players = [
         gameState.players[0],
-        { ...gameState.players[1], rack: [] }, // Hide P2 rack
+        { ...gameState.players[1], rack: facedownRack(gameState.players[1].rack.length) },
       ];
     } else {
       sanitized.players = [
-        { ...gameState.players[0], rack: [] }, // Hide P1 rack
+        { ...gameState.players[0], rack: facedownRack(gameState.players[0].rack.length) },
         gameState.players[1],
       ];
     }

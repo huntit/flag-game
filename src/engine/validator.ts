@@ -2,7 +2,7 @@
 
 import type { Board, Position, PlacedTile, Tile, Letter } from './types';
 import { getBoardTile, setBoardTile, isValidPosition, positionEquals, isFirstWord } from './game';
-import { CENTRE_STAR, FLAG_POSTS } from './types';
+import { CENTRE_STAR, FLAG_POSTS, BOARD_SIZE } from './types';
 import type { Dictionary } from './dictionary';
 
 interface WordInfo {
@@ -102,7 +102,7 @@ function findMainWord(board: Board, placements: { tile: Tile; position: Position
     
     // Extend right
     let endCol = maxCol;
-    while (endCol < 9 && getBoardTile(board, { row, col: endCol + 1 })) {
+    while (endCol < BOARD_SIZE && getBoardTile(board, { row, col: endCol + 1 })) {
       endCol++;
     }
 
@@ -128,7 +128,7 @@ function findMainWord(board: Board, placements: { tile: Tile; position: Position
     
     // Extend down
     let endRow = maxRow;
-    while (endRow < 9 && getBoardTile(board, { row: endRow + 1, col })) {
+    while (endRow < BOARD_SIZE && getBoardTile(board, { row: endRow + 1, col })) {
       endRow++;
     }
 
@@ -199,7 +199,7 @@ function extractWord(board: Board, pos: Position, horizontal: boolean): WordInfo
 
     // Extend right
     c = col + 1;
-    while (c <= 9) {
+    while (c <= BOARD_SIZE) {
       const t = getBoardTile(board, { row, col: c });
       if (!t) break;
       wordPositions.push({ row, col: c });
@@ -217,7 +217,7 @@ function extractWord(board: Board, pos: Position, horizontal: boolean): WordInfo
 
     // Extend down
     r = row + 1;
-    while (r <= 9) {
+    while (r <= BOARD_SIZE) {
       const t = getBoardTile(board, { row: r, col });
       if (!t) break;
       wordPositions.push({ row: r, col });

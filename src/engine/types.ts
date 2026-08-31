@@ -17,24 +17,31 @@ export interface PlacedTile extends Tile {
 }
 
 export type Position = {
-  row: number; // 1-9
-  col: number; // 1-9
+  row: number; // 1-indexed
+  col: number; // 1-indexed
 };
 
 export type FlagPost = 'NW' | 'NE' | 'SE' | 'SW';
 
+export const BOARD_SIZE = 11;
+export const RACK_MAX = 7;
+export const MARKET_SIZE = 4;
+export const STARTING_RACK_TILES = 2; // drawn from bag, not market
+export const MIN_WORD_LENGTH = 2;
+export const MAX_WORD_LENGTH = 11;
+
 export const FLAG_POSTS: Record<FlagPost, Position> = {
   NW: { row: 2, col: 2 },
-  NE: { row: 2, col: 8 },
-  SE: { row: 8, col: 8 },
-  SW: { row: 8, col: 2 },
+  NE: { row: 2, col: 10 },
+  SE: { row: 10, col: 10 },
+  SW: { row: 10, col: 2 },
 };
 
-export const CENTRE_STAR: Position = { row: 5, col: 5 };
+export const CENTRE_STAR: Position = { row: 6, col: 6 };
 
 export type BoardCell = PlacedTile | null;
 
-export type Board = BoardCell[][]; // 9x9 grid (0-indexed internally, but display as 1-9)
+export type Board = BoardCell[][]; // BOARD_SIZE×BOARD_SIZE, 0-indexed internally, display 1-indexed
 
 export interface Player {
   id: 'P1' | 'P2';

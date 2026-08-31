@@ -61,7 +61,7 @@ async function loadData() {
   const words = wordsText
     .split('\n')
     .map((line: string) => line.trim().toUpperCase())
-    .filter((word: string) => word.length >= 2 && word.length <= 9);
+    .filter((word: string) => word.length >= 2 && word.length <= 11);
   const dictionary = new Dictionary(words);
 
   return { tilesData, dictionary };

@@ -12,7 +12,7 @@ interface MarketProps {
 
 function Market({ market, selectedTileIds, onTileClick, disabled }: MarketProps) {
   return (
-    <div className="market-container">
+    <div className="market-container" data-market-count={market.length}>
       <div className="market-label">Market</div>
       <div className="market">
         {market.map((tile) => {

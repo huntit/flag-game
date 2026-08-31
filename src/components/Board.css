@@ -20,10 +20,10 @@
 
 .board-cell {
   position: relative;
-  width: calc((100vw - 48px) / 9);
-  height: calc((100vw - 48px) / 9);
-  max-width: 60px;
-  max-height: 60px;
+  width: calc((100vw - 32px) / 11);
+  height: calc((100vw - 32px) / 11);
+  max-width: 48px;
+  max-height: 48px;
   background-color: var(--color-cell);
   border: 1px solid var(--color-board);
   display: flex;
@@ -114,8 +114,8 @@
 
 @media (min-width: 600px) {
   .board-cell {
-    width: 60px;
-    height: 60px;
+    width: 48px;
+    height: 48px;
   }
 
   .tile-letter {

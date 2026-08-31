@@ -1,7 +1,7 @@
 // Game initialization and tile bag management
 
 import type { Tile, TileId, TileData, FlagPost, GameState, Board, Player } from './types';
-import { FLAG_POSTS } from './types';
+import { FLAG_POSTS, BOARD_SIZE, MARKET_SIZE, STARTING_RACK_TILES } from './types';
 
 let tileIdCounter = 0;
 
@@ -54,7 +54,7 @@ export function returnToBag(bag: Tile[], tiles: Tile[]): void {
 }
 
 function createEmptyBoard(): Board {
-  return Array(9).fill(null).map(() => Array(9).fill(null));
+  return Array(BOARD_SIZE).fill(null).map(() => Array(BOARD_SIZE).fill(null));
 }
 
 function randomFlagPost(): FlagPost {
@@ -66,11 +66,11 @@ export function initializeGame(tileData: TileData): GameState {
   const bag = createTileBag(tileData);
   shuffleBag(bag);
 
-  const market = drawFromBag(bag, 4);
+  const market = drawFromBag(bag, MARKET_SIZE);
 
   const players: [Player, Player] = [
-    { id: 'P1', rack: [], score: 0 },
-    { id: 'P2', rack: [], score: 0 },
+    { id: 'P1', rack: drawFromBag(bag, STARTING_RACK_TILES), score: 0 },
+    { id: 'P2', rack: drawFromBag(bag, STARTING_RACK_TILES), score: 0 },
   ];
 
   return {
@@ -93,7 +93,7 @@ export function positionEquals(a: { row: number; col: number }, b: { row: number
 }
 
 export function isValidPosition(pos: { row: number; col: number }): boolean {
-  return pos.row >= 1 && pos.row <= 9 && pos.col >= 1 && pos.col <= 9;
+  return pos.row >= 1 && pos.row <= BOARD_SIZE && pos.col >= 1 && pos.col <= BOARD_SIZE;
 }
 
 export function getBoardTile(board: Board, pos: { row: number; col: number }) {
@@ -122,12 +122,22 @@ export function getNextFlagPost(current: FlagPost, board: Board): FlagPost | nul
 }
 
 export function isFirstWord(board: Board): boolean {
-  for (let row = 0; row < 9; row++) {
-    for (let col = 0; col < 9; col++) {
+  for (let row = 0; row < BOARD_SIZE; row++) {
+    for (let col = 0; col < BOARD_SIZE; col++) {
       if (board[row][col] !== null) {
         return false;
       }
     }
   }
   return true;
+}
+
+/** Public opponent rack: tile count only, no letters or values. */
+export function facedownRack(count: number): Tile[] {
+  return Array.from({ length: count }, (_, i) => ({
+    id: `hidden_${i}`,
+    letter: null,
+    value: 0,
+    isBlank: true,
+  }));
 }
