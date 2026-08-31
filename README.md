@@ -10,13 +10,14 @@ Documentation for v0 playable slice. No implementation yet. Ada will build from 
 
 **Data files:**
 - ✅ Word list available at `data/words.txt` (175,030 words from Word Eagle)
-- ⏳ Tile data pending from Peter
+- ✅ Letter values available at `data/tiles.json` (WWF and Scrabble values from Word Eagle)
+- ⏳ Bag distribution pending (not in Word Eagle code)
 
 ## Documentation
 
 - [How to Play](docs/how-to-play.md) — Human-readable rules for v0
 - [Prototype Specification](docs/prototype-spec.md) — Technical build spec for Ada
-- [Assets](docs/assets.md) — Word list ✅ (from Peter's Word Eagle) and tile data ⏳ (pending from Peter)
+- [Assets](docs/assets.md) — Word list ✅, letter values ✅, bag distribution ⏳
 
 ## Distinctiveness
 
@@ -39,7 +40,8 @@ Once built, the prototype supports three modes:
 
 **Build readiness:**
 - ✅ Word list available (`data/words.txt`)
-- ⏳ Tile data pending from Peter (`data/tiles.json`)
+- ✅ Letter values available (`data/tiles.json`)
+- ⏳ Bag distribution pending (not in Word Eagle; needed for full gameplay)
 
 ## Team
 

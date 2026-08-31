@@ -1,6 +1,6 @@
 # Flag Tile Set and Dictionary
 
-**Status:** Pending from Peter
+**Status:** Word list ✅ | Letter values ✅ | Bag distribution ⏳
 
 ## Overview
 
@@ -8,10 +8,10 @@ Flag v0 will **NOT use a third-party crossword publisher's tile bag, letter valu
 
 Instead, Flag uses:
 
-- A **custom word list** (Peter's ENABLE-based list with additions and exclusions)
-- A **custom tile set** (letter frequencies, letter scores, blank count)
-
-Peter will provide both files from his existing Word Eagle assets.
+- A **custom word list** (Peter's ENABLE-based list with additions and exclusions) ✅
+- A **custom tile set:**
+  - **Letter values** ✅ — Locked from Word Eagle WWF default
+  - **Bag distribution** ⏳ — Pending (not present in Word Eagle, which is a seed-word puzzle, not a bag game)
 
 ## Word List
 
@@ -37,51 +37,45 @@ The full source file is preserved in `data/words.txt`. For v0 (9×9 board), Ada 
 
 ## Tile Set
 
-**Format:**
+**Path:** `data/tiles.json` ✅
 
-- JSON or similar structured data
-- Per-letter count (how many of each letter in the bag)
-- Per-letter score (point value)
-- Blank count (blanks score 0)
+**Source:** Word Eagle (huntit/web-apps/wordgame/index.html TILE_SETS, lines ~997–1002)
 
-**Suggested path:** `data/tiles.json`
+### Letter Values ✅
 
-**Source:** Peter's Word Eagle tile set (not a commercial crossword publisher's bag).
+**Locked from Word Eagle WWF default** (Flag v0 letter scores):
 
-### Placeholder Example (NOT FOR PLAY)
-
-Until Peter provides the real tile data, here is the **shape** of the data structure Ada should expect:
-
-```json
-{
-  "tiles": [
-    {
-      "letter": "A",
-      "count": 0,
-      "value": 0
-    },
-    {
-      "letter": "B",
-      "count": 0,
-      "value": 0
-    }
-  ],
-  "blanks": {
-    "count": 0,
-    "value": 0
-  }
-}
+```
+A1 B4 C4 D2 E1 F4 G3 H3 I1 J10 K5 L2 M4 N2 O1 P4 Q10 R1 S1 T1 U2 V5 W4 X8 Y3 Z10
 ```
 
-**⚠️ DO NOT USE THESE PLACEHOLDER VALUES FOR PLAY.**
+**Also available:** Scrabble values (present in Word Eagle TILE_SETS but not the default):
 
-The real tile counts and scores come from Peter. Ada should implement a loader that reads this file format and include a clear TODO or error if the file is missing or contains only placeholder data.
+```
+A1 B3 C3 D2 E1 F4 G2 H4 I1 J8 K5 L1 M3 N1 O1 P3 Q10 R1 S1 T1 U1 V4 W4 X8 Y4 Z10
+```
+
+**Blanks:** Flag-only (market rule); not present in Word Eagle. Blanks score 0 when played.
+
+### Bag Distribution ⏳
+
+**Still pending.** Word Eagle is a daily 7-tile seed-word puzzle, not a bag game — it does not define letter counts or a tile bag.
+
+The `data/tiles.json` file records letter values with `count: null` for each letter. `countsPending: true` is set at the top level.
+
+**Ada:** Load letter values from `data/tiles.json`. Bag distribution will be added later. Do NOT invent a Scrabble-like 100-tile bag or fabricate counts.
 
 ## Word Eagle Assets
 
-Peter's other game [Word Eagle](https://www.huntit.com.au/apps/wordgame/) ([source](https://github.com/huntit/web-apps/tree/main/wordgame)) already implements the real word list and tile set.
+Peter's other game [Word Eagle](https://www.huntit.com.au/apps/wordgame/) ([source](https://github.com/huntit/web-apps/tree/main/wordgame)) already implements the real word list and tile values.
 
-**Ada:** Copy the data files from Word Eagle when Peter says to, but do NOT copy Word Eagle application code.
+**Letter values extracted from Word Eagle TILE_SETS (index.html lines ~997–1002):**
+- ✅ WWF values (default) recorded in `data/tiles.json`
+- ✅ Scrabble values (also present, not default) recorded in `data/tiles.json`
+
+**Bag distribution not present in Word Eagle** — Word Eagle is a daily 7-tile seed-word puzzle, not a bag game.
+
+**Ada:** Do NOT vendor Word Eagle application code. The word list and letter values are now available as data files in this repository.
 
 ---
 
