@@ -6,6 +6,14 @@
 
 Flag is a two-player word game. Drawing from the market builds a better rack for later. Playing tiles scores points immediately but might steal the flag and end the game. Emptying your rack for a big scoring dump leaves you defenseless while your opponent hunts. If you're ahead on points, cover the flag to end it. If you're behind, keep the flag moving and build your comeback.
 
+## Play Modes
+
+**Three ways to play:**
+
+1. **Solo vs Hunter** — Play against the AI locally in your browser. No room server. This is the iPhone Safari feel-test.
+2. **Hotseat** — Two humans on one device. Pass-the-phone. No room.
+3. **Remote 2-player** — Play with a friend via persistent game links. Live and correspondence are the same mode. Host creates a game and gets a secret invite link to send. Each seat is a secret token so players can return for days on another device without accounts. The game persists even when both players are offline. No logins, no matchmaking, no friend lists.
+
 ## What You Need
 
 - **2 players**
@@ -118,6 +126,11 @@ The game ends when:
 - Capture bonus points
 - Hidden goals
 - 3–4 player variants (later)
+- Turn clocks/timeouts
+- Spectators
+- Accounts
+- Push/email notifications
+- Matchmaking
 
 ## Example Start
 
