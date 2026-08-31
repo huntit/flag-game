@@ -6,7 +6,7 @@ A two-player word game combining crossword mechanics with a shared tile market a
 
 ## Status
 
-Documentation for v0 playable slice. No implementation yet. Ada will build from the prototype specification.
+Documentation for v0 playable slice. No implementation yet. Ada will build from the prototype specification. Three play modes: Solo vs Hunter (local), Hotseat (local), and Remote 2-player (persistent game links via PartyKit).
 
 **Stack:** Phone-first static web app (Vite + React + TypeScript, Vercel hosting, iPhone Safari as primary target)
 
@@ -35,8 +35,9 @@ The crossword-on-a-grid mechanic is shared with games like Scrabble and Words Wi
 
 Once built, the prototype supports three modes:
 
-- **Hotseat** — Two players on one device
-- **Human vs AI** — Play against Greedy, Hunter, or Sleeper personality
+- **Solo vs Hunter** — Play against Greedy, Hunter, or Sleeper personality locally (no room server)
+- **Hotseat** — Two players on one device (local, no room)
+- **Remote 2-player** — Persistent game links (live and correspondence, same mode). Host creates a game and gets a P2 invite link. Secret unguessable seat tokens. No accounts. Games persist across disconnects and days. Transport: PartyKit (Cloudflare Durable Objects).
 - **Lab simulation** — Headless AI vs AI matchups for game balance analysis (`flag-sim --games 200 --p1 greedy --p2 hunter`)
 
 **Build readiness:**
