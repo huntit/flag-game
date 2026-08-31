@@ -10,7 +10,7 @@ Flag is a two-player word game. Drawing from the market builds a better rack for
 
 - **2 players**
 - **9×9 board** with centre star at (5,5) and four flag posts
-- **Flag's tile set** — Custom bag composition and letter values (see [docs/assets.md](assets.md), pending Peter's data file; NOT a third-party crossword tile set)
+- **Flag's tile set** — Words With Friends English bag (104 tiles, 2 blanks) from Word Eagle; NOT the NYT Crossplay bag (100 tiles, 3 blanks) or Scrabble bag (100 tiles). See [docs/assets.md](assets.md) for complete tile counts and values.
 - **Racks** holding maximum 7 tiles per player
 - **Market** showing 4 face-up tiles
 - **Bag** with remaining tiles

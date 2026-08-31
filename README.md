@@ -10,13 +10,13 @@ Documentation for v0 playable slice. No implementation yet. Ada will build from 
 
 **Data files:**
 - ✅ Word list available at `data/words.txt` (175,030 words from Word Eagle)
-- ⏳ Tile data pending from Peter
+- ✅ Tile data at `data/tiles.json` (Words With Friends bag: 104 tiles, 2 blanks)
 
 ## Documentation
 
 - [How to Play](docs/how-to-play.md) — Human-readable rules for v0
 - [Prototype Specification](docs/prototype-spec.md) — Technical build spec for Ada
-- [Assets](docs/assets.md) — Word list ✅ (from Peter's Word Eagle) and tile data ⏳ (pending from Peter)
+- [Assets](docs/assets.md) — Word list and tile data ✅ (from Peter's Word Eagle)
 
 ## Distinctiveness
 
@@ -29,6 +29,44 @@ Flag is a distinct game, not a variant of commercial crossword products:
 
 The crossword-on-a-grid mechanic is shared with games like Scrabble and Words With Friends, but Flag's market system, empty starting racks, rotating flag clock, and custom tile set make it a different game.
 
+## Tile Set
+
+Flag v0 uses the **Words With Friends English** tile set from Peter's Word Eagle (104 tiles, 2 blanks). This is NOT the NYT Crossplay bag (100 tiles, 3 blanks) or Scrabble bag (100 tiles).
+
+**Tile counts (sum: 104 including blanks):**
+
+| Letter | Count | Value |
+|--------|-------|-------|
+| A | 9 | 1 |
+| B | 2 | 4 |
+| C | 2 | 4 |
+| D | 5 | 2 |
+| E | 13 | 1 |
+| F | 2 | 4 |
+| G | 3 | 3 |
+| H | 4 | 3 |
+| I | 8 | 1 |
+| J | 1 | 10 |
+| K | 1 | 5 |
+| L | 4 | 2 |
+| M | 2 | 4 |
+| N | 5 | 2 |
+| O | 8 | 1 |
+| P | 2 | 4 |
+| Q | 1 | 10 |
+| R | 6 | 1 |
+| S | 5 | 1 |
+| T | 7 | 1 |
+| U | 4 | 2 |
+| V | 2 | 5 |
+| W | 2 | 4 |
+| X | 1 | 8 |
+| Y | 2 | 3 |
+| Z | 1 | 10 |
+| Blank | 2 | 0 |
+
+**Canonical data:** `data/tiles.json`
+
 ## Playtesting
 
 Once built, the prototype supports three modes:
@@ -39,7 +77,7 @@ Once built, the prototype supports three modes:
 
 **Build readiness:**
 - ✅ Word list available (`data/words.txt`)
-- ⏳ Tile data pending from Peter (`data/tiles.json`)
+- ✅ Tile data available (`data/tiles.json`)
 
 ## Team
 

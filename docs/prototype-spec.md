@@ -69,13 +69,19 @@ A two-player digital prototype combining crossword mechanics, a Splendor-style g
 
 **DO NOT use a third-party crossword publisher's bag composition or letter values.**
 
-Load tile counts and letter values from a data file Peter will add (see [docs/assets.md](assets.md)).
+Flag v0 uses the **Words With Friends English** tile set (104 tiles, 2 blanks) from Peter's Word Eagle (`TILE_SETS.wwf`). This is NOT the NYT Crossplay bag (100 tiles, 3 blanks) or Scrabble bag (100 tiles).
 
-Until that file exists:
+**Tile data:** `data/tiles.json` ✅
 
-- Define a typed interface for tile data (per-letter count, per-letter score, blank count)
-- Leave an empty or placeholder JSON with a **loud TODO**
-- Do NOT invent Scrabble-like numbers
+**Tile counts (must sum to 104 including blanks):**
+
+A9 B2 C2 D5 E13 F2 G3 H4 I8 J1 K1 L4 M2 N5 O8 P2 Q1 R6 S5 T7 U4 V2 W2 X1 Y2 Z1 Blank2
+
+**Letter values (blank = 0):**
+
+A1 B4 C4 D2 E1 F4 G3 H3 I1 J10 K5 L2 M4 N2 O1 P4 Q10 R1 S1 T1 U2 V5 W4 X8 Y3 Z10
+
+Ada should load tile data from `data/tiles.json` at runtime
 
 **Blank tiles:**
 
