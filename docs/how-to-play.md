@@ -10,19 +10,19 @@ Flag is a two-player word game. Drawing from the market builds a better rack for
 
 **Three ways to play:**
 
-1. **Solo vs Hunter** — Play against the AI locally in your browser. No room server. This is the iPhone Safari feel-test.
-2. **Hotseat** — Two humans on one device. Pass-the-phone. No room.
-3. **Remote 2-player** — Play with a friend via persistent game links. Live and correspondence are the same mode. Host creates a game and gets a secret invite link to send. Each seat is a secret token so players can return for days on another device without accounts. The game persists even when both players are offline. No logins, no matchmaking, no friend lists.
+1. **Solo vs Hunter** — Play against the AI locally in your browser. No room server. This is the iPhone Safari feel-test. You see how many tiles the AI has (facedown backs), not which letters.
+2. **Hotseat** — Two humans on one device. Pass-the-phone. No room. After the pass-the-phone interstitial, you see how many tiles the opponent has (facedown backs and empty slots), not the letters.
+3. **Remote 2-player** — Play with a friend via persistent game links. Live and correspondence are the same mode. Host creates a game and gets a secret invite link to send. Each seat is a secret token so players can return for days on another device without accounts. The game persists even when both players are offline. No logins, no matchmaking, no friend lists. Rack **count** is public state; rack **letters** are not.
 
 ## What You Need
 
 - **2 players**
-- **9×9 board** with centre star at (5,5) and four flag posts
+- **11×11 board** with centre star at (6,6) and four flag posts (odd size so there is a centre cell; not 10×10)
 - **Flag's tile set:**
   - **WWF English bag:** 104 tiles (A9 B2 C2 D5 E13 F2 G3 H4 I8 J1 K1 L4 M2 N5 O8 P2 Q1 R6 S5 T7 U4 V2 W2 X1 Y2 Z1 Blank 2)
   - **Word Eagle WWF values:** A1 B4 C4 D2 E1 F4 G3 H3 I1 J10 K5 L2 M4 N2 O1 P4 Q10 R1 S1 T1 U2 V5 W4 X8 Y3 Z10 (Blank 0)
   - See [docs/assets.md](assets.md) for the complete tile table
-- **Racks** holding maximum 7 tiles per player
+- **Racks** holding maximum 7 tiles per player. You always see your own letters. Opponent rack **letters** stay hidden; opponent rack **count** is public (0–7 facedown tile backs with empty slots, not a numeric badge)
 - **Market** showing 4 face-up tiles
 - **Bag** with remaining tiles
 
@@ -30,14 +30,14 @@ The board has no premium squares (no double/triple letter or word scores), no bi
 
 ## The Board
 
-9×9 grid with coordinates 1–9 (row 1 at top, column 1 at left).
+11×11 grid with coordinates 1–11 (row 1 at top, column 1 at left). Not 10×10: an odd size is required so there is a centre cell.
 
-- **Centre star** at (5,5) — First word must cover this
+- **Centre star** at (6,6) — First word must cover this
 - **Four flag posts** one square in from each corner:
   - Northwest: (2,2)
-  - Northeast: (2,8)
-  - Southeast: (8,8)
-  - Southwest: (8,2)
+  - Northeast: (2,10)
+  - Southeast: (10,10)
+  - Southwest: (10,2)
 
 One post is **live** (the active capture target) at a time. You know which post is live at the start of your turn.
 
@@ -45,11 +45,11 @@ One post is **live** (the active capture target) at a time. You know which post 
 
 1. Shuffle the tile bag
 2. Deal 4 tiles face-up to the market
-3. Both players start with **EMPTY racks** (no tiles)
+3. Deal **2 tiles from the bag** to each player (not from the market; not a full 7)
 4. Randomly choose which flag post is live at game start
 5. Choose first player
 
-The first action of the game is always a Draw.
+The first action of the game may be **Draw or Play**. You do not have to Draw first.
 
 ## Your Turn
 
@@ -72,7 +72,7 @@ After your draw, the market is refilled to 4 tiles from the bag.
 
 1. Place one or more tiles from your rack in a straight line (horizontal or vertical)
 2. Tiles must be contiguous when read through any existing tiles on the board
-3. **First word of the game must cover the centre star (5,5)**
+3. **First word of the game must cover the centre star (6,6)**
 4. **All later plays must attach** to existing words (sharing at least one tile or touching)
 5. Your rack **does NOT refill** after you play
 
@@ -117,9 +117,9 @@ Covering a **dark post** (not currently live) is legal and does not capture the 
 After your turn (including Draw turns), **unless you captured the flag**, the live flag rotates **clockwise** to the next empty post:
 
 1. Northwest (2,2)
-2. Northeast (2,8)
-3. Southeast (8,8)
-4. Southwest (8,2)
+2. Northeast (2,10)
+3. Southeast (10,10)
+4. Southwest (10,2)
 5. Back to Northwest
 
 **Skip occupied posts.** If all four posts are occupied by tiles, the game ends.
@@ -150,15 +150,15 @@ The game ends when:
 
 ## Example Start
 
-Both racks are empty. The flag is on Northwest.
+Both players start with 2 tiles from the bag (not the market). The market shows 4 face-up tiles. The flag is on Northwest. You can see how many tiles the opponent has (facedown backs), not which letters. The first action may be Draw or Play.
 
-**Turn 1 (You):** Draw S and A from market, skip the bag. Flag rotates to Northeast.
+**Turn 1 (You):** You already have 2 tiles, so you could play a short word through (6,6) if those tiles allow it. Instead you Draw S and A from the market, skip the bag (4 tiles now). Flag rotates to Northeast.
 
-**Turn 2 (Opponent):** Draw T and E from market, plus R facedown from bag (3 tiles now). Flag rotates to Southeast.
+**Turn 2 (Opponent):** Draw T and E from market, plus R facedown from bag. Flag rotates to Southeast.
 
-**Turn 3 (You):** Draw I and N from market (4 tiles: S, A, I, N). Flag rotates to Southwest.
+**Turn 3 (You):** Draw I and N from market. Flag rotates to Southwest.
 
-**Turn 4 (Opponent):** Play STAR through the centre star, scoring 4 points. They have 2 tiles left. They did not cover the live post (Southwest). Flag rotates back to Northwest.
+**Turn 4 (Opponent):** Play STAR through the centre star (6,6), scoring 4 points. They did not cover the live post (Southwest). Flag rotates back to Northwest.
 
 **Turn 5 (You):** You could:
 - Play SAINT through the R (if the R is placed where you can attach)

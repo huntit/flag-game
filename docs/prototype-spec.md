@@ -13,9 +13,9 @@ A two-player digital prototype combining crossword mechanics, a Splendor-style g
 
 **Three play modes, one engine:**
 
-1. **Solo vs Hunter** — Play against Greedy, Hunter, or Sleeper personality (opponent rack hidden). Local TypeScript engine in the browser. No room server. This is the iPhone Safari feel-test.
+1. **Solo vs Hunter** — Play against Greedy, Hunter, or Sleeper personality (opponent rack **letters** hidden; rack **count** public as 0–7 facedown tile backs with empty slots, not a numeric badge). Local TypeScript engine in the browser. No room server. This is the iPhone Safari feel-test.
 2. **Hotseat** — Two humans on one device, local engine. Pass-the-phone. No room.
-3. **Remote 2-player** — Live and correspondence are ONE mode (persistent game links). Secret unguessable game/seat links. No 4-letter room codes. Host creates a game and gets a P2 invite link to send. Each seat is a secret token so players can return for days on another device without accounts. No logins, no matchmaking, no friend lists, no accounts for v0. Transport: PartyKit (one Cloudflare Durable Object per game). UI can stay on Vercel; rooms on PartyKit. Authority: the same TypeScript rules engine is room-authoritative. Clients send actions (Draw, Play, Pass). The room validates, applies, and broadcasts public state. Opponent racks must not leak in the URL or in the other client's payload. Bag, market, board, scores, flag, and whose-turn live on the room. Persistence: store the engine snapshot in room storage. Do NOT destroy the room when tabs close or both players go offline. A game may sit for days. If both players are online it feels live; if not, it waits. Pass is an explicit button. Never treat silence, a closed tab, or elapsed time as a pass. Consecutive double-pass still ends the game only after two explicit passes in a row. Notifications are out of scope for v0. Testers ping each other (iMessage etc.) for "your turn" until later.
+3. **Remote 2-player** — Live and correspondence are ONE mode (persistent game links). Secret unguessable game/seat links. No 4-letter room codes. Host creates a game and gets a P2 invite link to send. Each seat is a secret token so players can return for days on another device without accounts. No logins, no matchmaking, no friend lists, no accounts for v0. Transport: PartyKit (one Cloudflare Durable Object per game). UI can stay on Vercel; rooms on PartyKit. Authority: the same TypeScript rules engine is room-authoritative. Clients send actions (Draw, Play, Pass). The room validates, applies, and broadcasts public state. Opponent rack **letters** must not leak in the URL or in the other client's payload. Opponent rack **count** is public state. Bag, market, board, scores, flag, whose-turn, and rack counts live on the room. Persistence: store the engine snapshot in room storage. Do NOT destroy the room when tabs close or both players go offline. A game may sit for days. If both players are online it feels live; if not, it waits. Pass is an explicit button. Never treat silence, a closed tab, or elapsed time as a pass. Consecutive double-pass still ends the game only after two explicit passes in a row. Notifications are out of scope for v0. Testers ping each other (iMessage etc.) for "your turn" until later.
 4. **AI vs AI lab** — Headless simulation for game balance analysis
 
 **Constraints:**
@@ -29,7 +29,7 @@ A two-player digital prototype combining crossword mechanics, a Splendor-style g
 
 - **Phone-first static web app** — NOT native iOS / TestFlight / App Store for v0
 - **TypeScript rules engine** — Shared by UI, CLI, and PartyKit room authority
-- **UI:** Vite + React (tap-to-place input for iPhone Safari; do NOT rely on desktop HTML5 drag)
+- **UI:** Vite + React (tap-to-place input for iPhone Safari; do NOT rely on desktop HTML5 drag). The 11×11 grid must stay tap-to-place on iPhone Safari; smaller cells are OK. Do not switch to desktop drag.
 - **CLI:** Node.js for `flag-sim` headless simulation
 - **Hosting:** Vercel or Cloudflare Pages from huntit/flag-game (every push gets a preview URL)
 - **Remote multiplayer:** PartyKit (one Cloudflare Durable Object per game) for rooms
@@ -40,9 +40,9 @@ A two-player digital prototype combining crossword mechanics, a Splendor-style g
 
 ## 2. Success Criteria
 
-- Two humans can complete a legal 9×9 game in hotseat mode
-- Two humans can complete a legal 9×9 game in remote mode via persistent game links (live and correspondence, same mode)
-- Human can play vs Hunter AI with opponent rack hidden (local engine, no room)
+- Two humans can complete a legal 11×11 game in hotseat mode
+- Two humans can complete a legal 11×11 game in remote mode via persistent game links (live and correspondence, same mode)
+- Human can play vs Hunter AI on 11×11 with opponent rack **letters** hidden and rack **count** public (0–7 facedown backs with empty slots; local engine, no room)
 - `flag-sim --games 200 --p1 greedy --p2 greedy` writes summary JSON with:
   - P1 win rate
   - Capture-end rate vs bag-empty rate
@@ -57,23 +57,25 @@ A two-player digital prototype combining crossword mechanics, a Splendor-style g
   - Blank as single market take
   - Full-rack discard-then-take on refresh
   - Remote game persistence across disconnects/days
-  - Opponent rack not leaked in URL or client payload
+  - Opponent rack letters not leaked in URL or client payload; rack count is public
+  - Opening deal: 2 tiles from the bag to each rack; market still 4; first action may be Draw or Play
+  - Dictionary load accepts length 2–11 without shrinking `data/words.txt`
 - **Out of scope:** Premiums, bingo, capture bonus, 3–4 player, secret goals, turn clocks/timeouts, spectators, accounts, push/email notifications
 
 ## 3. Board
 
-**Size:** 9×9
+**Size:** 11×11 (NOT 10×10 — an odd size is required so there is a centre cell)
 
-**Coordinates:** 1–9 (persist and log as 1-indexed). Row 1 at top, column 1 at left.
+**Coordinates:** 1–11 (persist and log as 1-indexed). Row 1 at top, column 1 at left.
 
-**Centre star:** (5,5)
+**Centre star:** (6,6)
 
 **Flag posts:** Four fixed locations one square in from each corner:
 
 - Northwest: (2,2)
-- Northeast: (2,8)
-- Southeast: (8,8)
-- Southwest: (8,2)
+- Northeast: (2,10)
+- Southeast: (10,10)
+- Southwest: (10,2)
 
 **Flag rotation:** Clockwise: NW → NE → SE → SW → NW (repeat).
 
@@ -127,7 +129,7 @@ Peter's custom ENABLE-based word list with additions and exclusions from Word Ea
 - Text file, one word per line
 - Uppercase A–Z only
 - Full source contains words of length 2–28
-- **For v0 (9×9 board):** Load only words of length 2–9 for validation
+- **For v0 (11×11 board):** At load, accept words of length 2–11 for validation. Keep the full `data/words.txt` file; do not shrink it.
 - No network lookup at runtime
 
 **Validation:**
@@ -138,11 +140,11 @@ A play is legal if and only if every new straight-line word (the main play word 
 
 1. Shuffle the tile bag
 2. Deal 4 tiles face-up to the market
-3. Both player racks start **empty** (0 tiles)
+3. Deal **2 tiles from the bag** to each player (not from the market; do NOT deal 7; do NOT deal from the market into opening racks)
 4. Choose a random live post (uniform random from the four)
 5. Player 1 goes first
 
-**First legal action of the game is Draw.**
+**The first action of the game may be Draw or Play.** It is no longer “must Draw”.
 
 ## 7. Turn Structure
 
@@ -182,7 +184,7 @@ If the bag runs out during market refill, set `bagDepleted = true`. The game wil
 
 - Place 1 or more tiles from rack in a straight line (horizontal or vertical)
 - Tiles must be contiguous when read through existing board tiles
-- **First word must occupy (5,5)**
+- **First word must occupy (6,6)**
 - **All later plays must attach** to existing words (orthogonally adjacent or sharing a cell)
 
 **Validation:**
@@ -241,7 +243,7 @@ Walk clockwise from the current live post (exclusive), wrapping through the four
 
 If no posts are empty, the game ends (`posts_full`).
 
-**Order:** NW (2,2) → NE (2,8) → SE (8,8) → SW (8,2) → NW (repeat)
+**Order:** NW (2,2) → NE (2,10) → SE (10,10) → SW (10,2) → NW (repeat)
 
 ## 8. Game End
 
@@ -262,11 +264,12 @@ Do NOT tie-break by who captured.
 
 **Board view:**
 
-- 9×9 grid
+- 11×11 grid
 - Live post highlighted prominently
 - Dark posts visible but quieter
 - Centre star visible until first word is played
 - Tiles on board with letters and scores visible
+- **Must stay tap-to-place on iPhone Safari.** Smaller cells are OK. Do not switch to desktop drag.
 
 **Game state:**
 
@@ -278,13 +281,14 @@ Do NOT tie-break by who captured.
 
 **Racks:**
 
-- Your own rack always visible
-- **Opponent rack hidden** in Human vs AI mode
-- **Hotseat:** Pass-the-device interstitial between turns (hide opponent rack)
+- Your own rack always visible (letters)
+- **Opponent (and AI) rack CONTENTS stay hidden.** Rack **COUNT** is public: show 0–7 facedown tile backs with empty slots, not a numeric badge
+- **Hotseat:** Pass-the-device interstitial between turns. After the interstitial, the incoming player sees how many tiles the opponent has (facedown backs and empty slots), not the letters
+- **Remote 2-player:** Rack count is public state; letters are not. Do not leak opponent letters in the URL or the other client's payload
 
 **Debug toggle (optional):**
 
-- Show opponent rack
+- Show opponent rack **letters** (count is already public as facedown backs)
 - Show count of legal plays available
 
 **Draw flow:**
@@ -296,7 +300,7 @@ Do NOT tie-break by who captured.
 
 **Play flow:**
 
-- Drag or tap tiles from rack to board
+- Tap tiles from rack to board (tap-to-place). On iPhone Safari this remains tap-to-place even on the 11×11 grid; smaller cells are OK. Do not switch to desktop drag as the primary input.
 - Confirm placement
 - Reject illegal plays with a short reason (e.g., "Not in dictionary", "Must attach to existing word")
 
@@ -320,7 +324,7 @@ Art is Skye's domain later. For v0:
 **Useful Word Eagle UX to reuse later (do NOT copy code now):**
 
 - Tile rack layout
-- Browser drag-and-drop
+- Browser drag-and-drop (desktop later only; v0 iPhone Safari stays tap-to-place on 11×11)
 - Word definition lookup on click
 
 ## 10. Remote Multiplayer (Persistent Game Links)
@@ -333,7 +337,7 @@ Art is Skye's domain later. For v0:
 
 **Authority:** The same TypeScript rules engine is room-authoritative. Clients send actions (Draw, Play, Pass). The room validates, applies, and broadcasts public state.
 
-**Privacy:** Opponent racks must NOT leak in the URL or in the other client's payload. Bag, market, board, scores, flag, and whose-turn live on the room.
+**Privacy:** Opponent rack **letters** must NOT leak in the URL or in the other client's payload. Opponent rack **count** is public state. Bag, market, board, scores, flag, whose-turn, and rack counts live on the room.
 
 **Persistence:** Store the engine snapshot in room storage. Do NOT destroy the room when tabs close or both players go offline. A game may sit for days. If both players are online it feels live; if not, it waits.
 
@@ -379,7 +383,7 @@ Returns all legal plays with:
 - Score
 - `captures` (boolean)
 
-**Implementation:** Brute force is acceptable for 9×9.
+**Implementation:** Brute force is acceptable for 11×11.
 
 Use the same generator for:
 
@@ -388,7 +392,7 @@ Use the same generator for:
 
 ## 12. AI Personalities
 
-**No search-based AI.** Three simple personalities.
+**No search-based AI.** Three simple personalities. They play the same v0 setup: 11×11 board, 2 opening tiles from the bag, market of 4, first action may be Draw or Play. Opponent rack letters stay hidden from the human; rack count is public.
 
 **Shared constant:** `DRAW_THRESHOLD = 8` (CLI-configurable)
 
@@ -513,7 +517,7 @@ Other matchups via CLI.
 **Constants (with CLI overrides where noted):**
 
 - `DRAW_THRESHOLD = 8` (CLI-configurable: `--threshold`)
-- Board size: 9×9 (NOT a runtime flag)
+- Board size: 11×11 (NOT a runtime flag; NOT 10×10 — need a centre cell)
 
 **Hooks for later tuning (commented out, not implemented):**
 
@@ -535,7 +539,7 @@ Other matchups via CLI.
 - Rotate flag per round, not per turn
 - Capture scores points and jumps you ahead instead of ending the game
 - 5 or 6 market tiles
-- 11×11 board at 4 players
+- Board larger than v0's 11×11 at 4 players
 - Public contracts, not hidden roles
 
 **Also out of scope:**
@@ -566,7 +570,9 @@ These are intentional design choices:
 - **Flag is a clock, not a scoring event** — No capture bonus; capturing ends the game
 - **Flag known before you act** — Don't randomize the live post after a player commits
 - **Rotation on Draw is a stall tax** — Even drawing advances the flag
-- **Empty racks at setup** — Do not deal starting tiles; first action is Draw
+- **Two opening tiles from the bag** — Deal 2 from the bag to each rack (not empty opening racks, not 7, not from the market). First action may be Draw or Play
+- **11×11, not 10×10** — Odd size so there is a centre cell at (6,6)
+- **Public rack count, hidden letters** — Show facedown backs and empty slots; do not expose opponent letters; do not use a numeric badge
 
 ## 17. Original Spark (Context, Not v0)
 
@@ -584,10 +590,11 @@ Peter's original idea (2 July 2018):
 
 **v0 changes on purpose:**
 
-- 9×9 board (not 15×15)
+- 11×11 board (not 15×15, not 10×10 — odd size needed for a centre cell)
 - Four posted squares rotating clockwise (not a new random cell each turn)
 - No capture bonus
 - Exchange action folded into Draw
+- Two opening tiles dealt from the bag; first action may be Draw or Play
 - Bag-empty and posts-full as backup game-end conditions
 
 ---
