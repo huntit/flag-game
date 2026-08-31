@@ -19,14 +19,21 @@ Peter will provide both files from his existing Word Eagle assets.
 
 - Text file, one word per line
 - Uppercase A–Z only
-- Length 2–9
+- Length 2–9 playable on v0's 9×9 board
 - No network lookup at runtime
 
-**Suggested path:** `data/words.txt`
+**Path:** `data/words.txt` ✅
 
-**Source:** Peter's custom ENABLE-based dictionary (not a stock ENABLE dump, not an official crossword word list). This file does not exist in the repo yet.
+**Source:** Peter's custom ENABLE-based dictionary from Word Eagle (`wordlookupv4.txt`). Not a stock ENABLE dump, not an official crossword word list.
 
-Ada should copy the word list data file from Word Eagle when Peter provides it.
+**Statistics:**
+- Total words: 175,030
+- Unique words: 175,030
+- Length range: 2–28 characters
+- Playable on 9×9 board (length 2–9): 107,437 words
+- Longer words (10+): 67,593 words
+
+The full source file is preserved in `data/words.txt`. For v0 (9×9 board), Ada should load only words of length 2–9 for gameplay validation. The longer words are retained for potential future use with larger boards.
 
 ## Tile Set
 

@@ -86,12 +86,16 @@ Until that file exists:
 
 ## 5. Dictionary
 
-Peter's custom ENABLE-based word list with additions and exclusions. **NOT a stock ENABLE dump and NOT an official crossword word list.**
+Peter's custom ENABLE-based word list with additions and exclusions from Word Eagle. **NOT a stock ENABLE dump and NOT an official crossword word list.**
+
+**Path:** `data/words.txt` ✅
 
 **Format:**
 
 - Text file, one word per line
-- Filter: A–Z only, length 2–9, uppercase
+- Uppercase A–Z only
+- Full source contains words of length 2–28
+- **For v0 (9×9 board):** Load only words of length 2–9 for validation
 - No network lookup at runtime
 
 **Validation:**
