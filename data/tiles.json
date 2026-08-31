@@ -1,0 +1,80 @@
+{
+  "source": "Word Eagle (huntit/web-apps/wordgame/index.html TILE_SETS, lines ~997-1002)",
+  "note": "Word Eagle is a daily 7-tile seed-word puzzle, not a bag game. Letter values are locked from WWF default. Bag distribution counts are pending (not present in Word Eagle code).",
+  "defaultSet": "wwf",
+  "countsPending": true,
+  "tileSets": {
+    "wwf": {
+      "description": "Words With Friends values (Flag v0 letter scores)",
+      "tiles": [
+        { "letter": "A", "value": 1, "count": null },
+        { "letter": "B", "value": 4, "count": null },
+        { "letter": "C", "value": 4, "count": null },
+        { "letter": "D", "value": 2, "count": null },
+        { "letter": "E", "value": 1, "count": null },
+        { "letter": "F", "value": 4, "count": null },
+        { "letter": "G", "value": 3, "count": null },
+        { "letter": "H", "value": 3, "count": null },
+        { "letter": "I", "value": 1, "count": null },
+        { "letter": "J", "value": 10, "count": null },
+        { "letter": "K", "value": 5, "count": null },
+        { "letter": "L", "value": 2, "count": null },
+        { "letter": "M", "value": 4, "count": null },
+        { "letter": "N", "value": 2, "count": null },
+        { "letter": "O", "value": 1, "count": null },
+        { "letter": "P", "value": 4, "count": null },
+        { "letter": "Q", "value": 10, "count": null },
+        { "letter": "R", "value": 1, "count": null },
+        { "letter": "S", "value": 1, "count": null },
+        { "letter": "T", "value": 1, "count": null },
+        { "letter": "U", "value": 2, "count": null },
+        { "letter": "V", "value": 5, "count": null },
+        { "letter": "W", "value": 4, "count": null },
+        { "letter": "X", "value": 8, "count": null },
+        { "letter": "Y", "value": 3, "count": null },
+        { "letter": "Z", "value": 10, "count": null }
+      ],
+      "blanks": {
+        "note": "Blanks are Flag-only (market rule) and not present in Word Eagle",
+        "value": 0,
+        "count": null
+      }
+    },
+    "scrabble": {
+      "description": "Scrabble values (also present in Word Eagle TILE_SETS, not default)",
+      "tiles": [
+        { "letter": "A", "value": 1, "count": null },
+        { "letter": "B", "value": 3, "count": null },
+        { "letter": "C", "value": 3, "count": null },
+        { "letter": "D", "value": 2, "count": null },
+        { "letter": "E", "value": 1, "count": null },
+        { "letter": "F", "value": 4, "count": null },
+        { "letter": "G", "value": 2, "count": null },
+        { "letter": "H", "value": 4, "count": null },
+        { "letter": "I", "value": 1, "count": null },
+        { "letter": "J", "value": 8, "count": null },
+        { "letter": "K", "value": 5, "count": null },
+        { "letter": "L", "value": 1, "count": null },
+        { "letter": "M", "value": 3, "count": null },
+        { "letter": "N", "value": 1, "count": null },
+        { "letter": "O", "value": 1, "count": null },
+        { "letter": "P", "value": 3, "count": null },
+        { "letter": "Q", "value": 10, "count": null },
+        { "letter": "R", "value": 1, "count": null },
+        { "letter": "S", "value": 1, "count": null },
+        { "letter": "T", "value": 1, "count": null },
+        { "letter": "U", "value": 1, "count": null },
+        { "letter": "V", "value": 4, "count": null },
+        { "letter": "W", "value": 4, "count": null },
+        { "letter": "X", "value": 8, "count": null },
+        { "letter": "Y", "value": 4, "count": null },
+        { "letter": "Z", "value": 10, "count": null }
+      ],
+      "blanks": {
+        "note": "Blanks are Flag-only (market rule) and not present in Word Eagle",
+        "value": 0,
+        "count": null
+      }
+    }
+  }
+}

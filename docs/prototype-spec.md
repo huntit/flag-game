@@ -69,13 +69,18 @@ A two-player digital prototype combining crossword mechanics, a Splendor-style g
 
 **DO NOT use a third-party crossword publisher's bag composition or letter values.**
 
-Load tile counts and letter values from a data file Peter will add (see [docs/assets.md](assets.md)).
+**Letter values:** ✅ Available at `data/tiles.json`
 
-Until that file exists:
+**Source:** Word Eagle WWF default (huntit/web-apps/wordgame/index.html TILE_SETS, lines ~997–1002)
 
-- Define a typed interface for tile data (per-letter count, per-letter score, blank count)
-- Leave an empty or placeholder JSON with a **loud TODO**
-- Do NOT invent Scrabble-like numbers
+**Bag distribution:** ⏳ Still pending — Word Eagle is a daily 7-tile seed-word puzzle, not a bag game, so letter counts are not defined in that code.
+
+Until bag distribution is provided:
+
+- Load letter values from `data/tiles.json` (WWF is the default set)
+- The file includes `countsPending: true` and `count: null` for each letter
+- Leave a **loud TODO** for bag distribution
+- Do NOT invent Scrabble-like tile counts or fabricate a 100-tile bag
 
 **Blank tiles:**
 
