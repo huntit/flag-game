@@ -26,7 +26,7 @@ npm run sim -- --games 100 --p1 greedy --p2 hunter --out ./out
 
 Development server runs at `http://localhost:5173`
 
-The game is phone-first and optimized for iPhone Safari, but works on desktop browsers too.
+The game is phone-first and optimized for iPhone Safari, but works on desktop browsers too. The 11×11 board must stay tap-to-place on iPhone Safari (smaller cells are OK; do not switch to desktop drag).
 
 ## Deployment
 
@@ -128,7 +128,7 @@ npm run test src/engine/engine.test.ts
 ### UI (`src/components/`)
 - `Menu.tsx` - Main menu
 - `Game.tsx` - Game orchestration
-- `Board.tsx` - 9×9 board display
+- `Board.tsx` - 11×11 board display
 - `Rack.tsx` - Player tile rack
 - `Market.tsx` - 4-tile market display
 - `GameInfo.tsx` - Score and game state
@@ -144,7 +144,7 @@ npm run test src/engine/engine.test.ts
 ## Data Files
 
 - `data/tiles.json` - WWF English tile bag (104 tiles, 2 blanks) + Word Eagle values
-- `data/words.txt` - Custom ENABLE-based word list (175,030 words, filtered to 2-9 for v0)
+- `data/words.txt` - Custom ENABLE-based word list (175,030 words; load length 2–11 for v0, do not shrink the file)
 
 ## Tech Stack
 
@@ -161,7 +161,7 @@ Optimized for:
 - iPhone Safari (primary target)
 - Desktop Safari, Chrome, Firefox, Edge
 
-Touch-friendly tap-to-place interaction (no drag-and-drop on mobile).
+Touch-friendly tap-to-place interaction on the 11×11 board (smaller cells are OK; do not switch to desktop drag). No drag-and-drop on iPhone Safari.
 
 ## Contributing
 

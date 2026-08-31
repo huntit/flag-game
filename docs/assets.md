@@ -19,7 +19,7 @@ Instead, Flag uses:
 
 - Text file, one word per line
 - Uppercase A–Z only
-- Length 2–9 playable on v0's 9×9 board
+- Length 2–11 playable on v0's 11×11 board
 - No network lookup at runtime
 
 **Path:** `data/words.txt` ✅
@@ -30,10 +30,10 @@ Instead, Flag uses:
 - Total words: 175,030
 - Unique words: 175,030
 - Length range: 2–28 characters
-- Playable on 9×9 board (length 2–9): 107,437 words
-- Longer words (10+): 67,593 words
+- Playable on 11×11 board (length 2–11): 143,261 words
+- Longer words (12+): 31,769 words
 
-The full source file is preserved in `data/words.txt`. For v0 (9×9 board), Ada should load only words of length 2–9 for gameplay validation. The longer words are retained for potential future use with larger boards.
+The full source file is preserved in `data/words.txt`. Do not shrink the file. For v0 (11×11 board), Ada should accept words of length 2–11 at load for gameplay validation. Longer words stay in the file for potential future use.
 
 ## Tile Set
 

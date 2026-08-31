@@ -2,13 +2,13 @@
 
 **Working title** — Private prototype repository
 
-A two-player word game combining crossword mechanics with a shared tile market and rotating capture-the-flag endgame. Players build a rack by drawing from a market of four face-up tiles, then spend those tiles to form words on a 9×9 crossword grid. A flag rotates clockwise through four corner posts; cover the live flag post to end the game. Highest score wins.
+A two-player word game combining crossword mechanics with a shared tile market and rotating capture-the-flag endgame. Both players start with two tiles from the bag. Players build a rack by drawing from a market of four face-up tiles, then spend those tiles to form words on an 11×11 crossword grid (odd size so there is a centre cell). A flag rotates clockwise through four corner posts; cover the live flag post to end the game. Highest score wins.
 
 ## Status
 
 Documentation for v0 playable slice. No implementation yet. Ada will build from the prototype specification. Three play modes: Solo vs Hunter (local), Hotseat (local), and Remote 2-player (persistent game links via PartyKit).
 
-**Stack:** Phone-first static web app (Vite + React + TypeScript, Vercel hosting, iPhone Safari as primary target)
+**Stack:** Phone-first static web app (Vite + React + TypeScript, Vercel hosting, iPhone Safari as primary target). 11×11 stays tap-to-place on iPhone Safari (smaller cells are OK; do not switch to desktop drag).
 
 **Data files:**
 - ✅ Word list available at `data/words.txt` (175,030 words from Word Eagle)
@@ -26,11 +26,13 @@ Documentation for v0 playable slice. No implementation yet. Ada will build from 
 Flag is a distinct game, not a variant of commercial crossword products:
 
 - **Custom dictionary and tile set** — Flag uses Peter's custom ENABLE-based word list and the WWF English bag (104 tiles) paired with Word Eagle's WWF letter values, not third-party crossword publisher data
-- **9×9 board with no premium squares** — Simple grid, no double/triple letter or word scores
+- **11×11 board with no premium squares** — Odd size so there is a centre cell (6,6). Not 10×10. Simple grid, no double/triple letter or word scores
+- **Two opening tiles from the bag** — Each player starts with 2 tiles dealt from the bag (not from the market, not a full 7). First action may be Draw or Play
 - **Take-or-spend turns** — Draw from market to build your rack OR play tiles to score; playing does not refill your rack
 - **Flag clock** — A rotating capture target that moves clockwise through four corner posts, acting as a game timer and victory condition
+- **Public rack count, hidden letters** — Opponent (and AI) rack letters stay hidden; tile count is public as 0–7 facedown backs with empty slots (not a numeric badge)
 
-The crossword-on-a-grid mechanic is shared with games like Scrabble and Words With Friends, but Flag's market system, empty starting racks, rotating flag clock, and custom tile set make it a different game.
+The crossword-on-a-grid mechanic is shared with games like Scrabble and Words With Friends, but Flag's market system, two-tile bag opening, rotating flag clock, and custom tile set make it a different game.
 
 ## Playtesting
 
