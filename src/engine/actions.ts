@@ -23,17 +23,14 @@ export function canDraw(state: GameState): boolean {
 /**
  * Can a draw actually add tiles to the active player's rack?
  *
- * With a full rack a draw can only be an exchange: return N tiles to the bag,
- * take N from the market, refill the market from the bag. That is tile-neutral,
- * so it can never deplete the bag. If neither player can play either, none of
- * the four game-end conditions can ever fire and the game runs forever — a
- * state reachable in real play on a crowded board.
- *
- * TODO(Finch): docs/prototype-spec.md section 7.3 defines "no legal Draw" as
- * "market and bag both empty". This treats a full rack as no legal Draw too, so
- * a genuinely stuck player can reach for Pass and the existing double-pass
- * ending can finish the game. Pass stays stuck-only: it still requires no legal
- * Play, and a player with room in their rack still cannot pass.
+ * Locked (Finch, 31 August 2026; spec §7.3). A Draw counts as "legal" for Pass
+ * purposes only if it would ADD at least one tile: an empty slot exists AND at
+ * least one takeable tile from market/bag. A full rack is therefore no legal
+ * Draw for Pass purposes. Full-rack exchange remains a legal Draw ACTION
+ * (discard into the bag, then take 1–2 from the market; no facedown on a
+ * full-rack refresh) and does not make Pass illegal. Otherwise two full
+ * unplayable racks can exchange forever (tile-neutral) and never hit
+ * bag-empty, capture, or double-pass.
  */
 export function canGrowRack(state: GameState): boolean {
   const player = state.players[state.currentPlayer];
