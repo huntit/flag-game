@@ -11,24 +11,38 @@ Human-readable rules: [docs/how-to-play.md](how-to-play.md)
 
 A two-player digital prototype combining crossword mechanics, a Splendor-style gem market (take-or-spend), and a rotating capture-the-flag endgame.
 
-**Three execution modes, one engine:**
+**Three play modes, one engine:**
 
-1. **Hotseat** — Two humans on one device
-2. **Human vs AI** — Play against Greedy, Hunter, or Sleeper personality (opponent rack hidden)
-3. **AI vs AI lab** — Headless simulation for game balance analysis
+1. **Solo vs Hunter** — Play against Greedy, Hunter, or Sleeper personality (opponent rack hidden). Local TypeScript engine in the browser. No room server. This is the iPhone Safari feel-test.
+2. **Hotseat** — Two humans on one device, local engine. Pass-the-phone. No room.
+3. **Remote 2-player** — Live and correspondence are ONE mode (persistent game links). Secret unguessable game/seat links. No 4-letter room codes. Host creates a game and gets a P2 invite link to send. Each seat is a secret token so players can return for days on another device without accounts. No logins, no matchmaking, no friend lists, no accounts for v0. Transport: PartyKit (one Cloudflare Durable Object per game). UI can stay on Vercel; rooms on PartyKit. Authority: the same TypeScript rules engine is room-authoritative. Clients send actions (Draw, Play, Pass). The room validates, applies, and broadcasts public state. Opponent racks must not leak in the URL or in the other client's payload. Bag, market, board, scores, flag, and whose-turn live on the room. Persistence: store the engine snapshot in room storage. Do NOT destroy the room when tabs close or both players go offline. A game may sit for days. If both players are online it feels live; if not, it waits. Pass is an explicit button. Never treat silence, a closed tab, or elapsed time as a pass. Consecutive double-pass still ends the game only after two explicit passes in a row. Notifications are out of scope for v0. Testers ping each other (iMessage etc.) for "your turn" until later.
+4. **AI vs AI lab** — Headless simulation for game balance analysis
 
 **Constraints:**
 
-- Desktop-playable (phone layout nice but not required)
+- Phone-first (iPhone Safari), desktop-playable
 - Dictionary loaded from a text file Peter will supply
 - Headless simulation must run with no UI
+- Do NOT add: async-only correspondence as a separate mode, turn clocks/timeouts, spectators (optional later), 3–4p, accounts, push/email, Discord, native iOS
 
-**Tech stack:** Ada's call.
+**Tech stack (locked):**
+
+- **Phone-first static web app** — NOT native iOS / TestFlight / App Store for v0
+- **TypeScript rules engine** — Shared by UI, CLI, and PartyKit room authority
+- **UI:** Vite + React (tap-to-place input for iPhone Safari; do NOT rely on desktop HTML5 drag)
+- **CLI:** Node.js for `flag-sim` headless simulation
+- **Hosting:** Vercel or Cloudflare Pages from huntit/flag-game (every push gets a preview URL)
+- **Remote multiplayer:** PartyKit (one Cloudflare Durable Object per game) for rooms
+- **Deployment workflow:** Iterate in iPhone Safari, Add to Home Screen for feel-test
+- **Solo vs Hunter = local** — Dictionary loaded from `data/words.txt` bundled with app
+- **Hotseat = pass-the-phone** — Two humans on one iPhone
+- **Remote 2-player = persistent links** — PartyKit rooms with secret seat tokens
 
 ## 2. Success Criteria
 
 - Two humans can complete a legal 9×9 game in hotseat mode
-- Human can play vs Hunter AI with opponent rack hidden
+- Two humans can complete a legal 9×9 game in remote mode via persistent game links (live and correspondence, same mode)
+- Human can play vs Hunter AI with opponent rack hidden (local engine, no room)
 - `flag-sim --games 200 --p1 greedy --p2 greedy` writes summary JSON with:
   - P1 win rate
   - Capture-end rate vs bag-empty rate
@@ -42,7 +56,9 @@ A two-player digital prototype combining crossword mechanics, a Splendor-style g
   - Skip-occupied-posts logic
   - Blank as single market take
   - Full-rack discard-then-take on refresh
-- **Out of scope:** Premiums, bingo, capture bonus, 3–4 player, secret goals
+  - Remote game persistence across disconnects/days
+  - Opponent rack not leaked in URL or client payload
+- **Out of scope:** Premiums, bingo, capture bonus, 3–4 player, secret goals, turn clocks/timeouts, spectators, accounts, push/email notifications
 
 ## 3. Board
 
@@ -69,6 +85,7 @@ A two-player digital prototype combining crossword mechanics, a Splendor-style g
 
 **DO NOT use a third-party crossword publisher's bag composition or letter values.**
 
+<<<<<<< HEAD
 Flag v0 uses the **Words With Friends English** tile set (104 tiles, 2 blanks) from Peter's Word Eagle (`TILE_SETS.wwf`). This is NOT the NYT Crossplay bag (100 tiles, 3 blanks) or Scrabble bag (100 tiles).
 
 **Tile data:** `data/tiles.json` ✅
@@ -82,6 +99,31 @@ A9 B2 C2 D5 E13 F2 G3 H4 I8 J1 K1 L4 M2 N5 O8 P2 Q1 R6 S5 T7 U4 V2 W2 X1 Y2 Z1 B
 A1 B4 C4 D2 E1 F4 G3 H3 I1 J10 K5 L2 M4 N2 O1 P4 Q10 R1 S1 T1 U2 V5 W4 X8 Y3 Z10
 
 Ada should load tile data from `data/tiles.json` at runtime
+=======
+**Tile set:** ✅ Available at `data/tiles.json`
+
+**Source:**
+- **Letter values:** Word Eagle TILE_SETS.wwf (huntit/web-apps/wordgame/index.html lines ~997–1002)
+- **Bag counts:** Published Words With Friends English distribution (104 tiles, 2 blanks)
+
+**Complete WWF English tile set (104 tiles):**
+
+```
+A9 B2 C2 D5 E13 F2 G3 H4 I8 J1 K1 L4 M2 N5 O8 P2 Q1 R6 S5 T7 U4 V2 W2 X1 Y2 Z1 Blank 2
+```
+
+**Letter values:**
+
+```
+A1 B4 C4 D2 E1 F4 G3 H3 I1 J10 K5 L2 M4 N2 O1 P4 Q10 R1 S1 T1 U2 V5 W4 X8 Y3 Z10
+```
+
+**Important:**
+- Load both counts and values from `data/tiles.json`
+- **NOT** NYT Crossplay bag (100 tiles / 3 blanks / different values)
+- **NOT** Scrabble bag (100 tiles / different counts)
+- Flag uses the **WWF English bag (104 tiles)** paired with **Word Eagle's WWF letter values**
+>>>>>>> origin/main
 
 **Blank tiles:**
 
@@ -266,10 +308,10 @@ Do NOT tie-break by who captured.
 
 **Main menu:**
 
-- Hotseat
-- vs Greedy
-- vs Hunter
-- vs Sleeper
+- Solo vs Hunter (local, no room)
+- Hotseat (local, no room)
+- Create Remote Game (get invite link)
+- Join Remote Game (paste invite link)
 - Run lab
 
 **Art:**
@@ -287,7 +329,51 @@ Art is Skye's domain later. For v0:
 - Browser drag-and-drop
 - Word definition lookup on click
 
-## 10. Move Generator
+## 10. Remote Multiplayer (Persistent Game Links)
+
+**Live and correspondence are ONE mode, not two products.**
+
+### Architecture
+
+**Transport:** PartyKit (one Cloudflare Durable Object per game). UI can stay on Vercel; rooms on PartyKit. Do NOT add a general Node game server. Do NOT use WebRTC/P2P (unreliable on iPhone Safari).
+
+**Authority:** The same TypeScript rules engine is room-authoritative. Clients send actions (Draw, Play, Pass). The room validates, applies, and broadcasts public state.
+
+**Privacy:** Opponent racks must NOT leak in the URL or in the other client's payload. Bag, market, board, scores, flag, and whose-turn live on the room.
+
+**Persistence:** Store the engine snapshot in room storage. Do NOT destroy the room when tabs close or both players go offline. A game may sit for days. If both players are online it feels live; if not, it waits.
+
+### Game Creation and Joining
+
+**Host creates a game:**
+
+1. Click "Create Remote Game"
+2. Host gets a P2 invite link to send (e.g., via iMessage, email, etc.)
+3. Each seat is a secret unguessable token (NOT 4-letter room codes — those get guessed over days)
+4. Players can return for days on another device without accounts
+
+**No logins, no matchmaking, no friend lists, no accounts for v0.**
+
+### Pass Behavior
+
+Pass is an explicit button. Never treat silence, a closed tab, or elapsed time as a pass. Consecutive double-pass still ends the game only after two explicit passes in a row.
+
+### Notifications
+
+Notifications are out of scope for v0. Testers ping each other (iMessage etc.) for "your turn" until later.
+
+### Out of Scope for v0
+
+- Async-only correspondence as a separate mode
+- Turn clocks/timeouts
+- Spectators (optional later)
+- 3–4 player variants
+- Accounts
+- Push/email notifications
+- Discord integration
+- Native iOS app
+
+## 11. Move Generator
 
 `legalPlays(board, rack, isFirstWord) → [Play]`
 
@@ -306,7 +392,7 @@ Use the same generator for:
 - AI move selection
 - Illegal-play rejection messages
 
-## 11. AI Personalities
+## 12. AI Personalities
 
 **No search-based AI.** Three simple personalities.
 
@@ -352,7 +438,7 @@ Keep this simple and dumb:
 
 **No thinking-time slider.** Human vs AI should respond instantly.
 
-## 12. Lab CLI (Simulation Mode)
+## 13. Lab CLI (Simulation Mode)
 
 **Command:**
 
@@ -428,7 +514,7 @@ For the UI "Run lab" button, default to:
 
 Other matchups via CLI.
 
-## 13. Tuning Knobs
+## 14. Tuning Knobs
 
 **Constants (with CLI overrides where noted):**
 
@@ -448,7 +534,7 @@ Other matchups via CLI.
 
 **Do NOT implement these patches until Finch says so.**
 
-## 14. Out of Scope (Not v0)
+## 15. Out of Scope (Not v0)
 
 **3–4 player variant (later):**
 
@@ -472,8 +558,13 @@ Other matchups via CLI.
 - Onboarding beyond a short rules blurb
 - Search-based AI (Monte Carlo, minimax, etc.)
 - Production app-store build
+- Turn clocks/timeouts
+- Spectators (optional later)
+- Push/email notifications
+- Discord integration
+- Native iOS app
 
-## 15. Design Intent (Do NOT "Fix")
+## 16. Design Intent (Do NOT "Fix")
 
 These are intentional design choices:
 
@@ -483,7 +574,7 @@ These are intentional design choices:
 - **Rotation on Draw is a stall tax** — Even drawing advances the flag
 - **Empty racks at setup** — Do not deal starting tiles; first action is Draw
 
-## 16. Original Spark (Context, Not v0)
+## 17. Original Spark (Context, Not v0)
 
 Peter's original idea (2 July 2018):
 

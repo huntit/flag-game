@@ -6,23 +6,33 @@ A two-player word game combining crossword mechanics with a shared tile market a
 
 ## Status
 
-Documentation for v0 playable slice. No implementation yet. Ada will build from the prototype specification.
+Documentation for v0 playable slice. No implementation yet. Ada will build from the prototype specification. Three play modes: Solo vs Hunter (local), Hotseat (local), and Remote 2-player (persistent game links via PartyKit).
+
+**Stack:** Phone-first static web app (Vite + React + TypeScript, Vercel hosting, iPhone Safari as primary target)
 
 **Data files:**
 - ✅ Word list available at `data/words.txt` (175,030 words from Word Eagle)
+<<<<<<< HEAD
 - ✅ Tile data at `data/tiles.json` (Words With Friends bag: 104 tiles, 2 blanks)
+=======
+- ✅ Tile set available at `data/tiles.json` (WWF English bag: 104 tiles, 2 blanks + Word Eagle WWF values)
+>>>>>>> origin/main
 
 ## Documentation
 
 - [How to Play](docs/how-to-play.md) — Human-readable rules for v0
 - [Prototype Specification](docs/prototype-spec.md) — Technical build spec for Ada
+<<<<<<< HEAD
 - [Assets](docs/assets.md) — Word list and tile data ✅ (from Peter's Word Eagle)
+=======
+- [Assets](docs/assets.md) — Word list ✅, tile set ✅ (WWF English bag + Word Eagle values)
+>>>>>>> origin/main
 
 ## Distinctiveness
 
 Flag is a distinct game, not a variant of commercial crossword products:
 
-- **Custom dictionary and tiles** — Flag uses Peter's custom ENABLE-based word list and tile set (bag composition, letter values), not third-party crossword publisher data
+- **Custom dictionary and tile set** — Flag uses Peter's custom ENABLE-based word list and the WWF English bag (104 tiles) paired with Word Eagle's WWF letter values, not third-party crossword publisher data
 - **9×9 board with no premium squares** — Simple grid, no double/triple letter or word scores
 - **Take-or-spend turns** — Draw from market to build your rack OR play tiles to score; playing does not refill your rack
 - **Flag clock** — A rotating capture target that moves clockwise through four corner posts, acting as a game timer and victory condition
@@ -71,13 +81,18 @@ Flag v0 uses the **Words With Friends English** tile set from Peter's Word Eagle
 
 Once built, the prototype supports three modes:
 
-- **Hotseat** — Two players on one device
-- **Human vs AI** — Play against Greedy, Hunter, or Sleeper personality
+- **Solo vs Hunter** — Play against Greedy, Hunter, or Sleeper personality locally (no room server)
+- **Hotseat** — Two players on one device (local, no room)
+- **Remote 2-player** — Persistent game links (live and correspondence, same mode). Host creates a game and gets a P2 invite link. Secret unguessable seat tokens. No accounts. Games persist across disconnects and days. Transport: PartyKit (Cloudflare Durable Objects).
 - **Lab simulation** — Headless AI vs AI matchups for game balance analysis (`flag-sim --games 200 --p1 greedy --p2 hunter`)
 
 **Build readiness:**
 - ✅ Word list available (`data/words.txt`)
+<<<<<<< HEAD
 - ✅ Tile data available (`data/tiles.json`)
+=======
+- ✅ Tile set available (`data/tiles.json` — WWF English bag: 104 tiles, 2 blanks + Word Eagle WWF values)
+>>>>>>> origin/main
 
 ## Team
 

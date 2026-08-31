@@ -6,11 +6,26 @@
 
 Flag is a two-player word game. Drawing from the market builds a better rack for later. Playing tiles scores points immediately but might steal the flag and end the game. Emptying your rack for a big scoring dump leaves you defenseless while your opponent hunts. If you're ahead on points, cover the flag to end it. If you're behind, keep the flag moving and build your comeback.
 
+## Play Modes
+
+**Three ways to play:**
+
+1. **Solo vs Hunter** — Play against the AI locally in your browser. No room server. This is the iPhone Safari feel-test.
+2. **Hotseat** — Two humans on one device. Pass-the-phone. No room.
+3. **Remote 2-player** — Play with a friend via persistent game links. Live and correspondence are the same mode. Host creates a game and gets a secret invite link to send. Each seat is a secret token so players can return for days on another device without accounts. The game persists even when both players are offline. No logins, no matchmaking, no friend lists.
+
 ## What You Need
 
 - **2 players**
 - **9×9 board** with centre star at (5,5) and four flag posts
+<<<<<<< HEAD
 - **Flag's tile set** — Words With Friends English bag (104 tiles, 2 blanks) from Word Eagle; NOT the NYT Crossplay bag (100 tiles, 3 blanks) or Scrabble bag (100 tiles). See [docs/assets.md](assets.md) for complete tile counts and values.
+=======
+- **Flag's tile set:**
+  - **WWF English bag:** 104 tiles (A9 B2 C2 D5 E13 F2 G3 H4 I8 J1 K1 L4 M2 N5 O8 P2 Q1 R6 S5 T7 U4 V2 W2 X1 Y2 Z1 Blank 2)
+  - **Word Eagle WWF values:** A1 B4 C4 D2 E1 F4 G3 H3 I1 J10 K5 L2 M4 N2 O1 P4 Q10 R1 S1 T1 U2 V5 W4 X8 Y3 Z10 (Blank 0)
+  - See [docs/assets.md](assets.md) for the complete tile table
+>>>>>>> origin/main
 - **Racks** holding maximum 7 tiles per player
 - **Market** showing 4 face-up tiles
 - **Bag** with remaining tiles
@@ -115,6 +130,11 @@ The game ends when:
 - Capture bonus points
 - Hidden goals
 - 3–4 player variants (later)
+- Turn clocks/timeouts
+- Spectators
+- Accounts
+- Push/email notifications
+- Matchmaking
 
 ## Example Start
 
