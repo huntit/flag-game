@@ -21,12 +21,33 @@ export function canDraw(state: GameState): boolean {
 }
 
 /**
- * Pass is a stuck-only escape valve: legal only when there is no legal Draw and
- * no legal Play. Never triggered by silence or elapsed time — the player must
- * tap the button. Omitting `dictionary` checks the Draw half only.
+ * Can a draw actually add tiles to the active player's rack?
+ *
+ * With a full rack a draw can only be an exchange: return N tiles to the bag,
+ * take N from the market, refill the market from the bag. That is tile-neutral,
+ * so it can never deplete the bag. If neither player can play either, none of
+ * the four game-end conditions can ever fire and the game runs forever — a
+ * state reachable in real play on a crowded board.
+ *
+ * TODO(Finch): docs/prototype-spec.md section 7.3 defines "no legal Draw" as
+ * "market and bag both empty". This treats a full rack as no legal Draw too, so
+ * a genuinely stuck player can reach for Pass and the existing double-pass
+ * ending can finish the game. Pass stays stuck-only: it still requires no legal
+ * Play, and a player with room in their rack still cannot pass.
+ */
+export function canGrowRack(state: GameState): boolean {
+  const player = state.players[state.currentPlayer];
+  if (player.rack.length >= RACK_MAX) return false;
+  return canDraw(state);
+}
+
+/**
+ * Pass is a stuck-only escape valve: legal only when no draw can grow the rack
+ * and no play is legal. Never triggered by silence or elapsed time — the player
+ * must tap the button. Omitting `dictionary` checks the Draw half only.
  */
 export function canPass(state: GameState, dictionary?: Dictionary): boolean {
-  if (canDraw(state)) return false;
+  if (canGrowRack(state)) return false;
   if (!dictionary) return true;
   const player = state.players[state.currentPlayer];
   return !hasLegalPlay(state.board, player.rack, dictionary, state.livePost);
@@ -250,7 +271,7 @@ function executePlay(state: GameState, action: PlayAction, dictionary: Dictionar
 }
 
 function executePass(state: GameState, dictionary: Dictionary): ActionResult {
-  if (canDraw(state)) {
+  if (canGrowRack(state)) {
     return { success: false, error: 'Pass is only for when Draw and Play are both impossible' };
   }
   if (!canPass(state, dictionary)) {

@@ -1,183 +1,207 @@
-// PartyKit server for Flag remote multiplayer
+// PartyKit room for Flag remote 2-player.
+//
+// One Durable Object per game. The room is authoritative: clients send actions
+// and the room validates them with the same rules engine the UI and CLI use.
+// The snapshot lives in room storage and is never destroyed when tabs close, so
+// a game can sit for days and silence is never treated as a pass.
+//
+// Privacy: opponent rack LETTERS never leave the room. Rack COUNT is public
+// state, and so is the bag count — but not the bag's contents or order.
 
-import type * as Party from "partykit/server";
-import { facedownRack } from "../engine/game";
+import type * as Party from 'partykit/server';
+import type { GameAction, GameState, TileData } from '../engine/types';
+import { facedownRack, initializeGame } from '../engine/game';
+import { executeAction } from '../engine/actions';
+import { Dictionary } from '../engine/dictionary';
 
-// Server-side game state
-interface RoomState {
+/** Where the room fetches its data from; same files the app ships. */
+const DATA_BASE_URL = 'https://huntit.github.io/flag-game';
+
+type Seat = 'P1' | 'P2';
+
+interface StoredState {
   gameState: GameState | null;
   p1Token: string;
   p2Token: string;
-  connections: Map<string, Party.Connection>;
+}
+
+interface PublicState {
+  game: GameState;
+  yourSeat: Seat;
+  bagCount: number;
+  opponentTileCount: number;
+}
+
+let dictionaryPromise: Promise<Dictionary> | null = null;
+let tileDataPromise: Promise<TileData> | null = null;
+
+function loadDictionary(): Promise<Dictionary> {
+  dictionaryPromise ??= fetch(`${DATA_BASE_URL}/data/words.txt`)
+    .then(res => res.text())
+    .then(text => Dictionary.fromText(text));
+  return dictionaryPromise;
+}
+
+function loadTileData(): Promise<TileData> {
+  tileDataPromise ??= fetch(`${DATA_BASE_URL}/data/tiles.json`).then(
+    res => res.json() as Promise<TileData>
+  );
+  return tileDataPromise;
+}
+
+function secretToken(): string {
+  // 32 hex characters of crypto randomness: unguessable over days of play,
+  // unlike a 4-letter room code.
+  const bytes = new Uint8Array(16);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('');
 }
 
 export default class FlagServer implements Party.Server {
   constructor(readonly room: Party.Room) {}
 
-  async onConnect(conn: Party.Connection, ctx: Party.ConnectionContext) {
-    // Extract token from query params
-    const url = new URL(ctx.request.url);
-    const token = url.searchParams.get('token');
-    
+  async onConnect(connection: Party.Connection, ctx: Party.ConnectionContext) {
+    const token = new URL(ctx.request.url).searchParams.get('token');
     if (!token) {
-      conn.close(1008, 'Missing token');
+      connection.close(1008, 'Missing seat token');
       return;
     }
 
-    // Load room state
-    const state = await this.getState();
-    
-    // Verify token
-    if (token !== state.p1Token && token !== state.p2Token) {
-      conn.close(1008, 'Invalid token');
+    const stored = await this.load();
+    const seat = this.seatFor(token, stored);
+    if (!seat) {
+      connection.close(1008, 'Invalid seat token');
       return;
     }
 
-    // Store connection
-    state.connections.set(conn.id, conn);
-
-    // Send current game state
-    if (state.gameState) {
-      this.sendToConnection(conn, {
-        type: 'state',
-        state: this.sanitizeStateForPlayer(state.gameState, token, state),
-      });
+    if (!stored.gameState) {
+      stored.gameState = initializeGame(await loadTileData());
+      await this.save(stored);
     }
 
-    // Notify other players
-    this.broadcast({
-      type: 'player-connected',
-      playerId: token === state.p1Token ? 'P1' : 'P2',
-    }, [conn.id]);
+    this.send(connection, { type: 'state', state: this.publicState(stored, seat) });
+    this.room.broadcast(JSON.stringify({ type: 'seat-connected', seat }), [connection.id]);
   }
 
   async onMessage(message: string, sender: Party.Connection) {
-    const data = JSON.parse(message);
-    const state = await this.getState();
-
-    // Extract sender token from connection
-    const url = new URL(sender.url!);
-    const token = url.searchParams.get('token');
-    
+    const token = new URL(sender.uri).searchParams.get('token');
     if (!token) return;
+
+    const stored = await this.load();
+    const seat = this.seatFor(token, stored);
+    if (!seat) return;
+
+    let data: { type?: string; action?: GameAction };
+    try {
+      data = JSON.parse(message);
+    } catch {
+      this.send(sender, { type: 'error', error: 'Malformed message' });
+      return;
+    }
 
     switch (data.type) {
       case 'action':
-        await this.handleAction(data.action, token, state);
+        if (data.action) await this.applyAction(stored, seat, data.action, sender);
         break;
-      
       case 'get-state':
-        this.sendToConnection(sender, {
-          type: 'state',
-          state: this.sanitizeStateForPlayer(state.gameState!, token, state),
-        });
+        this.send(sender, { type: 'state', state: this.publicState(stored, seat) });
         break;
+      default:
+        this.send(sender, { type: 'error', error: 'Unknown message type' });
     }
   }
 
-  async onClose(conn: Party.Connection) {
-    const state = await this.getState();
-    state.connections.delete(conn.id);
-  }
+  /**
+   * Validate and apply one action, then broadcast the new public state to each
+   * seat separately so neither payload carries the other rack's letters.
+   */
+  private async applyAction(
+    stored: StoredState,
+    seat: Seat,
+    action: GameAction,
+    sender: Party.Connection
+  ) {
+    if (!stored.gameState) return;
 
-  private async getState(): Promise<RoomState> {
-    const stored = await this.room.storage.get<RoomState>('state');
-    if (stored) {
-      return {
-        ...stored,
-        connections: new Map(),
-      };
+    const activeSeat = stored.gameState.players[stored.gameState.currentPlayer].id;
+    if (activeSeat !== seat) {
+      this.send(sender, { type: 'error', error: 'Not your turn' });
+      return;
     }
 
-    // Initialize new game
-    const p1Token = this.generateToken();
-    const p2Token = this.generateToken();
+    const dictionary = await loadDictionary();
+    const result = executeAction(stored.gameState, action, dictionary);
+    if (!result.success) {
+      this.send(sender, { type: 'error', error: result.error });
+      return;
+    }
 
-    const newState: RoomState = {
-      gameState: null, // Will be initialized when first player connects
-      p1Token,
-      p2Token,
-      connections: new Map(),
+    await this.save(stored);
+    await this.broadcastState(stored);
+  }
+
+  private async broadcastState(stored: StoredState) {
+    for (const connection of this.room.getConnections()) {
+      const token = new URL(connection.uri).searchParams.get('token');
+      const seat = token ? this.seatFor(token, stored) : null;
+      if (!seat) continue;
+      this.send(connection, { type: 'state', state: this.publicState(stored, seat) });
+    }
+  }
+
+  private seatFor(token: string, stored: StoredState): Seat | null {
+    if (token === stored.p1Token) return 'P1';
+    if (token === stored.p2Token) return 'P2';
+    return null;
+  }
+
+  /**
+   * Strip everything the other seat is not entitled to: their rack letters and
+   * the bag's contents. Counts survive; identities do not.
+   */
+  private publicState(stored: StoredState, seat: Seat): PublicState {
+    const game = stored.gameState!;
+    const youIndex = seat === 'P1' ? 0 : 1;
+    const themIndex = youIndex === 0 ? 1 : 0;
+
+    const players = [...game.players] as GameState['players'];
+    players[themIndex] = {
+      ...game.players[themIndex],
+      rack: facedownRack(game.players[themIndex].rack.length),
     };
 
-    await this.room.storage.put('state', newState);
-    return newState;
+    return {
+      game: {
+        ...game,
+        players,
+        bag: facedownRack(game.bag.length),
+      },
+      yourSeat: seat,
+      bagCount: game.bag.length,
+      opponentTileCount: game.players[themIndex].rack.length,
+    };
   }
 
-  private async saveState(state: RoomState) {
-    await this.room.storage.put('state', {
-      gameState: state.gameState,
-      p1Token: state.p1Token,
-      p2Token: state.p2Token,
-    });
+  private async load(): Promise<StoredState> {
+    const stored = await this.room.storage.get<StoredState>('state');
+    if (stored) return stored;
+
+    const fresh: StoredState = {
+      gameState: null,
+      p1Token: secretToken(),
+      p2Token: secretToken(),
+    };
+    await this.save(fresh);
+    return fresh;
   }
 
-  private generateToken(): string {
-    return Math.random().toString(36).substring(2, 15) + 
-           Math.random().toString(36).substring(2, 15);
+  private async save(stored: StoredState): Promise<void> {
+    // Only serialisable state is persisted; live connections are not.
+    await this.room.storage.put('state', stored);
   }
 
-  private sanitizeStateForPlayer(
-    gameState: GameState,
-    playerToken: string,
-    roomState: RoomState
-  ): any {
-    // Hide opponent's rack
-    const isP1 = playerToken === roomState.p1Token;
-    const sanitized = { ...gameState };
-    
-    if (isP1) {
-      sanitized.players = [
-        gameState.players[0],
-        { ...gameState.players[1], rack: facedownRack(gameState.players[1].rack.length) },
-      ];
-    } else {
-      sanitized.players = [
-        { ...gameState.players[0], rack: facedownRack(gameState.players[0].rack.length) },
-        gameState.players[1],
-      ];
-    }
-
-    return sanitized;
-  }
-
-  private async handleAction(action: GameAction, token: string, state: RoomState) {
-    if (!state.gameState) return;
-
-    // Verify it's the player's turn
-    const isP1 = token === state.p1Token;
-    const currentPlayerId = state.gameState.players[state.gameState.currentPlayer].id;
-    
-    if ((isP1 && currentPlayerId !== 'P1') || (!isP1 && currentPlayerId !== 'P2')) {
-      return; // Not your turn
-    }
-
-    // TODO: Execute action using the engine
-    // For now, this is a placeholder
-    // We would need to load the dictionary and execute the action
-
-    // Broadcast updated state to all players
-    state.connections.forEach((conn) => {
-      const url = new URL(conn.url!);
-      const connToken = url.searchParams.get('token');
-      if (connToken) {
-        this.sendToConnection(conn, {
-          type: 'state',
-          state: this.sanitizeStateForPlayer(state.gameState!, connToken, state),
-        });
-      }
-    });
-
-    await this.saveState(state);
-  }
-
-  private sendToConnection(conn: Party.Connection, data: any) {
-    conn.send(JSON.stringify(data));
-  }
-
-  private broadcast(data: any, exclude: string[] = []) {
-    const message = JSON.stringify(data);
-    this.room.broadcast(message, exclude);
+  private send(connection: Party.Connection, payload: unknown): void {
+    connection.send(JSON.stringify(payload));
   }
 }
 

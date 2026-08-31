@@ -6,9 +6,19 @@ A two-player word game combining crossword mechanics with a shared tile market a
 
 ## Status
 
-Documentation for v0 playable slice. No implementation yet. Ada will build from the prototype specification. Three play modes: Solo vs Hunter (local), Hotseat (local), and Remote 2-player (persistent game links via PartyKit).
+v0 playable prototype. Solo vs Hunter/Greedy/Sleeper and Hotseat play now; Remote 2-player is engine-complete but waiting on a PartyKit deployment.
 
-**Stack:** Phone-first static web app (Vite + React + TypeScript, Vercel hosting, iPhone Safari as primary target). 11×11 stays tap-to-place on iPhone Safari (smaller cells are OK; do not switch to desktop drag).
+**Play it:** https://huntit.github.io/flag-game/ — built for iPhone Safari, Add to Home Screen for the feel-test.
+
+**Stack:** Phone-first static web app (Vite + React + TypeScript, iPhone Safari as primary target). 11×11 stays tap-to-place on iPhone Safari (smaller cells are OK; do not switch to desktop drag). The play screen fits the visual viewport with no vertical scrolling — see [prototype-spec.md](docs/prototype-spec.md) section 9.
+
+```bash
+npm install
+npm run dev          # local dev server
+npx vitest run       # unit tests
+npm run build        # production build into dist/
+npm run sim -- --games 200 --p1 greedy --p2 hunter --seed 1 --out ./out
+```
 
 **Data files:**
 - ✅ Word list available at `data/words.txt` (175,030 words from Word Eagle)
@@ -30,13 +40,13 @@ Flag is a distinct game, not a variant of commercial crossword products:
 - **Two opening tiles from the bag** — Each player starts with 2 tiles dealt from the bag (not from the market, not a full 7). First action may be Draw or Play
 - **Take-or-spend turns** — Draw from market to build your rack OR play tiles to score; playing does not refill your rack
 - **Flag clock** — A rotating capture target that moves clockwise through four corner posts, acting as a game timer and victory condition
-- **Public rack count, hidden letters** — Opponent (and AI) rack letters stay hidden; tile count is public as 0–7 facedown backs with empty slots (not a numeric badge)
+- **Public rack count, hidden letters** — Opponent (and AI) rack letters stay hidden; tile count is public as 0–7 facedown backs with empty slots plus a readable count number
 
 The crossword-on-a-grid mechanic is shared with games like Scrabble and Words With Friends, but Flag's market system, two-tile bag opening, rotating flag clock, and custom tile set make it a different game.
 
 ## Playtesting
 
-Once built, the prototype supports three modes:
+The prototype supports three modes plus the lab:
 
 - **Solo vs Hunter** — Play against Greedy, Hunter, or Sleeper personality locally (no room server)
 - **Hotseat** — Two players on one device (local, no room)

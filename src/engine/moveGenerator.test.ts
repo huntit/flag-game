@@ -171,6 +171,116 @@ describe('completeness', () => {
   });
 });
 
+/**
+ * Reference generator: try every combination of cells and rack tiles and keep
+ * whatever validatePlay accepts. Far too slow to ship, but it is an independent
+ * definition of "legal", so comparing against it catches both missed plays and
+ * illegal ones. Pass legality depends on this being exact — Pass unlocks only
+ * when the generator finds nothing.
+ */
+function bruteForceLegalPlays(
+  board: Board,
+  rack: Tile[],
+  dict: Dictionary,
+  livePost: string,
+  maxTiles: number
+): Set<string> {
+  const cells: Position[] = [];
+  for (let row = 1; row <= BOARD_SIZE; row++) {
+    for (let col = 1; col <= BOARD_SIZE; col++) {
+      if (!board[row - 1][col - 1]) cells.push({ row, col });
+    }
+  }
+
+  const found = new Set<string>();
+
+  const key = (placements: { tile: Tile; position: Position }[]) =>
+    placements
+      .map(p => `${p.position.row},${p.position.col}:${p.tile.letter}`)
+      .sort()
+      .join('|');
+
+  const tryPlacement = (placements: { tile: Tile; position: Position }[]) => {
+    if (validatePlay(board, placements, dict, livePost).valid) found.add(key(placements));
+  };
+
+  // Every arrangement of `size` rack tiles over `size` distinct empty cells.
+  const walk = (
+    chosen: { tile: Tile; position: Position }[],
+    cellIndex: number,
+    remaining: Tile[],
+    size: number
+  ) => {
+    if (chosen.length === size) {
+      tryPlacement(chosen);
+      return;
+    }
+    for (let c = cellIndex; c < cells.length; c++) {
+      for (let t = 0; t < remaining.length; t++) {
+        walk(
+          [...chosen, { tile: remaining[t], position: cells[c] }],
+          c + 1,
+          [...remaining.slice(0, t), ...remaining.slice(t + 1)],
+          size
+        );
+      }
+    }
+  };
+
+  for (let size = 1; size <= maxTiles; size++) {
+    walk([], 0, rack, size);
+  }
+
+  return found;
+}
+
+describe('matches a brute-force reference', () => {
+  const canonical = (plays: ReturnType<typeof generateLegalPlays>) =>
+    new Set(
+      plays.map(p =>
+        p.tiles
+          .map(t => `${t.position.row},${t.position.col}:${t.assignedLetter ?? t.tile.letter}`)
+          .sort()
+          .join('|')
+      )
+    );
+
+  it('finds exactly the legal plays on an opening board', () => {
+    const board = emptyBoard();
+    const rack = rackOf('CAT');
+
+    const generated = canonical(generateLegalPlays(board, rack, dictionary, 'NW'));
+    const reference = bruteForceLegalPlays(board, rack, dictionary, 'NW', 3);
+
+    expect(generated.size).toBeGreaterThan(0);
+    expect([...reference].filter(p => !generated.has(p))).toEqual([]); // none missed
+    expect([...generated].filter(p => !reference.has(p))).toEqual([]); // none invented
+  });
+
+  it('finds exactly the legal plays mid-game, hooks and crosswords included', () => {
+    const board = emptyBoard();
+    put(board, 'STAR', { row: 6, col: 5 }, 'h');
+    put(board, 'DO', { row: 7, col: 5 }, 'v'); // D under S, O below it
+
+    const rack = rackOf('AT');
+    const generated = canonical(generateLegalPlays(board, rack, dictionary, 'NW'));
+    const reference = bruteForceLegalPlays(board, rack, dictionary, 'NW', 2);
+
+    expect(reference.size).toBeGreaterThan(0);
+    expect([...reference].filter(p => !generated.has(p))).toEqual([]);
+    expect([...generated].filter(p => !reference.has(p))).toEqual([]);
+  });
+
+  it('agrees that nothing is legal when nothing is legal', () => {
+    const board = emptyBoard();
+    put(board, 'STAR', { row: 6, col: 5 }, 'h');
+
+    const rack = rackOf('BF');
+    expect(generateLegalPlays(board, rack, dictionary, 'NW')).toHaveLength(0);
+    expect(bruteForceLegalPlays(board, rack, dictionary, 'NW', 2).size).toBe(0);
+  });
+});
+
 describe('early exit', () => {
   it('stops at the requested limit', () => {
     const plays = generateLegalPlays(emptyBoard(), rackOf('CATSO'), dictionary, 'NW', { limit: 3 });

@@ -3,7 +3,7 @@
 import type { GameState, AIPersonality, GameAction, DrawAction, PlayAction, Tile, WordPlacement } from './types';
 import { RACK_MAX, MAX_MARKET_TAKE } from './types';
 import { generateLegalPlays } from './moveGenerator';
-import { canDraw } from './actions';
+import { canDraw, canGrowRack } from './actions';
 import { random } from './game';
 import type { Dictionary } from './dictionary';
 
@@ -20,30 +20,67 @@ function toPlayAction(play: WordPlacement): PlayAction {
   };
 }
 
-export function selectAIAction(
+export interface AIPlan {
+  action: GameAction;
+  /** Every play that was on the table, so the lab can spot refused captures. */
+  legalPlays: WordPlacement[];
+}
+
+/**
+ * Choose an action and hand back the plays that were considered. The lab CLI
+ * uses the play list for refusal stats, which is why it is returned rather than
+ * regenerated.
+ */
+export function planAIAction(
   state: GameState,
   personality: AIPersonality,
   dictionary: Dictionary,
   threshold: number = DRAW_THRESHOLD
-): GameAction {
+): AIPlan {
   const player = state.players[state.currentPlayer];
   const opponent = state.players[state.currentPlayer === 0 ? 1 : 0];
 
   const legalPlays = generateLegalPlays(state.board, player.rack, dictionary, state.livePost);
 
   if (legalPlays.length === 0) {
-    return canDraw(state) ? selectDrawAction(state) : { type: 'pass' };
+    return { action: drawWouldHelp(state) ? selectDrawAction(state) : { type: 'pass' }, legalPlays };
   }
 
   switch (personality) {
     case 'hunter':
-      return selectHunterAction(state, legalPlays, threshold);
+      return { action: selectHunterAction(state, legalPlays, threshold), legalPlays };
     case 'sleeper':
-      return selectSleeperAction(state, legalPlays, threshold, player.score, opponent.score);
+      return {
+        action: selectSleeperAction(state, legalPlays, threshold, player.score, opponent.score),
+        legalPlays,
+      };
     case 'greedy':
     default:
-      return selectGreedyAction(state, legalPlays, threshold);
+      return { action: selectGreedyAction(state, legalPlays, threshold), legalPlays };
   }
+}
+
+export function selectAIAction(
+  state: GameState,
+  personality: AIPersonality,
+  dictionary: Dictionary,
+  threshold: number = DRAW_THRESHOLD
+): GameAction {
+  return planAIAction(state, personality, dictionary, threshold).action;
+}
+
+/**
+ * Would drawing actually gain the AI anything?
+ *
+ * A full-rack draw is only an exchange, which never drains the bag (see
+ * canGrowRack in actions.ts). Chasing a blank is worth an exchange because a
+ * blank is wild and there are only two of them; otherwise the AI spends its rack
+ * instead of trading tiles back and forth forever.
+ */
+function drawWouldHelp(state: GameState): boolean {
+  if (!canDraw(state)) return false;
+  if (canGrowRack(state)) return true;
+  return state.market.some(t => t.isBlank);
 }
 
 function selectGreedyAction(
@@ -52,17 +89,19 @@ function selectGreedyAction(
   threshold: number
 ): GameAction {
   const bestPlay = findBestPlay(legalPlays);
+  const canImprove = drawWouldHelp(state);
 
-  if (bestPlay && bestPlay.totalScore >= threshold) {
+  if (bestPlay && (bestPlay.totalScore >= threshold || !canImprove)) {
     return toPlayAction(bestPlay);
   }
 
-  if (canDraw(state)) {
+  if (canImprove) {
     return selectDrawAction(state);
   }
 
-  // Cannot draw, so take the best play we have rather than stalling.
-  return bestPlay ? toPlayAction(bestPlay) : { type: 'pass' };
+  // Nothing worth drawing for and no play worth making: take what we have.
+  if (bestPlay) return toPlayAction(bestPlay);
+  return { type: 'pass' };
 }
 
 function selectHunterAction(

@@ -12,7 +12,7 @@ import {
   setRandomSource,
   resetRandomSource,
 } from './game';
-import { executeAction, canDraw, canPass, validateDraw } from './actions';
+import { executeAction, canDraw, canGrowRack, canPass, validateDraw } from './actions';
 import { Dictionary } from './dictionary';
 import type { GameState, TileData, Tile } from './types';
 import {
@@ -248,6 +248,28 @@ describe('pass is stuck-only', () => {
     expect(result.error).toMatch(/legal play/);
   });
 
+  it('stays illegal while the rack has room, even with no legal play', () => {
+    // Two tiles that make no word, but the rack can still grow.
+    state.players[state.currentPlayer].rack = [tile('t1', 'T'), tile('t2', 'T')];
+    expect(canGrowRack(state)).toBe(true);
+    expect(canPass(state, dictionary)).toBe(false);
+  });
+
+  it('is legal when a full rack can only exchange and has no legal play', () => {
+    // Reachable in real play: a crowded board leaves no legal placement, and a
+    // full-rack draw is a tile-neutral exchange, so nothing can end the game.
+    const player = state.players[state.currentPlayer];
+    player.rack = Array.from({ length: RACK_MAX }, (_, i) => tile(`stuck${i}`, 'T'));
+    expect(player.rack).toHaveLength(RACK_MAX);
+    expect(state.market.length).toBeGreaterThan(0);
+    expect(state.bag.length).toBeGreaterThan(0);
+
+    expect(canDraw(state)).toBe(true); // an exchange is still available
+    expect(canGrowRack(state)).toBe(false); // but it cannot add tiles
+    expect(canPass(state, dictionary)).toBe(true);
+    expect(executeAction(state, { type: 'pass' }, dictionary).success).toBe(true);
+  });
+
   it('is legal only with no Draw and no Play', () => {
     makeStuck(state);
     expect(canPass(state, dictionary)).toBe(true);
@@ -336,6 +358,8 @@ describe('draw', () => {
     player.rack = state.bag.splice(0, RACK_MAX);
     expect(player.rack).toHaveLength(7);
 
+    // Fixed non-blank market: a blank would be a single take instead.
+    state.market = [tile('m1', 'A'), tile('m2', 'E'), tile('m3', 'T'), tile('m4', 'S')];
     const ids = state.market.slice(0, 2).map(t => t.id);
     const noDiscard = validateDraw(state, { type: 'draw', marketTiles: ids, takeBagTile: false });
     expect(noDiscard.valid).toBe(false);
@@ -357,6 +381,7 @@ describe('draw', () => {
   it('refuses a bag tile on a refresh turn', () => {
     const player = state.players[0];
     player.rack = state.bag.splice(0, RACK_MAX);
+    state.market = [tile('m1', 'A'), tile('m2', 'E'), tile('m3', 'T'), tile('m4', 'S')];
     const ids = [state.market[0].id];
     const result = validateDraw(state, {
       type: 'draw',
