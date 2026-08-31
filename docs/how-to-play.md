@@ -82,11 +82,27 @@ After your draw, the market is refilled to 4 tiles from the bag.
 
 Covering a **dark post** (not currently live) is legal and does not capture the flag.
 
-### Stuck?
+### Pass (Stuck-Only)
 
-- If you have no legal plays, you must Draw
-- If you cannot Draw (market and bag both empty), you pass
+**Pass is NOT a voluntary third action.** You cannot choose to pass instead of drawing or playing. Pass exists only for the stuck case where you have no legal moves.
+
+**When you can pass:**
+
+- You have no legal Draw (market and bag both empty), AND
+- You have no legal Play (no valid word placements possible)
+
+**How to pass:**
+
+- Pass is an **explicit button** you must tap
+- The Pass button is disabled when Draw or Play is legal
+- In remote or correspondence games, **never treat silence, a closed tab, or elapsed time as a pass**
+
+**After you pass:**
+
+- The flag still rotates
 - If both players pass consecutively, the game ends
+
+**Important:** Draw OR Play is the normal turn. Pass is a stuck-only escape valve, not a stalling tactic.
 
 ## Flag Rotation
 

@@ -196,18 +196,28 @@ If the bag runs out during market refill, set `bagDepleted = true`. The game wil
 
 **No bingo bonus.**
 
-**Pass:**
+### 7.3 Pass (Stuck-Only)
 
-- If the player has no legal plays, they must Draw
-- If they cannot Draw (market + bag empty), they pass
+**Pass is NOT a voluntary third action.** It exists solely for the stuck case where the active player has no legal moves.
 
-### 7.3 Stuck Case
+**When Pass is legal:**
 
-- No legal plays → must Draw
-- Cannot Draw (market and bag both empty) → pass
-- After a pass, still rotate the flag
+- Pass is legal **only when** the player has:
+  - No legal Draw (market and bag both empty), AND
+  - No legal Play (no valid word placements possible)
 
-Consecutive double-pass ends the game.
+**UI requirement:**
+
+- Pass is an **explicit button** the player must tap
+- The Pass button is **disabled or hidden** when Draw or Play is legal
+- **Never auto-pass:** Do not treat silence, a closed tab, or elapsed time as a pass (critical for remote/correspondence multiplayer)
+
+**After a pass:**
+
+- Still rotate the flag
+- Consecutive double-pass (two explicit stuck-passes in a row) ends the game
+
+**Important:** Draw XOR Play remains the normal turn action. Pass is a stuck-only escape valve, not a stalling tactic.
 
 ### 7.4 Flag Rotation (if no capture)
 
