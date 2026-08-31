@@ -1,0 +1,133 @@
+/* Board styles */
+
+.board-container {
+  margin-bottom: 12px;
+}
+
+.board {
+  display: flex;
+  flex-direction: column;
+  background-color: var(--color-board);
+  border: 2px solid var(--color-bg-light);
+  border-radius: 8px;
+  padding: 4px;
+  touch-action: manipulation;
+}
+
+.board-row {
+  display: flex;
+}
+
+.board-cell {
+  position: relative;
+  width: calc((100vw - 48px) / 9);
+  height: calc((100vw - 48px) / 9);
+  max-width: 60px;
+  max-height: 60px;
+  background-color: var(--color-cell);
+  border: 1px solid var(--color-board);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.board-cell:active {
+  background-color: var(--color-cell-hover);
+}
+
+.board-cell.live-post {
+  background-color: rgba(255, 212, 59, 0.3);
+  border-color: var(--color-live-post);
+}
+
+.board-cell.dark-post {
+  background-color: rgba(102, 102, 102, 0.2);
+  border-color: var(--color-dark-post);
+}
+
+.board-cell.centre-star {
+  background-color: rgba(74, 158, 255, 0.2);
+}
+
+.board-cell.pending {
+  background-color: rgba(81, 207, 102, 0.3);
+}
+
+.board-tile {
+  width: 90%;
+  height: 90%;
+  background-color: var(--color-tile);
+  color: var(--color-tile-text);
+  border-radius: 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.tile-letter {
+  font-size: 0.75rem;
+  line-height: 1;
+}
+
+.tile-value {
+  font-size: 0.5rem;
+  margin-top: 1px;
+  opacity: 0.7;
+}
+
+.star {
+  font-size: 1rem;
+  color: var(--color-primary);
+}
+
+.flag-icon {
+  font-size: 1rem;
+}
+
+@media (max-width: 380px) {
+  .board {
+    padding: 2px;
+  }
+
+  .board-cell {
+    border-width: 0.5px;
+  }
+
+  .tile-letter {
+    font-size: 0.65rem;
+  }
+
+  .tile-value {
+    font-size: 0.45rem;
+  }
+
+  .star,
+  .flag-icon {
+    font-size: 0.875rem;
+  }
+}
+
+@media (min-width: 600px) {
+  .board-cell {
+    width: 60px;
+    height: 60px;
+  }
+
+  .tile-letter {
+    font-size: 1rem;
+  }
+
+  .tile-value {
+    font-size: 0.625rem;
+  }
+
+  .star,
+  .flag-icon {
+    font-size: 1.25rem;
+  }
+}
