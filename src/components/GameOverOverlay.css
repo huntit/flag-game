@@ -1,95 +1,90 @@
-/* GameOverOverlay styles */
+/* End-of-game overlay. Sits inside the play shell, so it inherits the no-scroll
+   constraint and must fit the viewport. */
 
-.game-over-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.85);
+.game-over {
+  position: absolute;
+  inset: 0;
+  z-index: 50;
+  background-color: rgba(8, 10, 14, 0.9);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
-  padding: 20px;
+  padding: calc(var(--safe-top) + 14px) 18px calc(var(--safe-bottom) + 14px);
+  overflow: hidden;
 }
 
-.game-over-content {
-  background-color: var(--color-bg-light);
-  border-radius: 12px;
-  padding: 32px;
-  max-width: 400px;
+.game-over-panel {
   width: 100%;
+  max-width: 340px;
+  max-height: 100%;
+  padding: 22px 18px;
+  border-radius: 16px;
+  background-color: var(--color-bg-light);
   text-align: center;
-}
-
-.game-over-title {
-  font-size: 2rem;
-  font-weight: bold;
-  margin-bottom: 12px;
-  color: var(--color-primary);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow: hidden;
 }
 
 .game-over-reason {
-  font-size: 1rem;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
   color: var(--color-text-dim);
-  margin-bottom: 8px;
 }
 
 .game-over-winner {
-  font-size: 1.5rem;
-  font-weight: bold;
-  margin-bottom: 24px;
+  font-size: 1.7rem;
+  font-weight: 800;
   color: var(--color-success);
 }
 
-.final-scores {
+.game-over-scores {
   display: flex;
-  justify-content: space-around;
-  gap: 16px;
-  margin-bottom: 24px;
-  padding: 16px;
-  background-color: var(--color-bg);
-  border-radius: 8px;
+  gap: 10px;
+  margin: 4px 0 8px;
 }
 
-.final-score {
+.game-over-score {
+  flex: 1;
+  padding: 10px 6px;
+  border-radius: 10px
+  ;
+  background-color: var(--color-bg);
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
 }
 
-.player-label {
-  font-size: 0.875rem;
+.game-over-score span {
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
   color: var(--color-text-dim);
 }
 
-.score-value {
-  font-size: 1.75rem;
-  font-weight: bold;
-  color: var(--color-text);
-}
-
-.game-over-actions {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+.game-over-score strong {
+  font-size: 1.5rem;
+  font-variant-numeric: tabular-nums;
 }
 
 .game-over-button {
-  padding: 14px 24px;
-  font-size: 1rem;
-  font-weight: 600;
+  height: 46px;
+  border-radius: 10px;
   background-color: var(--color-primary);
+  color: #06121f;
+  font-size: 0.95rem;
+  font-weight: 800;
+}
+
+.game-over-button.is-secondary {
+  background-color: var(--color-bg-lift);
   color: var(--color-text);
-  border-radius: 8px;
-  transition: transform 0.1s;
 }
 
 .game-over-button:active {
   transform: scale(0.98);
-}
-
-.game-over-button.secondary {
-  background-color: var(--color-bg);
 }

@@ -1,19 +1,26 @@
-// Main Game component
+// Play screen. Tap a rack tile, then tap a square. No drag anywhere.
+//
+// Every action button is enabled only when that action is actually legal, which
+// is decided by the engine rather than by UI guesswork: Draw runs validateDraw
+// on the current market selection, Play runs validatePlay on the pending
+// placement, and Pass asks canPass (no legal Draw and no legal Play).
 
-import { useState, useEffect } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { TileData, GameState, GameAction, Tile, Position, Letter } from '../engine/types';
+import { RACK_MAX } from '../engine/types';
 import type { Dictionary } from '../engine/dictionary';
-import { initializeGame } from '../engine/game';
-import { executeAction, canDraw, canPass } from '../engine/actions';
+import { initializeGame, shuffleRack } from '../engine/game';
+import { executeAction, canPass, validateDraw } from '../engine/actions';
+import { validatePlay } from '../engine/validator';
 import { selectAIAction } from '../engine/ai';
-import { hasLegalPlay } from '../engine/moveGenerator';
 import type { GameMode, AIOpponent } from '../App';
-import Board from './Board';
-import Rack from './Rack';
+import Board, { type PendingPlacement } from './Board';
+import { Rack, OpponentRack } from './Rack';
 import Market from './Market';
 import GameInfo from './GameInfo';
 import GameOverOverlay from './GameOverOverlay';
 import PassThePhone from './PassThePhone';
+import BlankPicker from './BlankPicker';
 import './Game.css';
 
 interface GameProps {
@@ -24,265 +31,464 @@ interface GameProps {
   onBackToMenu: () => void;
 }
 
-type SelectedTile = { tile: Tile; source: 'rack' | 'market' };
+interface Pending {
+  tileId: string;
+  position: Position;
+  assignedLetter?: Letter;
+}
+
+const AI_NAMES: Record<AIOpponent, string> = {
+  hunter: 'Hunter',
+  greedy: 'Greedy',
+  sleeper: 'Sleeper',
+};
 
 function Game({ tileData, dictionary, mode, aiOpponent, onBackToMenu }: GameProps) {
   const [gameState, setGameState] = useState<GameState>(() => initializeGame(tileData));
-  const [selectedTiles, setSelectedTiles] = useState<SelectedTile[]>([]);
-  const [pendingPlacements, setPendingPlacements] = useState<{ tileId: string; position: Position; assignedLetter?: Letter }[]>([]);
+  const [selectedRackTileId, setSelectedRackTileId] = useState<string | null>(null);
+  const [selectedMarketIds, setSelectedMarketIds] = useState<string[]>([]);
+  const [discardIds, setDiscardIds] = useState<string[]>([]);
+  const [takeBagTile, setTakeBagTile] = useState(false);
+  const [pending, setPending] = useState<Pending[]>([]);
+  const [blankPrompt, setBlankPrompt] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [hint, setHint] = useState<string | null>(null);
   const [isAIThinking, setIsAIThinking] = useState(false);
-  const [showPassThePhone, setShowPassThePhone] = useState(false);
+  const [awaitingHandover, setAwaitingHandover] = useState(false);
 
   const isVsAI = mode === 'vs-ai';
   const isHotseat = mode === 'hotseat';
-  const currentPlayer = gameState.players[gameState.currentPlayer];
-  const opponent = gameState.players[gameState.currentPlayer === 0 ? 1 : 0];
-  const isAITurn = isVsAI && currentPlayer.id === 'P2';
+  const opponentName = isVsAI && aiOpponent ? AI_NAMES[aiOpponent] : null;
 
-  // AI turn handler
+  const activeIndex = gameState.currentPlayer;
+  const active = gameState.players[activeIndex];
+  // Against the AI the human always sits at P1, so their own letters stay on
+  // screen even while the AI moves. In hotseat only the active seat is shown.
+  const viewerIndex = isVsAI ? 0 : activeIndex;
+  const viewer = gameState.players[viewerIndex];
+  const other = gameState.players[viewerIndex === 0 ? 1 : 0];
+
+  const isAITurn = isVsAI && activeIndex === 1;
+  const interactive = !isAITurn && !gameState.gameOver && !awaitingHandover;
+
+  const resetSelection = useCallback(() => {
+    setSelectedRackTileId(null);
+    setSelectedMarketIds([]);
+    setDiscardIds([]);
+    setTakeBagTile(false);
+    setPending([]);
+    setBlankPrompt(null);
+    setError(null);
+    setHint(null);
+  }, []);
+
+  const commit = useCallback(
+    (next: GameState) => {
+      setGameState({ ...next });
+      resetSelection();
+    },
+    [resetSelection]
+  );
+
+  // --- AI turns -------------------------------------------------------------
+  const aiFailures = useRef(0);
   useEffect(() => {
-    if (isAITurn && !gameState.gameOver && !isAIThinking) {
-      setIsAIThinking(true);
-      setTimeout(() => {
-        const action = selectAIAction(gameState, aiOpponent!, dictionary);
-        const result = executeAction(gameState, action, dictionary);
-        if (!result.success) {
-          console.error('AI action failed:', result.error);
-        }
-        setGameState({ ...gameState });
-        setIsAIThinking(false);
-      }, 500); // Small delay for better UX
-    }
-  }, [isAITurn, gameState, isAIThinking, aiOpponent, dictionary]);
+    if (!isVsAI || !aiOpponent || gameState.gameOver) return;
+    if (gameState.currentPlayer !== 1) return;
+    if (aiFailures.current > 2) return;
 
-  // Pass-the-phone handler for hotseat
+    setIsAIThinking(true);
+    const timer = window.setTimeout(() => {
+      const action = selectAIAction(gameState, aiOpponent, dictionary);
+      const result = executeAction(gameState, action, dictionary);
+      if (!result.success) {
+        aiFailures.current += 1;
+        setError(`${AI_NAMES[aiOpponent]} could not move: ${result.error}`);
+      } else {
+        aiFailures.current = 0;
+      }
+      setIsAIThinking(false);
+      setGameState({ ...gameState });
+    }, 420);
+
+    return () => {
+      window.clearTimeout(timer);
+      setIsAIThinking(false);
+    };
+  }, [gameState, isVsAI, aiOpponent, dictionary]);
+
+  // --- Hotseat handover ----------------------------------------------------
+  const lastSeat = useRef(gameState.currentPlayer);
   useEffect(() => {
-    if (isHotseat && !gameState.gameOver && gameState.turnCount > 0) {
-      setShowPassThePhone(true);
+    if (!isHotseat || gameState.gameOver) return;
+    if (gameState.currentPlayer === lastSeat.current) return;
+    lastSeat.current = gameState.currentPlayer;
+    setAwaitingHandover(true);
+    resetSelection();
+  }, [gameState.currentPlayer, gameState.gameOver, isHotseat, resetSelection]);
+
+  // --- Derived legality ----------------------------------------------------
+  const placedTileIds = useMemo(() => pending.map(p => p.tileId), [pending]);
+
+  const room = RACK_MAX - viewer.rack.length;
+  const requiredDiscards = Math.max(0, selectedMarketIds.length - room);
+
+  const drawAction: GameAction = useMemo(
+    () => ({
+      type: 'draw',
+      marketTiles: selectedMarketIds,
+      discardTiles: discardIds.length > 0 ? discardIds : undefined,
+      takeBagTile,
+    }),
+    [selectedMarketIds, discardIds, takeBagTile]
+  );
+
+  const drawCheck = useMemo(
+    () => (interactive && pending.length === 0 ? validateDraw(gameState, drawAction) : null),
+    [interactive, pending.length, gameState, drawAction]
+  );
+  const canDrawNow = Boolean(drawCheck?.valid);
+
+  const playEvaluation = useMemo(() => {
+    if (!interactive || pending.length === 0) return null;
+    const placements = pending.map(p => {
+      const tile = active.rack.find(t => t.id === p.tileId)!;
+      return { tile, position: p.position, assignedLetter: p.assignedLetter };
+    });
+    if (placements.some(p => !p.tile)) return null;
+    return validatePlay(gameState.board, placements, dictionary, gameState.livePost);
+  }, [interactive, pending, active.rack, gameState.board, gameState.livePost, dictionary]);
+
+  const canPlayNow = Boolean(playEvaluation?.valid);
+
+  // Pass short-circuits on Draw, so the move generator only runs when the
+  // market and bag are both empty.
+  const canPassNow = interactive && canPass(gameState, dictionary);
+
+  const canShuffleNow = interactive && pending.length === 0 && viewer.rack.length > 1;
+  const canClearNow =
+    interactive &&
+    (pending.length > 0 || selectedMarketIds.length > 0 || discardIds.length > 0 || takeBagTile);
+
+  const bagTileAvailable =
+    interactive &&
+    pending.length === 0 &&
+    requiredDiscards === 0 &&
+    gameState.bag.length > 0 &&
+    viewer.rack.length + selectedMarketIds.length < RACK_MAX;
+
+  useEffect(() => {
+    if (!bagTileAvailable && takeBagTile) setTakeBagTile(false);
+  }, [bagTileAvailable, takeBagTile]);
+
+  // --- Interactions --------------------------------------------------------
+  const handleRackTileClick = (tile: Tile) => {
+    if (!interactive) return;
+    setError(null);
+
+    if (requiredDiscards > 0) {
+      setDiscardIds(current => {
+        if (current.includes(tile.id)) return current.filter(id => id !== tile.id);
+        if (current.length >= requiredDiscards) return [...current.slice(1), tile.id];
+        return [...current, tile.id];
+      });
+      return;
     }
-  }, [gameState.currentPlayer, gameState.gameOver, isHotseat, gameState.turnCount]);
 
-  const handleTileClick = (tile: Tile, source: 'rack' | 'market') => {
-    if (isAITurn || gameState.gameOver) return;
+    setSelectedRackTileId(current => (current === tile.id ? null : tile.id));
+  };
 
-    // Toggle selection
-    const alreadySelected = selectedTiles.some(st => st.tile.id === tile.id);
-    if (alreadySelected) {
-      setSelectedTiles(selectedTiles.filter(st => st.tile.id !== tile.id));
-    } else {
-      setSelectedTiles([...selectedTiles, { tile, source }]);
+  const handleMarketTileClick = (tile: Tile) => {
+    if (!interactive) return;
+    if (pending.length > 0) {
+      setError('Clear your placement before drawing');
+      return;
     }
     setError(null);
+    setDiscardIds([]);
+
+    setSelectedMarketIds(current => {
+      if (current.includes(tile.id)) return current.filter(id => id !== tile.id);
+      // A blank is the whole market take.
+      if (tile.isBlank) return [tile.id];
+      const withoutBlanks = current.filter(id => !gameState.market.find(t => t.id === id)?.isBlank);
+      if (withoutBlanks.length >= 2) return [withoutBlanks[1], tile.id];
+      return [...withoutBlanks, tile.id];
+    });
   };
 
   const handleCellClick = (position: Position) => {
-    if (isAITurn || gameState.gameOver || selectedTiles.length === 0) return;
+    if (!interactive) return;
+    setError(null);
 
-    // Only allow placing tiles from rack
-    const rackTiles = selectedTiles.filter(st => st.source === 'rack');
-    if (rackTiles.length === 0) {
-      setError('Can only place tiles from your rack');
+    const existing = pending.find(
+      p => p.position.row === position.row && p.position.col === position.col
+    );
+    if (existing) {
+      setPending(current => current.filter(p => p.tileId !== existing.tileId));
+      setSelectedRackTileId(null);
       return;
     }
 
-    // Place first selected rack tile
-    const tile = rackTiles[0].tile;
-    setPendingPlacements([...pendingPlacements, {
-      tileId: tile.id,
-      position,
-      assignedLetter: (tile.isBlank ? 'A' : undefined) as Letter | undefined,
-    }]);
-    setSelectedTiles(selectedTiles.filter(st => st.tile.id !== tile.id));
-    setError(null);
+    if (!selectedRackTileId) {
+      setHint('Tap one of your tiles first');
+      return;
+    }
+
+    const tile = viewer.rack.find(t => t.id === selectedRackTileId);
+    if (!tile) return;
+
+    setPending(current => [...current, { tileId: tile.id, position }]);
+    setSelectedRackTileId(null);
+    setSelectedMarketIds([]);
+    setHint(null);
+    if (tile.isBlank) setBlankPrompt(tile.id);
+  };
+
+  const handleBlankPick = (letter: Letter) => {
+    setPending(current =>
+      current.map(p => (p.tileId === blankPrompt ? { ...p, assignedLetter: letter } : p))
+    );
+    setBlankPrompt(null);
+  };
+
+  const handleBlankCancel = () => {
+    setPending(current => current.filter(p => p.tileId !== blankPrompt));
+    setBlankPrompt(null);
+  };
+
+  const run = (action: GameAction) => {
+    const result = executeAction(gameState, action, dictionary);
+    if (!result.success) {
+      setError(result.error ?? 'That move is not legal');
+      return;
+    }
+    commit(gameState);
   };
 
   const handleDraw = () => {
-    if (isAITurn || gameState.gameOver) return;
-
-    const marketTiles = selectedTiles
-      .filter(st => st.source === 'market')
-      .map(st => st.tile.id);
-
-    if (marketTiles.length === 0 && gameState.market.length > 0) {
-      setError('Select tiles from the market to draw');
-      return;
-    }
-
-    const action: GameAction = {
-      type: 'draw',
-      marketTiles,
-      takeBagTile: false, // TODO: Add UI for optional bag tile
-    };
-
-    const result = executeAction(gameState, action, dictionary);
-    if (!result.success) {
-      setError(result.error || 'Draw failed');
-      return;
-    }
-
-    setGameState({ ...gameState });
-    setSelectedTiles([]);
-    setPendingPlacements([]);
-    setError(null);
+    if (!canDrawNow) return;
+    run(drawAction);
   };
 
   const handlePlay = () => {
-    if (isAITurn || gameState.gameOver || pendingPlacements.length === 0) return;
-
-    const action: GameAction = {
+    if (!canPlayNow) return;
+    run({
       type: 'play',
-      placements: pendingPlacements,
-    };
-
-    const result = executeAction(gameState, action, dictionary);
-    if (!result.success) {
-      setError(result.error || 'Play failed');
-      return;
-    }
-
-    setGameState({ ...gameState });
-    setSelectedTiles([]);
-    setPendingPlacements([]);
-    setError(null);
+      placements: pending.map(p => ({
+        tileId: p.tileId,
+        position: p.position,
+        assignedLetter: p.assignedLetter,
+      })),
+    });
   };
 
   const handlePass = () => {
-    if (isAITurn || gameState.gameOver) return;
+    if (!canPassNow) return;
+    run({ type: 'pass' });
+  };
 
-    if (!canPass(gameState)) {
-      setError('Can only pass when market and bag are empty');
-      return;
-    }
-
-    const action: GameAction = { type: 'pass' };
-    const result = executeAction(gameState, action, dictionary);
-    if (!result.success) {
-      setError(result.error || 'Pass failed');
-      return;
-    }
-
+  // Shuffling is not a turn: it reorders your own rack and nothing else.
+  const handleShuffle = () => {
+    if (!canShuffleNow) return;
+    gameState.players[viewerIndex].rack = shuffleRack(viewer.rack);
     setGameState({ ...gameState });
-    setSelectedTiles([]);
-    setPendingPlacements([]);
+    setSelectedRackTileId(null);
+  };
+
+  const handleClear = () => {
+    if (!canClearNow) return;
+    setPending([]);
+    setSelectedRackTileId(null);
+    setSelectedMarketIds([]);
+    setDiscardIds([]);
+    setTakeBagTile(false);
     setError(null);
   };
 
-  const handleClearPlacements = () => {
-    setPendingPlacements([]);
-    setSelectedTiles([]);
-    setError(null);
-  };
+  // --- Presentation --------------------------------------------------------
+  const pendingForBoard: PendingPlacement[] = pending.map(p => {
+    const tile = viewer.rack.find(t => t.id === p.tileId);
+    return {
+      tileId: p.tileId,
+      position: p.position,
+      letter: p.assignedLetter ?? (tile?.isBlank ? '?' : tile?.letter ?? ''),
+      value: tile ? (tile.isBlank ? 0 : tile.value) : 0,
+      isBlank: Boolean(tile?.isBlank),
+    };
+  });
 
-  const canDrawNow = canDraw(gameState);
-  const canPassNow = canPass(gameState) && !hasLegalPlay(gameState.board, currentPlayer.rack, dictionary, gameState.livePost);
+  const lastPlayHighlight = useMemo(
+    () => gameState.lastPlay?.words.flatMap(w => w.positions) ?? [],
+    [gameState.lastPlay]
+  );
 
-  if (showPassThePhone) {
+  const youLabel = isHotseat ? viewer.id : 'You';
+  const otherLabel = opponentName ?? other.id;
+
+  const statusToast = useMemo(() => {
+    if (error) return { kind: 'toast-error', text: error };
+    if (isAIThinking) return { kind: 'toast-info', text: `${otherLabel} is thinking…` };
+    if (pending.length > 0 && playEvaluation && !playEvaluation.valid) {
+      return { kind: 'toast-error', text: playEvaluation.reason ?? 'Not a legal play' };
+    }
+    if (playEvaluation?.valid) {
+      const words = playEvaluation.words?.map(w => w.word).join(' + ') ?? '';
+      return { kind: 'toast-hint', text: `${words} for ${playEvaluation.totalScore}` };
+    }
+    if (requiredDiscards > 0) {
+      const left = requiredDiscards - discardIds.length;
+      return {
+        kind: 'toast-hint',
+        text:
+          left > 0
+            ? `Tap ${left} rack tile${left === 1 ? '' : 's'} to put back`
+            : 'Ready — tap Draw',
+      };
+    }
+    if (gameState.lastPlay) {
+      const words = gameState.lastPlay.words.map(w => w.word).join(' + ');
+      const who = gameState.lastPlay.player === viewer.id ? youLabel : otherLabel;
+      return { kind: 'toast-info', text: `${who} played ${words} +${gameState.lastPlay.totalScore}` };
+    }
+    if (hint) return { kind: 'toast-hint', text: hint };
+    return null;
+  }, [
+    error,
+    isAIThinking,
+    otherLabel,
+    pending.length,
+    playEvaluation,
+    requiredDiscards,
+    discardIds.length,
+    gameState.lastPlay,
+    viewer.id,
+    youLabel,
+    hint,
+  ]);
+
+  if (awaitingHandover) {
     return (
       <PassThePhone
-        currentPlayer={currentPlayer.id}
-        onContinue={() => setShowPassThePhone(false)}
+        seat={active.id}
+        onContinue={() => {
+          setAwaitingHandover(false);
+          setError(null);
+        }}
       />
     );
   }
 
   return (
-    <div className="game">
-      <div className="game-header">
-        <button className="back-button" onClick={onBackToMenu}>
-          ← Menu
-        </button>
-        <h1>Flag</h1>
+    <div className="play-shell">
+      <div className="hud">
+        <GameInfo
+          youLabel={youLabel}
+          yourScore={viewer.score}
+          isYourTurn={activeIndex === viewerIndex}
+          livePost={gameState.livePost}
+          bagCount={gameState.bag.length}
+          onBackToMenu={onBackToMenu}
+        />
       </div>
 
-      <GameInfo
-        gameState={gameState}
-        isVsAI={isVsAI}
-        isAIThinking={isAIThinking}
-      />
+      <div className="opponent-bar">
+        <OpponentRack
+          name={otherLabel}
+          count={other.rack.length}
+          score={other.score}
+          isTheirTurn={activeIndex !== viewerIndex}
+        />
+      </div>
 
-      {error && (
-        <div className="game-error">
-          {error}
-        </div>
-      )}
+      <div className="stage">
+        <Board
+          board={gameState.board}
+          livePost={gameState.livePost}
+          pendingPlacements={pendingForBoard}
+          highlight={pending.length === 0 ? lastPlayHighlight : []}
+          onCellClick={handleCellClick}
+        />
+      </div>
 
-      <Board
-        board={gameState.board}
-        livePost={gameState.livePost}
-        pendingPlacements={pendingPlacements}
-        onCellClick={handleCellClick}
-      />
+      <div className="market-row">
+        <Market
+          market={gameState.market}
+          selectedTileIds={selectedMarketIds}
+          disabled={!interactive}
+          bagTileAvailable={bagTileAvailable}
+          bagTileSelected={takeBagTile}
+          onTileClick={handleMarketTileClick}
+          onToggleBagTile={() => setTakeBagTile(v => !v)}
+        />
+      </div>
 
-      <Market
-        market={gameState.market}
-        selectedTileIds={selectedTiles.filter(st => st.source === 'market').map(st => st.tile.id)}
-        onTileClick={(tile) => handleTileClick(tile, 'market')}
-        disabled={isAITurn || gameState.gameOver}
-      />
+      <div className="rack-row">
+        <Rack
+          tiles={viewer.rack}
+          label={youLabel}
+          selectedTileId={selectedRackTileId}
+          discardTileIds={discardIds}
+          placedTileIds={placedTileIds}
+          disabled={!interactive}
+          onTileClick={handleRackTileClick}
+        />
+      </div>
 
-      <Rack
-        tiles={opponent.rack}
-        selectedTileIds={[]}
-        placedTileIds={[]}
-        onTileClick={() => {}}
-        disabled
-        hidden
-        label="Opponent"
-      />
-
-      <Rack
-        tiles={currentPlayer.rack}
-        selectedTileIds={selectedTiles.filter(st => st.source === 'rack').map(st => st.tile.id)}
-        placedTileIds={pendingPlacements.map(p => p.tileId)}
-        onTileClick={(tile) => handleTileClick(tile, 'rack')}
-        disabled={isAITurn || gameState.gameOver}
-        label={`Your Rack (${currentPlayer.id})`}
-      />
-
-      <div className="game-actions">
+      <div className="actions">
         <button
+          type="button"
           className="action-button action-draw"
           onClick={handleDraw}
-          disabled={isAITurn || gameState.gameOver || !canDrawNow || pendingPlacements.length > 0}
+          disabled={!canDrawNow}
         >
           Draw
         </button>
-
         <button
+          type="button"
           className="action-button action-play"
           onClick={handlePlay}
-          disabled={isAITurn || gameState.gameOver || pendingPlacements.length === 0}
+          disabled={!canPlayNow}
         >
           Play
         </button>
-
         <button
-          className="action-button action-clear"
-          onClick={handleClearPlacements}
-          disabled={isAITurn || gameState.gameOver || (pendingPlacements.length === 0 && selectedTiles.length === 0)}
+          type="button"
+          className="action-button action-shuffle"
+          onClick={canClearNow ? handleClear : handleShuffle}
+          disabled={!canClearNow && !canShuffleNow}
         >
-          Clear
+          {canClearNow ? 'Clear' : 'Shuffle'}
         </button>
-
         <button
+          type="button"
           className="action-button action-pass"
           data-pass-stuck-only="true"
           onClick={handlePass}
-          disabled={isAITurn || gameState.gameOver || !canPassNow}
+          disabled={!canPassNow}
         >
           Pass
         </button>
       </div>
 
+      {statusToast && (
+        <div className="toast-layer">
+          <div className={`toast ${statusToast.kind}`}>{statusToast.text}</div>
+        </div>
+      )}
+
+      {blankPrompt && <BlankPicker onPick={handleBlankPick} onCancel={handleBlankCancel} />}
+
       {gameState.gameOver && (
         <GameOverOverlay
           gameState={gameState}
+          youLabel={youLabel}
+          otherLabel={otherLabel}
+          viewerIndex={viewerIndex}
           onNewGame={() => {
-            setGameState(initializeGame(tileData));
-            setSelectedTiles([]);
-            setPendingPlacements([]);
-            setError(null);
+            aiFailures.current = 0;
+            lastSeat.current = 0;
+            commit(initializeGame(tileData));
           }}
           onBackToMenu={onBackToMenu}
         />

@@ -1,4 +1,6 @@
-// Online mode component (placeholder for Remote 2P)
+// Remote 2-player. The room (src/server/index.ts) is engine-authoritative and
+// persistent; it needs a PartyKit deployment before this screen can hand out
+// links, which is Peter's hosting step rather than a code change.
 
 import './OnlineMode.css';
 
@@ -8,34 +10,27 @@ interface OnlineModeProps {
 
 function OnlineMode({ onBackToMenu }: OnlineModeProps) {
   return (
-    <div className="online-mode">
-      <div className="online-content">
-        <h1>Remote 2-Player</h1>
-        
-        <div className="online-info">
+    <div className="screen">
+      <div className="screen-panel online-panel">
+        <h1>Remote 2-player</h1>
+
+        <div className="online-body">
           <p>
-            <strong>Status:</strong> Implementation complete, deployment pending
+            Live and correspondence are the same mode: a persistent game link with a secret token
+            per seat, so either player can come back days later on any device without an account.
           </p>
           <p>
-            Remote multiplayer uses PartyKit (Cloudflare Durable Objects) for engine-authoritative gameplay with secret seat links.
+            The room runs the same rules engine as this build and keeps the snapshot in storage, so
+            a closed tab is never treated as a pass. Rack <strong>counts</strong> are public; rack{' '}
+            <strong>letters</strong> are not.
           </p>
-          <p>
-            <strong>Features:</strong>
-          </p>
-          <ul>
-            <li>Persistent game links (games survive disconnects)</li>
-            <li>Secret unguessable seat tokens</li>
-            <li>Engine-authoritative validation</li>
-            <li>Opponent racks hidden</li>
-            <li>Works for both live and correspondence play</li>
-          </ul>
-          <p>
-            <strong>Note:</strong> Deployment requires Cloudflare account and PartyKit setup. Peter will handle hosting and DNS configuration.
+          <p className="online-status">
+            Waiting on the PartyKit deployment. Solo and Hotseat play now.
           </p>
         </div>
 
-        <button className="back-button-large" onClick={onBackToMenu}>
-          Back to Menu
+        <button type="button" className="online-back" onClick={onBackToMenu}>
+          Back to menu
         </button>
       </div>
     </div>

@@ -1,53 +1,65 @@
-// GameOverOverlay component
+// End-of-game overlay: reason, winner, final scores.
 
 import type { GameState } from '../engine/types';
 import './GameOverOverlay.css';
 
 interface GameOverOverlayProps {
   gameState: GameState;
+  youLabel: string;
+  otherLabel: string;
+  viewerIndex: 0 | 1;
   onNewGame: () => void;
   onBackToMenu: () => void;
 }
 
-function GameOverOverlay({ gameState, onNewGame, onBackToMenu }: GameOverOverlayProps) {
-  const [p1, p2] = gameState.players;
-  const endReasonText = {
-    capture: 'Flag captured!',
-    bag: 'Bag depleted',
-    posts_full: 'All posts occupied',
-    double_pass: 'Double pass',
-  }[gameState.endReason || 'capture'];
+const END_REASONS: Record<string, string> = {
+  capture: 'Flag captured',
+  bag: 'Bag ran out',
+  posts_full: 'All four posts occupied',
+  double_pass: 'Both players passed',
+};
 
-  const winnerText = gameState.winner === 'draw' 
-    ? "It's a draw!" 
-    : `${gameState.winner} wins!`;
+function GameOverOverlay({
+  gameState,
+  youLabel,
+  otherLabel,
+  viewerIndex,
+  onNewGame,
+  onBackToMenu,
+}: GameOverOverlayProps) {
+  const viewer = gameState.players[viewerIndex];
+  const other = gameState.players[viewerIndex === 0 ? 1 : 0];
+
+  const winnerText =
+    gameState.winner === 'draw'
+      ? 'Draw'
+      : gameState.winner === viewer.id
+        ? `${youLabel} win`
+        : `${otherLabel} wins`;
 
   return (
-    <div className="game-over-overlay">
-      <div className="game-over-content">
-        <h2 className="game-over-title">Game Over</h2>
-        <p className="game-over-reason">{endReasonText}</p>
-        <p className="game-over-winner">{winnerText}</p>
+    <div className="game-over">
+      <div className="game-over-panel">
+        <p className="game-over-reason">{END_REASONS[gameState.endReason ?? ''] ?? 'Game over'}</p>
+        <h2 className="game-over-winner">{winnerText}</h2>
 
-        <div className="final-scores">
-          <div className="final-score">
-            <span className="player-label">P1:</span>
-            <span className="score-value">{p1.score}</span>
+        <div className="game-over-scores">
+          <div className="game-over-score">
+            <span>{youLabel}</span>
+            <strong>{viewer.score}</strong>
           </div>
-          <div className="final-score">
-            <span className="player-label">P2:</span>
-            <span className="score-value">{p2.score}</span>
+          <div className="game-over-score">
+            <span>{otherLabel}</span>
+            <strong>{other.score}</strong>
           </div>
         </div>
 
-        <div className="game-over-actions">
-          <button className="game-over-button" onClick={onNewGame}>
-            New Game
-          </button>
-          <button className="game-over-button secondary" onClick={onBackToMenu}>
-            Back to Menu
-          </button>
-        </div>
+        <button type="button" className="game-over-button" onClick={onNewGame}>
+          New game
+        </button>
+        <button type="button" className="game-over-button is-secondary" onClick={onBackToMenu}>
+          Menu
+        </button>
       </div>
     </div>
   );

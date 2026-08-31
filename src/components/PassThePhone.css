@@ -1,53 +1,34 @@
-/* PassThePhone styles */
+/* Hotseat handover screen. Fits the viewport; no scrolling. */
 
-.pass-the-phone {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.95);
-  display: flex;
+.handover {
+  background-color: #0d1016;
+}
+
+.handover .screen-panel {
+  gap: 10px;
   align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  padding: 20px;
 }
 
-.pass-the-phone-content {
-  text-align: center;
-  max-width: 400px;
-}
-
-.pass-the-phone-title {
-  font-size: 2rem;
-  font-weight: bold;
-  margin-bottom: 24px;
+.handover-kicker {
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
   color: var(--color-primary);
 }
 
-.pass-the-phone-text {
-  font-size: 1.5rem;
-  margin-bottom: 16px;
-  color: var(--color-text);
-}
-
-.pass-the-phone-instruction {
-  font-size: 1rem;
-  color: var(--color-text-dim);
-  margin-bottom: 32px;
-}
-
-.pass-the-phone-button {
-  padding: 16px 48px;
-  font-size: 1.25rem;
-  font-weight: 600;
+.handover-button {
+  margin-top: 22px;
+  width: 100%;
+  max-width: 260px;
+  height: 54px;
+  border-radius: 12px;
   background-color: var(--color-primary);
-  color: var(--color-text);
-  border-radius: 8px;
-  transition: transform 0.1s;
+  color: #06121f;
+  font-size: 1.05rem;
+  font-weight: 800;
 }
 
-.pass-the-phone-button:active {
+.handover-button:active {
   transform: scale(0.98);
 }

@@ -1,21 +1,58 @@
-/* Global styles */
+/* Global styles and the no-scroll phone shell.
+ *
+ * LAYOUT CONSTRAINT (do not regress): the play screen must fit the visual
+ * viewport on iPhone and iPad with no vertical scrolling. The player must never
+ * have to scroll to reach Draw / Play / Shuffle / Pass. That is enforced here:
+ *
+ *   - --app-h resolves to 100svh (the *small* viewport height, i.e. the height
+ *     with the browser toolbars showing) so the shell always fits, falling back
+ *     to 100dvh then 100vh on older engines.
+ *   - .play-shell is exactly --app-h tall with `overflow: hidden`, and lays its
+ *     rows out on a grid whose chrome rows have known heights.
+ *   - --board-size is derived from what is left over, so the board shrinks to
+ *     fit rather than pushing the action bar off-screen.
+ *   - Chrome row heights clamp against --app-h, so short devices lose chrome
+ *     height, never the buttons.
+ */
 
 :root {
-  --color-bg: #1a1a1a;
-  --color-bg-light: #2a2a2a;
-  --color-text: #ffffff;
-  --color-text-dim: #999999;
+  --color-bg: #14161c;
+  --color-bg-light: #1e222c;
+  --color-bg-lift: #272d3a;
+  --color-text: #f4f6fb;
+  --color-text-dim: #99a2b8;
   --color-primary: #4a9eff;
   --color-secondary: #ff6b6b;
-  --color-success: #51cf66;
+  --color-success: #46c26a;
   --color-warning: #ffd43b;
-  --color-board: #3a3a3a;
-  --color-cell: #2a2a2a;
-  --color-cell-hover: #3a3a3a;
-  --color-tile: #e8e8e8;
-  --color-tile-text: #1a1a1a;
+  --color-board: #2b3140;
+  --color-cell: #1b1f28;
+  --color-tile: #f2ead6;
+  --color-tile-text: #23201a;
+  --color-tile-blank: #cfe4ff;
   --color-live-post: #ffd43b;
-  --color-dark-post: #666666;
+  --color-dark-post: #5a6377;
+
+  /* Smallest viewport height wins: content then fits whether or not the
+     iOS Safari toolbars are showing. */
+  --app-h: 100vh;
+
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+}
+
+@supports (height: 100dvh) {
+  :root {
+    --app-h: 100dvh;
+  }
+}
+
+@supports (height: 100svh) {
+  :root {
+    --app-h: 100svh;
+  }
 }
 
 * {
@@ -24,13 +61,22 @@
   padding: 0;
 }
 
+html,
+body {
+  height: 100%;
+  /* Belt and braces: nothing in this app scrolls the document. */
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
   background-color: var(--color-bg);
   color: var(--color-text);
-  line-height: 1.5;
+  line-height: 1.3;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  -webkit-text-size-adjust: 100%;
   touch-action: manipulation;
   user-select: none;
   -webkit-user-select: none;
@@ -38,43 +84,54 @@ body {
 }
 
 #root {
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
+  height: var(--app-h);
+  overflow: hidden;
 }
 
 button {
   font-family: inherit;
+  color: inherit;
   border: none;
+  background: none;
   cursor: pointer;
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
 }
 
 button:disabled {
-  opacity: 0.5;
   cursor: not-allowed;
 }
 
-.app-loading,
-.app-error {
+/* Screens that are a single centred panel (loading, menu, remote, errors).
+   They fit the viewport too; long copy scrolls inside its own panel, never the
+   page. */
+.screen {
+  height: var(--app-h);
+  overflow: hidden;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-height: 100vh;
-  padding: 20px;
+  padding: calc(var(--safe-top) + 16px) calc(var(--safe-right) + 18px)
+    calc(var(--safe-bottom) + 16px) calc(var(--safe-left) + 18px);
   text-align: center;
 }
 
-.app-loading h1,
-.app-error h1 {
-  font-size: 2rem;
-  margin-bottom: 1rem;
+.screen-panel {
+  width: 100%;
+  max-width: 420px;
+  max-height: 100%;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 
-.app-loading p,
-.app-error p {
-  font-size: 1rem;
+.screen h1 {
+  font-size: clamp(1.6rem, 8vw, 2.4rem);
+  margin-bottom: 0.5rem;
+}
+
+.screen p {
   color: var(--color-text-dim);
+  font-size: 0.95rem;
 }

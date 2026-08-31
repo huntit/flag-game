@@ -1,24 +1,21 @@
-// PassThePhone component for hotseat mode
+// Hotseat handover. Nothing from the incoming player's game is on screen behind
+// this, so the outgoing player cannot glimpse the next rack.
 
 import './PassThePhone.css';
 
 interface PassThePhoneProps {
-  currentPlayer: 'P1' | 'P2';
+  seat: 'P1' | 'P2';
   onContinue: () => void;
 }
 
-function PassThePhone({ currentPlayer, onContinue }: PassThePhoneProps) {
+function PassThePhone({ seat, onContinue }: PassThePhoneProps) {
   return (
-    <div className="pass-the-phone">
-      <div className="pass-the-phone-content">
-        <h2 className="pass-the-phone-title">Pass the Phone</h2>
-        <p className="pass-the-phone-text">
-          It's {currentPlayer}'s turn
-        </p>
-        <p className="pass-the-phone-instruction">
-          Hand the device to the next player
-        </p>
-        <button className="pass-the-phone-button" onClick={onContinue}>
+    <div className="screen handover">
+      <div className="screen-panel">
+        <p className="handover-kicker">Pass the phone</p>
+        <h1>{seat}&apos;s turn</h1>
+        <p>Hand the device over, then tap Ready.</p>
+        <button type="button" className="handover-button" onClick={onContinue}>
           Ready
         </button>
       </div>

@@ -1,83 +1,85 @@
-/* Menu styles */
+/* Menu screen. Fixed to the viewport height; the button stack shrinks instead of
+   scrolling. */
 
-.menu {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+.menu-panel {
   justify-content: center;
-  min-height: 100vh;
-  padding: 20px;
+  gap: clamp(14px, 4vh, 32px);
 }
 
-.menu-content {
-  max-width: 400px;
-  width: 100%;
+.menu-head {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .menu-title {
-  font-size: 3rem;
-  font-weight: bold;
-  text-align: center;
-  margin-bottom: 0.5rem;
+  font-size: clamp(2.4rem, 14vw, 4rem);
+  font-weight: 800;
+  letter-spacing: -0.02em;
   color: var(--color-primary);
+  line-height: 1;
 }
 
 .menu-subtitle {
-  font-size: 1rem;
-  text-align: center;
+  font-size: 0.82rem;
   color: var(--color-text-dim);
-  margin-bottom: 2rem;
 }
 
 .menu-buttons {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  margin-bottom: 2rem;
+  gap: 9px;
+}
+
+.menu-split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 9px;
 }
 
 .menu-button {
-  padding: 16px 24px;
-  font-size: 1.125rem;
-  font-weight: 600;
-  background-color: var(--color-primary);
+  padding: clamp(11px, 2.2vh, 17px) 18px;
+  border-radius: 12px;
+  background-color: var(--color-bg-lift);
   color: var(--color-text);
-  border-radius: 8px;
-  transition: background-color 0.2s, transform 0.1s;
+  font-size: 1.02rem;
+  font-weight: 700;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.menu-button small {
+  font-size: 0.66rem;
+  font-weight: 600;
+  color: var(--color-text-dim);
+}
+
+.menu-button.is-primary {
+  background-color: var(--color-primary);
+  color: #06121f;
+}
+
+.menu-button.is-primary small {
+  color: rgba(6, 18, 31, 0.7);
+}
+
+.menu-button.is-small {
+  padding: clamp(9px, 1.7vh, 13px) 14px;
+  font-size: 0.88rem;
+  background-color: var(--color-bg-light);
 }
 
 .menu-button:active {
   transform: scale(0.98);
 }
 
-.menu-button:hover:not(:disabled) {
-  background-color: #5aa7ff;
+.menu-note {
+  font-size: 0.76rem;
+  line-height: 1.5;
+  color: var(--color-text-dim);
 }
 
-.menu-button-secondary {
-  background-color: var(--color-bg-light);
-}
-
-.menu-button-secondary:hover:not(:disabled) {
-  background-color: #3a3a3a;
-}
-
-.menu-info {
-  padding: 16px;
-  background-color: var(--color-bg-light);
-  border-radius: 8px;
-  font-size: 0.875rem;
-  line-height: 1.6;
-}
-
-.menu-info p {
-  margin-bottom: 8px;
-}
-
-.menu-info p:last-child {
-  margin-bottom: 0;
-}
-
-.menu-info strong {
-  color: var(--color-primary);
+.menu-note strong {
+  color: var(--color-text);
 }

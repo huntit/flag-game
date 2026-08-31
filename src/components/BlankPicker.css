@@ -1,0 +1,59 @@
+/* Blank letter picker. Fits inside the viewport; the keypad never scrolls. */
+
+.blank-picker {
+  position: absolute;
+  inset: 0;
+  z-index: 40;
+  background-color: rgba(10, 12, 16, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: calc(var(--safe-top) + 12px) 14px calc(var(--safe-bottom) + 12px);
+}
+
+.blank-picker-panel {
+  width: 100%;
+  max-width: 340px;
+  max-height: 100%;
+  padding: 14px;
+  border-radius: 14px;
+  background-color: var(--color-bg-light);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow: hidden;
+}
+
+.blank-picker-title {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--color-text-dim);
+  text-align: center;
+}
+
+.blank-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 5px;
+}
+
+.blank-picker-key {
+  aspect-ratio: 1;
+  border-radius: 7px;
+  background-color: var(--color-tile);
+  color: var(--color-tile-text);
+  font-size: clamp(0.8rem, 3.6vw, 1.05rem);
+  font-weight: 800;
+}
+
+.blank-picker-key:active {
+  transform: scale(0.94);
+}
+
+.blank-picker-cancel {
+  height: 40px;
+  border-radius: 9px;
+  background-color: var(--color-bg-lift);
+  font-size: 0.9rem;
+  font-weight: 700;
+}
