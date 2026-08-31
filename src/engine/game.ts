@@ -73,15 +73,30 @@ export function shuffleBag(bag: Tile[]): void {
 
 /**
  * Reorder a player's own rack. Shuffling is a display convenience, not a turn:
- * it never changes which tiles you hold, only the order they are drawn in.
+ * it never changes which tiles you hold, only the order they sit in.
+ *
+ * A plain shuffle of two tiles leaves them alone half the time, which reads as a
+ * dead button, so keep shuffling until the order actually changes (when a
+ * different order is possible at all).
  */
 export function shuffleRack(rack: Tile[]): Tile[] {
-  const next = [...rack];
-  for (let i = next.length - 1; i > 0; i--) {
-    const j = Math.floor(random() * (i + 1));
-    [next[i], next[j]] = [next[j], next[i]];
+  if (rack.length < 2) return [...rack];
+
+  const order = (tiles: Tile[]) => tiles.map(t => t.id).join(',');
+  const original = order(rack);
+
+  let next = [...rack];
+  for (let attempt = 0; attempt < 12; attempt++) {
+    for (let i = next.length - 1; i > 0; i--) {
+      const j = Math.floor(random() * (i + 1));
+      [next[i], next[j]] = [next[j], next[i]];
+    }
+    if (order(next) !== original) return next;
+    next = [...rack];
   }
-  return next;
+
+  // Fall back to a rotation, which always differs for two or more tiles.
+  return [...rack.slice(1), rack[0]];
 }
 
 export function drawFromBag(bag: Tile[], count: number): Tile[] {

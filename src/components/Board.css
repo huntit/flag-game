@@ -78,21 +78,23 @@
 }
 
 .board-tile .tile-letter {
-  font-size: calc(var(--cell) * 0.56);
+  font-size: calc(var(--cell) * 0.52);
   font-weight: 800;
   line-height: 1;
   /* Optical centring: leave room for the value in the bottom-right corner. */
-  transform: translate(-4%, -4%);
+  transform: translate(-7%, -6%);
 }
 
+/* The value has to stay legible at a ~32px cell, so it is deliberately larger
+   and darker than a typical corner subscript. */
 .board-tile .tile-value {
   position: absolute;
-  right: 7%;
-  bottom: 2%;
-  font-size: calc(var(--cell) * 0.28);
-  font-weight: 700;
-  line-height: 1;
-  opacity: 0.72;
+  right: 4%;
+  bottom: 0;
+  font-size: calc(var(--cell) * 0.34);
+  font-weight: 800;
+  line-height: 1.05;
+  color: #6a5f47;
 }
 
 .cell-mark {

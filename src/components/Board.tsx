@@ -64,7 +64,9 @@ function Board({ board, livePost, pendingPlacements, highlight, onCellClick }: B
         {letter ? (
           <span className={`board-tile ${pending ? 'is-pending' : ''} ${isBlank ? 'is-blank' : ''}`}>
             <span className="tile-letter">{letter}</span>
-            {!isBlank && <span className="tile-value">{value}</span>}
+            {/* Blanks show their 0 too, so a blank standing in for N reads
+                differently from a real N. */}
+            <span className="tile-value">{value}</span>
           </span>
         ) : (
           <>

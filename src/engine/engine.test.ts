@@ -175,16 +175,27 @@ describe('rack shuffle', () => {
     expect(state.moveHistory).toHaveLength(0);
   });
 
-  it('actually reorders a rack', () => {
+  it('always changes the order, so the button never looks dead', () => {
     setRandomSource(mulberry32(3));
-    const rack = ['a', 'b', 'c', 'd', 'e', 'f', 'g'].map((id, i) =>
-      tile(id, (['A', 'E', 'T', 'S'] as const)[i % 4])
-    );
-    const orders = new Set<string>();
-    for (let i = 0; i < 20; i++) {
-      orders.add(shuffleRack(rack).map(t => t.id).join(''));
+
+    // Two tiles are the tricky case: a plain shuffle leaves them alone half the
+    // time, which reads as a broken button.
+    for (const size of [2, 3, 7]) {
+      const rack = Array.from({ length: size }, (_, i) =>
+        tile(`t${size}-${i}`, (['A', 'E', 'T', 'S'] as const)[i % 4])
+      );
+      for (let attempt = 0; attempt < 30; attempt++) {
+        const shuffled = shuffleRack(rack);
+        expect(shuffled.map(t => t.id).join(',')).not.toBe(rack.map(t => t.id).join(','));
+        expect([...shuffled].map(t => t.id).sort()).toEqual([...rack].map(t => t.id).sort());
+      }
     }
-    expect(orders.size).toBeGreaterThan(1);
+  });
+
+  it('leaves a rack of one tile alone', () => {
+    const rack = [tile('only', 'A')];
+    expect(shuffleRack(rack).map(t => t.id)).toEqual(['only']);
+    expect(shuffleRack([]).length).toBe(0);
   });
 });
 

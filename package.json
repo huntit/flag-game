@@ -8,7 +8,9 @@
     "build": "tsc && vite build",
     "preview": "vite preview",
     "test": "vitest",
-    "sim": "tsx src/cli/flag-sim.ts"
+    "sim": "tsx src/cli/flag-sim.ts",
+    "verify:layout": "node scripts/verify-layout.mjs",
+    "verify:play": "node scripts/verify-play.mjs"
   },
   "dependencies": {
     "react": "^18.3.1",
@@ -20,6 +22,7 @@
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^4.3.1",
     "partykit": "^0.0.111",
+    "playwright": "1.56.1",
     "tsx": "^4.19.0",
     "typescript": "^5.5.3",
     "vite": "^5.4.1",

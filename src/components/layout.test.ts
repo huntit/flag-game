@@ -43,6 +43,16 @@ describe('no-scroll phone shell', () => {
     expect(shell).toMatch(/grid-template-areas:[\s\S]*'actions'/);
   });
 
+  it('budgets the board against the shell width, not the raw viewport width', () => {
+    // The shell is centred and capped, so measuring the board against 100vw
+    // makes it taller than its column on a wide-but-tall screen (iPad portrait)
+    // and the cells come out rectangular.
+    const shell = gameCss.match(/\.play-shell\s*\{[\s\S]*?\n\}/)?.[0] ?? '';
+    expect(shell).toMatch(/--shell-w:\s*min\(/);
+    expect(shell).toMatch(/--board-size:\s*min\(\s*calc\(var\(--shell-w\)/);
+    expect(gameCss).toMatch(/max-width:\s*var\(--shell-max-w\)/);
+  });
+
   it('uses the safe area rather than guessing at insets', () => {
     expect(appCss).toMatch(/env\(safe-area-inset-top/);
     expect(appCss).toMatch(/env\(safe-area-inset-bottom/);

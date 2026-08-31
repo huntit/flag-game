@@ -7,13 +7,15 @@
  */
 
 .play-shell {
-  /* Chrome rows shrink on short screens; the buttons never do. */
-  --hud-h: clamp(26px, calc(var(--app-h) * 0.045), 34px);
-  --opp-h: clamp(26px, calc(var(--app-h) * 0.042), 32px);
-  --market-h: clamp(46px, calc(var(--app-h) * 0.082), 60px);
-  --rack-h: clamp(48px, calc(var(--app-h) * 0.088), 66px);
-  --actions-h: clamp(40px, calc(var(--app-h) * 0.068), 50px);
-  --shell-gap: clamp(3px, calc(var(--app-h) * 0.007), 7px);
+  /* Chrome rows shrink on short screens; the buttons never do. On a tall phone
+     the board is limited by width, so the spare height goes into bigger tiles
+     and bigger tap targets rather than dead space. */
+  --hud-h: clamp(26px, calc(var(--app-h) * 0.048), 42px);
+  --opp-h: clamp(26px, calc(var(--app-h) * 0.044), 38px);
+  --market-h: clamp(46px, calc(var(--app-h) * 0.09), 76px);
+  --rack-h: clamp(48px, calc(var(--app-h) * 0.098), 82px);
+  --actions-h: clamp(40px, calc(var(--app-h) * 0.072), 60px);
+  --shell-gap: clamp(3px, calc(var(--app-h) * 0.008), 8px);
   --shell-pad-x: 6px;
   --shell-pad-y: 5px;
 
@@ -23,8 +25,17 @@
       (5 * var(--shell-gap)) + (2 * var(--shell-pad-y)) + var(--safe-top) + var(--safe-bottom) + 2px
   );
 
+  /* The shell is centred and capped, so the board's width budget is the shell
+     width, not the viewport width — otherwise a wide-but-tall screen (iPad in
+     portrait) computes a board taller than the column it sits in and the cells
+     come out rectangular. */
+  --shell-max-w: 560px;
+  --shell-w: min(
+    var(--shell-max-w),
+    calc(100vw - var(--safe-left) - var(--safe-right))
+  );
   --board-size: min(
-    calc(100vw - (2 * var(--shell-pad-x)) - var(--safe-left) - var(--safe-right)),
+    calc(var(--shell-w) - (2 * var(--shell-pad-x))),
     calc(var(--app-h) - var(--chrome-h))
   );
   --cell: calc(var(--board-size) / 11);
@@ -52,7 +63,7 @@
   gap: var(--shell-gap);
   padding: calc(var(--safe-top) + var(--shell-pad-y)) calc(var(--safe-right) + var(--shell-pad-x))
     calc(var(--safe-bottom) + var(--shell-pad-y)) calc(var(--safe-left) + var(--shell-pad-x));
-  max-width: 560px;
+  max-width: var(--shell-max-w);
   margin: 0 auto;
 }
 
@@ -60,12 +71,13 @@
    the full height without the controls being pushed off-screen. */
 @media (orientation: landscape) and (min-width: 640px) {
   .play-shell {
+    --shell-max-w: 1100px;
     --board-size: min(
-      calc((100vw - var(--safe-left) - var(--safe-right)) * 0.58),
+      calc(var(--shell-w) * 0.58),
       calc(var(--app-h) - (2 * var(--shell-pad-y)) - var(--safe-top) - var(--safe-bottom) - 2px)
     );
 
-    max-width: 1100px;
+    max-width: var(--shell-max-w);
     grid-template-columns: var(--board-size) minmax(0, 1fr);
     grid-template-rows: var(--hud-h) var(--opp-h) var(--market-h) minmax(0, 1fr) var(--actions-h);
     grid-template-areas:

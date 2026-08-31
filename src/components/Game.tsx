@@ -9,7 +9,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { TileData, GameState, GameAction, Tile, Position, Letter } from '../engine/types';
 import { RACK_MAX } from '../engine/types';
 import type { Dictionary } from '../engine/dictionary';
-import { initializeGame, shuffleRack } from '../engine/game';
+import { getBoardTile, initializeGame, shuffleRack } from '../engine/game';
 import { executeAction, canPass, validateDraw } from '../engine/actions';
 import { validatePlay } from '../engine/validator';
 import { selectAIAction } from '../engine/ai';
@@ -181,6 +181,20 @@ function Game({ tileData, dictionary, mode, aiOpponent, onBackToMenu }: GameProp
     if (!bagTileAvailable && takeBagTile) setTakeBagTile(false);
   }, [bagTileAvailable, takeBagTile]);
 
+  // Transient messages clear themselves so the toast returns to the last-play
+  // readout instead of pinning a stale nudge on screen.
+  useEffect(() => {
+    if (!hint) return;
+    const timer = window.setTimeout(() => setHint(null), 1900);
+    return () => window.clearTimeout(timer);
+  }, [hint]);
+
+  useEffect(() => {
+    if (!error) return;
+    const timer = window.setTimeout(() => setError(null), 3200);
+    return () => window.clearTimeout(timer);
+  }, [error]);
+
   // --- Interactions --------------------------------------------------------
   const handleRackTileClick = (tile: Tile) => {
     if (!interactive) return;
@@ -227,6 +241,14 @@ function Game({ tileData, dictionary, mode, aiOpponent, onBackToMenu }: GameProp
     if (existing) {
       setPending(current => current.filter(p => p.tileId !== existing.tileId));
       setSelectedRackTileId(null);
+      return;
+    }
+
+    // Never let a pending tile cover a tile already on the board: the engine
+    // would reject the play anyway, and the placed tile would hide the letter
+    // underneath it.
+    if (getBoardTile(gameState.board, position)) {
+      setHint('That square is taken');
       return;
     }
 
@@ -346,12 +368,14 @@ function Game({ tileData, dictionary, mode, aiOpponent, onBackToMenu }: GameProp
             : 'Ready — tap Draw',
       };
     }
+    // A hint is a response to something the player just did, so it outranks the
+    // standing last-play readout.
+    if (hint) return { kind: 'toast-hint', text: hint };
     if (gameState.lastPlay) {
       const words = gameState.lastPlay.words.map(w => w.word).join(' + ');
       const who = gameState.lastPlay.player === viewer.id ? youLabel : otherLabel;
       return { kind: 'toast-info', text: `${who} played ${words} +${gameState.lastPlay.totalScore}` };
     }
-    if (hint) return { kind: 'toast-hint', text: hint };
     return null;
   }, [
     error,
