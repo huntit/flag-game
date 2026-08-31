@@ -1,0 +1,4 @@
+{
+  "name": "flag-game-server",
+  "main": "src/server/index.ts"
+}

@@ -1,0 +1,97 @@
+/* Game styles */
+
+.game {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  padding: 12px;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.game-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.game-header h1 {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: var(--color-primary);
+  flex: 1;
+  text-align: center;
+}
+
+.back-button {
+  padding: 8px 12px;
+  font-size: 0.875rem;
+  background-color: var(--color-bg-light);
+  color: var(--color-text);
+  border-radius: 6px;
+}
+
+.game-error {
+  padding: 12px;
+  margin-bottom: 12px;
+  background-color: var(--color-secondary);
+  color: var(--color-text);
+  border-radius: 6px;
+  text-align: center;
+  font-size: 0.875rem;
+}
+
+.game-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.action-button {
+  padding: 14px;
+  font-size: 1rem;
+  font-weight: 600;
+  border-radius: 6px;
+  transition: transform 0.1s;
+}
+
+.action-button:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.action-draw {
+  background-color: var(--color-primary);
+  color: var(--color-text);
+}
+
+.action-play {
+  background-color: var(--color-success);
+  color: var(--color-text);
+}
+
+.action-clear {
+  background-color: var(--color-bg-light);
+  color: var(--color-text);
+}
+
+.action-pass {
+  background-color: var(--color-warning);
+  color: var(--color-tile-text);
+}
+
+@media (max-width: 380px) {
+  .game {
+    padding: 8px;
+  }
+
+  .game-actions {
+    gap: 6px;
+  }
+
+  .action-button {
+    padding: 12px;
+    font-size: 0.875rem;
+  }
+}
