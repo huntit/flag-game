@@ -69,18 +69,29 @@ A two-player digital prototype combining crossword mechanics, a Splendor-style g
 
 **DO NOT use a third-party crossword publisher's bag composition or letter values.**
 
-**Letter values:** ✅ Available at `data/tiles.json`
+**Tile set:** ✅ Available at `data/tiles.json`
 
-**Source:** Word Eagle WWF default (huntit/web-apps/wordgame/index.html TILE_SETS, lines ~997–1002)
+**Source:**
+- **Letter values:** Word Eagle TILE_SETS.wwf (huntit/web-apps/wordgame/index.html lines ~997–1002)
+- **Bag counts:** Published Words With Friends English distribution (104 tiles, 2 blanks)
 
-**Bag distribution:** ⏳ Still pending — Word Eagle is a daily 7-tile seed-word puzzle, not a bag game, so letter counts are not defined in that code.
+**Complete WWF English tile set (104 tiles):**
 
-Until bag distribution is provided:
+```
+A9 B2 C2 D5 E13 F2 G3 H4 I8 J1 K1 L4 M2 N5 O8 P2 Q1 R6 S5 T7 U4 V2 W2 X1 Y2 Z1 Blank 2
+```
 
-- Load letter values from `data/tiles.json` (WWF is the default set)
-- The file includes `countsPending: true` and `count: null` for each letter
-- Leave a **loud TODO** for bag distribution
-- Do NOT invent Scrabble-like tile counts or fabricate a 100-tile bag
+**Letter values:**
+
+```
+A1 B4 C4 D2 E1 F4 G3 H3 I1 J10 K5 L2 M4 N2 O1 P4 Q10 R1 S1 T1 U2 V5 W4 X8 Y3 Z10
+```
+
+**Important:**
+- Load both counts and values from `data/tiles.json`
+- **NOT** NYT Crossplay bag (100 tiles / 3 blanks / different values)
+- **NOT** Scrabble bag (100 tiles / different counts)
+- Flag uses the **WWF English bag (104 tiles)** paired with **Word Eagle's WWF letter values**
 
 **Blank tiles:**
 

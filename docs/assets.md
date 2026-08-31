@@ -1,6 +1,6 @@
 # Flag Tile Set and Dictionary
 
-**Status:** Word list ✅ | Letter values ✅ | Bag distribution ⏳
+**Status:** Word list ✅ | Tile set ✅ (counts + values)
 
 ## Overview
 
@@ -9,9 +9,9 @@ Flag v0 will **NOT use a third-party crossword publisher's tile bag, letter valu
 Instead, Flag uses:
 
 - A **custom word list** (Peter's ENABLE-based list with additions and exclusions) ✅
-- A **custom tile set:**
-  - **Letter values** ✅ — Locked from Word Eagle WWF default
-  - **Bag distribution** ⏳ — Pending (not present in Word Eagle, which is a seed-word puzzle, not a bag game)
+- **Words With Friends English bag** (104 tiles, 2 blanks) paired with **Word Eagle's WWF letter values** ✅
+  - **NOT** NYT Crossplay bag (100 tiles / 3 blanks / different values)
+  - **NOT** Scrabble bag (100 tiles)
 
 ## Word List
 
@@ -39,43 +39,75 @@ The full source file is preserved in `data/words.txt`. For v0 (9×9 board), Ada 
 
 **Path:** `data/tiles.json` ✅
 
-**Source:** Word Eagle (huntit/web-apps/wordgame/index.html TILE_SETS, lines ~997–1002)
+**Source:**
+- **Letter values:** Word Eagle TILE_SETS.wwf (huntit/web-apps/wordgame/index.html lines ~997–1002)
+- **Bag counts:** Published Words With Friends English distribution (104 tiles, 2 blanks)
 
-### Letter Values ✅
+### Complete WWF English Tile Set ✅
 
-**Locked from Word Eagle WWF default** (Flag v0 letter scores):
+**104 tiles total** (102 letter tiles + 2 blanks):
+
+| Letter | Count | Value |
+|--------|-------|-------|
+| A | 9 | 1 |
+| B | 2 | 4 |
+| C | 2 | 4 |
+| D | 5 | 2 |
+| E | 13 | 1 |
+| F | 2 | 4 |
+| G | 3 | 3 |
+| H | 4 | 3 |
+| I | 8 | 1 |
+| J | 1 | 10 |
+| K | 1 | 5 |
+| L | 4 | 2 |
+| M | 2 | 4 |
+| N | 5 | 2 |
+| O | 8 | 1 |
+| P | 2 | 4 |
+| Q | 1 | 10 |
+| R | 6 | 1 |
+| S | 5 | 1 |
+| T | 7 | 1 |
+| U | 4 | 2 |
+| V | 2 | 5 |
+| W | 2 | 4 |
+| X | 1 | 8 |
+| Y | 2 | 3 |
+| Z | 1 | 10 |
+| **Blank** | **2** | **0** |
+
+**Compact notation:**
+
+```
+A9 B2 C2 D5 E13 F2 G3 H4 I8 J1 K1 L4 M2 N5 O8 P2 Q1 R6 S5 T7 U4 V2 W2 X1 Y2 Z1 Blank 2
+```
+
+**Values:**
 
 ```
 A1 B4 C4 D2 E1 F4 G3 H3 I1 J10 K5 L2 M4 N2 O1 P4 Q10 R1 S1 T1 U2 V5 W4 X8 Y3 Z10
 ```
 
-**Also available:** Scrabble values (present in Word Eagle TILE_SETS but not the default):
+**Blanks:** Score 0 when played. Taking a blank from the market counts as the one-tile draw (no second tile allowed).
 
-```
-A1 B3 C3 D2 E1 F4 G2 H4 I1 J8 K5 L1 M3 N1 O1 P3 Q10 R1 S1 T1 U1 V4 W4 X8 Y4 Z10
-```
+### Important Notes
 
-**Blanks:** Flag-only (market rule); not present in Word Eagle. Blanks score 0 when played.
-
-### Bag Distribution ⏳
-
-**Still pending.** Word Eagle is a daily 7-tile seed-word puzzle, not a bag game — it does not define letter counts or a tile bag.
-
-The `data/tiles.json` file records letter values with `count: null` for each letter. `countsPending: true` is set at the top level.
-
-**Ada:** Load letter values from `data/tiles.json`. Bag distribution will be added later. Do NOT invent a Scrabble-like 100-tile bag or fabricate counts.
+- **NOT NYT Crossplay bag** (100 tiles / 3 blanks / different values)
+- **NOT Scrabble bag** (100 tiles / different counts)
+- Flag uses the **WWF English bag (104 tiles)** paired with **Word Eagle's WWF letter values**
 
 ## Word Eagle Assets
 
-Peter's other game [Word Eagle](https://www.huntit.com.au/apps/wordgame/) ([source](https://github.com/huntit/web-apps/tree/main/wordgame)) already implements the real word list and tile values.
+Peter's other game [Word Eagle](https://www.huntit.com.au/apps/wordgame/) ([source](https://github.com/huntit/web-apps/tree/main/wordgame)) provides the WWF letter values used in Flag.
 
-**Letter values extracted from Word Eagle TILE_SETS (index.html lines ~997–1002):**
-- ✅ WWF values (default) recorded in `data/tiles.json`
-- ✅ Scrabble values (also present, not default) recorded in `data/tiles.json`
+**Extracted from Word Eagle:**
+- ✅ WWF letter values from TILE_SETS.wwf (index.html lines ~997–1002) recorded in `data/tiles.json`
 
-**Bag distribution not present in Word Eagle** — Word Eagle is a daily 7-tile seed-word puzzle, not a bag game.
+**From published WWF English distribution:**
+- ✅ Bag counts (104 tiles, 2 blanks) recorded in `data/tiles.json`
 
-**Ada:** Do NOT vendor Word Eagle application code. The word list and letter values are now available as data files in this repository.
+**Ada:** Do NOT vendor Word Eagle application code. The word list and complete tile set (counts + values) are now available as data files in this repository.
 
 ---
 

@@ -10,20 +10,19 @@ Documentation for v0 playable slice. No implementation yet. Ada will build from 
 
 **Data files:**
 - ✅ Word list available at `data/words.txt` (175,030 words from Word Eagle)
-- ✅ Letter values available at `data/tiles.json` (WWF and Scrabble values from Word Eagle)
-- ⏳ Bag distribution pending (not in Word Eagle code)
+- ✅ Tile set available at `data/tiles.json` (WWF English bag: 104 tiles, 2 blanks + Word Eagle WWF values)
 
 ## Documentation
 
 - [How to Play](docs/how-to-play.md) — Human-readable rules for v0
 - [Prototype Specification](docs/prototype-spec.md) — Technical build spec for Ada
-- [Assets](docs/assets.md) — Word list ✅, letter values ✅, bag distribution ⏳
+- [Assets](docs/assets.md) — Word list ✅, tile set ✅ (WWF English bag + Word Eagle values)
 
 ## Distinctiveness
 
 Flag is a distinct game, not a variant of commercial crossword products:
 
-- **Custom dictionary and tiles** — Flag uses Peter's custom ENABLE-based word list and tile set (bag composition, letter values), not third-party crossword publisher data
+- **Custom dictionary and tile set** — Flag uses Peter's custom ENABLE-based word list and the WWF English bag (104 tiles) paired with Word Eagle's WWF letter values, not third-party crossword publisher data
 - **9×9 board with no premium squares** — Simple grid, no double/triple letter or word scores
 - **Take-or-spend turns** — Draw from market to build your rack OR play tiles to score; playing does not refill your rack
 - **Flag clock** — A rotating capture target that moves clockwise through four corner posts, acting as a game timer and victory condition
@@ -40,8 +39,7 @@ Once built, the prototype supports three modes:
 
 **Build readiness:**
 - ✅ Word list available (`data/words.txt`)
-- ✅ Letter values available (`data/tiles.json`)
-- ⏳ Bag distribution pending (not in Word Eagle; needed for full gameplay)
+- ✅ Tile set available (`data/tiles.json` — WWF English bag: 104 tiles, 2 blanks + Word Eagle WWF values)
 
 ## Team
 

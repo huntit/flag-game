@@ -11,8 +11,9 @@ Flag is a two-player word game. Drawing from the market builds a better rack for
 - **2 players**
 - **9×9 board** with centre star at (5,5) and four flag posts
 - **Flag's tile set:**
-  - ✅ **Letter values** locked from Word Eagle WWF default (see [docs/assets.md](assets.md))
-  - ⏳ **Bag distribution** pending (not in Word Eagle, which is a seed-word puzzle, not a bag game)
+  - **WWF English bag:** 104 tiles (A9 B2 C2 D5 E13 F2 G3 H4 I8 J1 K1 L4 M2 N5 O8 P2 Q1 R6 S5 T7 U4 V2 W2 X1 Y2 Z1 Blank 2)
+  - **Word Eagle WWF values:** A1 B4 C4 D2 E1 F4 G3 H3 I1 J10 K5 L2 M4 N2 O1 P4 Q10 R1 S1 T1 U2 V5 W4 X8 Y3 Z10 (Blank 0)
+  - See [docs/assets.md](assets.md) for the complete tile table
 - **Racks** holding maximum 7 tiles per player
 - **Market** showing 4 face-up tiles
 - **Bag** with remaining tiles
