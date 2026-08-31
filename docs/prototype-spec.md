@@ -13,7 +13,7 @@ A two-player digital prototype combining crossword mechanics, a Splendor-style g
 
 **Three play modes, one engine:**
 
-1. **Solo vs Hunter** — Play against Greedy, Hunter, or Sleeper personality (opponent rack **letters** hidden; rack **count** public as 0–7 facedown tile backs with empty slots, not a numeric badge). Local TypeScript engine in the browser. No room server. This is the iPhone Safari feel-test.
+1. **Solo vs Hunter** — Play against Greedy, Hunter, or Sleeper personality (opponent rack **letters** hidden; rack **count** public as 0–7 facedown tile backs with empty slots **plus a readable number**). Local TypeScript engine in the browser. No room server. This is the iPhone Safari feel-test.
 2. **Hotseat** — Two humans on one device, local engine. Pass-the-phone. No room.
 3. **Remote 2-player** — Live and correspondence are ONE mode (persistent game links). Secret unguessable game/seat links. No 4-letter room codes. Host creates a game and gets a P2 invite link to send. Each seat is a secret token so players can return for days on another device without accounts. No logins, no matchmaking, no friend lists, no accounts for v0. Transport: PartyKit (one Cloudflare Durable Object per game). UI can stay on Vercel; rooms on PartyKit. Authority: the same TypeScript rules engine is room-authoritative. Clients send actions (Draw, Play, Pass). The room validates, applies, and broadcasts public state. Opponent rack **letters** must not leak in the URL or in the other client's payload. Opponent rack **count** is public state. Bag, market, board, scores, flag, whose-turn, and rack counts live on the room. Persistence: store the engine snapshot in room storage. Do NOT destroy the room when tabs close or both players go offline. A game may sit for days. If both players are online it feels live; if not, it waits. Pass is an explicit button. Never treat silence, a closed tab, or elapsed time as a pass. Consecutive double-pass still ends the game only after two explicit passes in a row. Notifications are out of scope for v0. Testers ping each other (iMessage etc.) for "your turn" until later.
 4. **AI vs AI lab** — Headless simulation for game balance analysis
@@ -224,6 +224,10 @@ If the bag runs out during market refill, set `bagDepleted = true`. The game wil
   - No legal Draw (market and bag both empty), AND
   - No legal Play (no valid word placements possible)
 
+**TODO(Finch) — stuck-exchange gap.** "No legal Draw" as written (market and bag both empty) leaves a state where the game can never end. With a **full 7-tile rack**, a Draw can only be an exchange: return N tiles to the bag, take N from the market, refill the market from the bag. That is tile-neutral, so `bagDepleted` can never become true. If both players also have no legal Play — reachable on a crowded board, and hit by `flag-sim` — neither Draw, Play, Pass, capture, bag, nor posts-full can ever fire, and the game runs forever.
+
+The implementation therefore treats **a full rack as no legal Draw** for the purposes of Pass legality only, so a genuinely stuck player can reach for the Pass button and the existing double-pass ending finishes the game. Pass stays stuck-only: it still requires no legal Play, a player with room in their rack still cannot pass, and exchanging with a full rack is still allowed for anyone who wants it. No new `endReason` was invented. Please confirm or replace this rule.
+
 **UI requirement:**
 
 - Pass is an **explicit button** the player must tap
@@ -262,6 +266,14 @@ Do NOT tie-break by who captured.
 
 ## 9. UI Requirements (Minimum)
 
+**Layout — no vertical scrolling (locked 31 Aug 2026).**
+
+The whole play UI (board, market, racks, action buttons) must fit the visual viewport on iPhone and iPad. The player must never scroll to reach Draw, Play, Shuffle or Pass. If space runs short, shrink the chrome — never the reachability of the buttons. Use the safe area (`env(safe-area-inset-*)` with `viewport-fit=cover`). State the constraint in CSS: the play screen is `100svh` tall (falling back to `100dvh`, then `100vh`) with `overflow: hidden`, and the board is sized from whatever height the chrome leaves over.
+
+**Action buttons.** Every action button is enabled only when that action is legal or has a reason to press, and disabled otherwise. Pass included — see section 7.3.
+
+**Shuffle.** The player can shuffle their own rack. Shuffling is **not a turn**: it does not advance the flag, does not change the score, and does not change tile identity — only the order tiles sit in.
+
 **Board view:**
 
 - 11×11 grid
@@ -282,7 +294,7 @@ Do NOT tie-break by who captured.
 **Racks:**
 
 - Your own rack always visible (letters)
-- **Opponent (and AI) rack CONTENTS stay hidden.** Rack **COUNT** is public: show 0–7 facedown tile backs with empty slots, not a numeric badge
+- **Opponent (and AI) rack CONTENTS stay hidden.** Rack **COUNT** is public: show 0–7 facedown tile backs with empty slots, **and show the count as a number** — Peter asked for the count to be readable at a glance for strategy (31 Aug 2026)
 - **Hotseat:** Pass-the-device interstitial between turns. After the interstitial, the incoming player sees how many tiles the opponent has (facedown backs and empty slots), not the letters
 - **Remote 2-player:** Rack count is public state; letters are not. Do not leak opponent letters in the URL or the other client's payload
 
@@ -301,8 +313,10 @@ Do NOT tie-break by who captured.
 **Play flow:**
 
 - Tap tiles from rack to board (tap-to-place). On iPhone Safari this remains tap-to-place even on the 11×11 grid; smaller cells are OK. Do not switch to desktop drag as the primary input.
+- Tapping a placed-but-unconfirmed tile returns it to the rack
+- Placing a blank prompts for the letter it stands for
 - Confirm placement
-- Reject illegal plays with a short reason (e.g., "Not in dictionary", "Must attach to existing word")
+- Reject illegal plays with a short reason (e.g., "Not a word: CD", "Play must touch a tile already on the board"). The Play button stays disabled while the placement is illegal, so the reason shows before the player commits
 
 **Main menu:**
 
@@ -572,7 +586,7 @@ These are intentional design choices:
 - **Rotation on Draw is a stall tax** — Even drawing advances the flag
 - **Two opening tiles from the bag** — Deal 2 from the bag to each rack (not empty opening racks, not 7, not from the market). First action may be Draw or Play
 - **11×11, not 10×10** — Odd size so there is a centre cell at (6,6)
-- **Public rack count, hidden letters** — Show facedown backs and empty slots; do not expose opponent letters; do not use a numeric badge
+- **Public rack count, hidden letters** — Show facedown backs and empty slots plus a readable count number; never expose opponent letters
 
 ## 17. Original Spark (Context, Not v0)
 

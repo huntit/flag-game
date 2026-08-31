@@ -1,50 +1,38 @@
-// GameInfo component
+// Compact HUD strip: menu, your score, live post and bag count on one line.
 
-import type { GameState } from '../engine/types';
 import './GameInfo.css';
 
 interface GameInfoProps {
-  gameState: GameState;
-  isVsAI: boolean;
-  isAIThinking: boolean;
+  youLabel: string;
+  yourScore: number;
+  isYourTurn: boolean;
+  livePost: string;
+  bagCount: number;
+  onBackToMenu: () => void;
 }
 
-function GameInfo({ gameState, isAIThinking }: GameInfoProps) {
-  const [p1, p2] = gameState.players;
-  const currentPlayer = gameState.players[gameState.currentPlayer];
-
+function GameInfo({ youLabel, yourScore, isYourTurn, livePost, bagCount, onBackToMenu }: GameInfoProps) {
   return (
-    <div className="game-info">
-      <div className="scores">
-        <div className={`player-score ${currentPlayer.id === 'P1' ? 'active' : ''}`}>
-          <div className="player-name">P1 {currentPlayer.id === 'P1' && '◀'}</div>
-          <div className="score">{p1.score}</div>
-        </div>
-        <div className={`player-score ${currentPlayer.id === 'P2' ? 'active' : ''}`}>
-          <div className="player-name">P2 {currentPlayer.id === 'P2' && '◀'}</div>
-          <div className="score">{p2.score}</div>
-        </div>
+    <>
+      <button type="button" className="icon-button" onClick={onBackToMenu} aria-label="Back to menu">
+        ‹
+      </button>
+
+      <div className={`hud-chip hud-you ${isYourTurn ? 'is-active' : ''}`}>
+        <span className="hud-key">{youLabel}</span>
+        <span className="hud-value">{yourScore}</span>
       </div>
 
-      <div className="game-status">
-        <div className="status-item">
-          <span className="status-label">Live Post:</span>
-          <span className="status-value">{gameState.livePost}</span>
-        </div>
-        <div className="status-item">
-          <span className="status-label">Bag:</span>
-          <span className="status-value">{gameState.bag.length} tiles</span>
-        </div>
-        <div className="status-item">
-          <span className="status-label">Turn:</span>
-          <span className="status-value">{gameState.turnCount + 1}</span>
-        </div>
+      <div className="hud-chip">
+        <span className="hud-key">Flag</span>
+        <span className="hud-value hud-flag">{livePost}</span>
       </div>
 
-      {isAIThinking && (
-        <div className="ai-thinking">AI is thinking...</div>
-      )}
-    </div>
+      <div className="hud-chip">
+        <span className="hud-key">Bag</span>
+        <span className="hud-value">{bagCount}</span>
+      </div>
+    </>
   );
 }
 

@@ -1,85 +1,55 @@
-/* Market styles */
+/* Market row. Shares tray/tile styling with the rack (see Rack.css). */
 
-.market-container {
-  margin-bottom: 12px;
-}
-
-.market-label {
-  font-size: 0.75rem;
-  color: var(--color-text-dim);
-  margin-bottom: 4px;
-  text-align: center;
-}
-
-.market {
-  display: flex;
+.market-tray {
   justify-content: center;
-  gap: 8px;
-  padding: 12px;
-  background-color: var(--color-bg-light);
-  border-radius: 8px;
-  min-height: 70px;
 }
 
-.market-tile {
-  width: 52px;
-  height: 60px;
-  background-color: var(--color-tile);
-  color: var(--color-tile-text);
-  border-radius: 6px;
+.market-tile,
+.market-tray .tray-slot-empty {
+  width: min(calc((100% - 3 * 6px) / 4), calc(var(--market-h) * 0.8));
+}
+
+.market-tile .tile-letter {
+  font-size: calc(var(--market-h) * 0.42);
+}
+
+.market-tile .tile-value {
+  font-size: calc(var(--market-h) * 0.2);
+}
+
+.market-tile.is-selected {
+  transform: translateY(-10%);
+}
+
+.bag-toggle {
+  flex: 0 0 auto;
+  width: calc(var(--market-h) * 0.72);
+  height: 82%;
+  border-radius: 8px;
+  background-color: var(--color-bg-lift);
+  color: var(--color-text-dim);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  font-weight: bold;
-  cursor: pointer;
-  touch-action: manipulation;
-  transition: transform 0.1s, box-shadow 0.1s;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-}
-
-.market-tile:active:not(.disabled) {
-  transform: scale(0.95);
-}
-
-.market-tile.selected {
-  transform: scale(1.05);
-  box-shadow: 0 4px 8px rgba(74, 158, 255, 0.5);
-  border: 2px solid var(--color-primary);
-}
-
-.market-tile.disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.market-tile .tile-letter {
-  font-size: 1.25rem;
+  gap: 1px;
+  font-size: calc(var(--market-h) * 0.24);
+  font-weight: 800;
   line-height: 1;
 }
 
-.market-tile .tile-value {
-  font-size: 0.75rem;
-  margin-top: 2px;
-  opacity: 0.7;
+.bag-toggle small {
+  font-size: calc(var(--market-h) * 0.15);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
-@media (max-width: 380px) {
-  .market {
-    gap: 6px;
-    padding: 8px;
-  }
+.bag-toggle.is-on:not(:disabled) {
+  background-color: var(--color-primary);
+  color: #06121f;
+}
 
-  .market-tile {
-    width: 44px;
-    height: 52px;
-  }
-
-  .market-tile .tile-letter {
-    font-size: 1rem;
-  }
-
-  .market-tile .tile-value {
-    font-size: 0.625rem;
-  }
+.bag-toggle:disabled {
+  opacity: 0.3;
 }

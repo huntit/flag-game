@@ -1,6 +1,6 @@
 // Main App component
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { loadTileData, loadDictionary } from './data/loader';
 import { Dictionary } from './engine/dictionary';
 import type { TileData } from './engine/types';
@@ -15,42 +15,50 @@ export type AIOpponent = 'greedy' | 'hunter' | 'sleeper';
 function App() {
   const [tileData, setTileData] = useState<TileData | null>(null);
   const [dictionary, setDictionary] = useState<Dictionary | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [gameMode, setGameMode] = useState<GameMode>('menu');
   const [aiOpponent, setAIOpponent] = useState<AIOpponent>('hunter');
 
   useEffect(() => {
+    let cancelled = false;
+
     async function loadData() {
       try {
-        const [tiles, dict] = await Promise.all([
-          loadTileData(),
-          loadDictionary(),
-        ]);
+        const [tiles, dict] = await Promise.all([loadTileData(), loadDictionary()]);
+        if (cancelled) return;
         setTileData(tiles);
         setDictionary(dict);
       } catch (error) {
-        console.error('Failed to load game data:', error);
-      } finally {
-        setLoading(false);
+        if (cancelled) return;
+        setLoadError(error instanceof Error ? error.message : 'Unknown error');
       }
     }
+
     loadData();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-  if (loading) {
+  if (loadError) {
     return (
-      <div className="app-loading">
-        <h1>Flag</h1>
-        <p>Loading game data...</p>
+      <div className="screen">
+        <div className="screen-panel">
+          <h1>Flag</h1>
+          <p>Could not load the word list. Pull to refresh.</p>
+          <p>{loadError}</p>
+        </div>
       </div>
     );
   }
 
   if (!tileData || !dictionary) {
     return (
-      <div className="app-error">
-        <h1>Error</h1>
-        <p>Failed to load game data. Please refresh.</p>
+      <div className="screen">
+        <div className="screen-panel">
+          <h1>Flag</h1>
+          <p>Loading words…</p>
+        </div>
       </div>
     );
   }
@@ -59,8 +67,8 @@ function App() {
     return (
       <Menu
         onSelectMode={(mode, opponent) => {
-          setGameMode(mode);
           if (opponent) setAIOpponent(opponent);
+          setGameMode(mode);
         }}
       />
     );
@@ -72,6 +80,7 @@ function App() {
 
   return (
     <Game
+      key={`${gameMode}-${aiOpponent}`}
       tileData={tileData}
       dictionary={dictionary}
       mode={gameMode}

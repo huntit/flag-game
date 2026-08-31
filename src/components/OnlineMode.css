@@ -1,63 +1,47 @@
-/* OnlineMode styles */
+/* Remote mode screen. Copy scrolls inside its own panel; the page never does. */
 
-.online-mode {
+.online-panel {
+  gap: 16px;
+  text-align: left;
+}
+
+.online-panel h1 {
+  text-align: center;
+  color: var(--color-primary);
+}
+
+.online-body {
+  flex: 0 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-height: 100vh;
-  padding: 20px;
-}
-
-.online-content {
-  max-width: 500px;
-  width: 100%;
-}
-
-.online-content h1 {
-  font-size: 2rem;
-  font-weight: bold;
-  text-align: center;
-  margin-bottom: 2rem;
-  color: var(--color-primary);
-}
-
-.online-info {
-  padding: 20px;
+  gap: 10px;
+  padding: 16px;
+  border-radius: 12px;
   background-color: var(--color-bg-light);
-  border-radius: 8px;
-  margin-bottom: 2rem;
-  line-height: 1.6;
 }
 
-.online-info p {
-  margin-bottom: 12px;
+.online-body p {
+  font-size: 0.86rem;
+  line-height: 1.5;
 }
 
-.online-info ul {
-  margin-left: 20px;
-  margin-bottom: 12px;
-}
-
-.online-info li {
-  margin-bottom: 6px;
-}
-
-.online-info strong {
-  color: var(--color-primary);
-}
-
-.back-button-large {
-  width: 100%;
-  padding: 16px 24px;
-  font-size: 1.125rem;
-  font-weight: 600;
-  background-color: var(--color-bg-light);
+.online-body strong {
   color: var(--color-text);
-  border-radius: 8px;
-  transition: background-color 0.2s;
 }
 
-.back-button-large:hover {
-  background-color: #3a3a3a;
+.online-status {
+  color: var(--color-warning) !important;
+  font-weight: 700;
+}
+
+.online-back {
+  height: 48px;
+  border-radius: 11px;
+  background-color: var(--color-bg-lift);
+  color: var(--color-text);
+  font-size: 0.95rem;
+  font-weight: 700;
 }

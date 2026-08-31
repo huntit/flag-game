@@ -22,7 +22,8 @@ Flag is a two-player word game. Drawing from the market builds a better rack for
   - **WWF English bag:** 104 tiles (A9 B2 C2 D5 E13 F2 G3 H4 I8 J1 K1 L4 M2 N5 O8 P2 Q1 R6 S5 T7 U4 V2 W2 X1 Y2 Z1 Blank 2)
   - **Word Eagle WWF values:** A1 B4 C4 D2 E1 F4 G3 H3 I1 J10 K5 L2 M4 N2 O1 P4 Q10 R1 S1 T1 U2 V5 W4 X8 Y3 Z10 (Blank 0)
   - See [docs/assets.md](assets.md) for the complete tile table
-- **Racks** holding maximum 7 tiles per player. You always see your own letters. Opponent rack **letters** stay hidden; opponent rack **count** is public (0–7 facedown tile backs with empty slots, not a numeric badge)
+- **Racks** holding maximum 7 tiles per player. You always see your own letters. Opponent rack **letters** stay hidden; opponent rack **count** is public — 0–7 facedown tile backs with empty slots, **plus the count as a number** so you can plan against it
+- **Shuffle** to reorder your own rack. Shuffling is not a turn and does not change which tiles you hold, only the order they sit in
 - **Market** showing 4 face-up tiles
 - **Bag** with remaining tiles
 

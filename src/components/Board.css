@@ -1,133 +1,109 @@
-/* Board styles */
-
-.board-container {
-  margin-bottom: 12px;
-}
+/* Board grid.
+ *
+ * The board is exactly --board-size square (computed in Game.css from the space
+ * left after the chrome), so all 11 columns always fit without scrolling.
+ * Everything inside a cell is sized from --cell so letters and values stay
+ * aligned and legible at any board size.
+ */
 
 .board {
-  display: flex;
-  flex-direction: column;
+  width: var(--board-size);
+  height: var(--board-size);
+  display: grid;
+  grid-template-columns: repeat(11, 1fr);
+  grid-template-rows: repeat(11, 1fr);
+  gap: 1px;
+  padding: 2px;
   background-color: var(--color-board);
-  border: 2px solid var(--color-bg-light);
   border-radius: 8px;
-  padding: 4px;
   touch-action: manipulation;
-}
-
-.board-row {
-  display: flex;
 }
 
 .board-cell {
   position: relative;
-  width: calc((100vw - 32px) / 11);
-  height: calc((100vw - 32px) / 11);
-  max-width: 48px;
-  max-height: 48px;
+  overflow: hidden;
+  padding: 0;
+  border-radius: calc(var(--cell) * 0.1);
   background-color: var(--color-cell);
-  border: 1px solid var(--color-board);
   display: flex;
   align-items: center;
   justify-content: center;
-  cursor: pointer;
-  touch-action: manipulation;
+  min-width: 0;
+  min-height: 0;
+}
+
+.board-cell.is-centre {
+  background-color: #23304a;
+}
+
+.board-cell.is-dark-post {
+  background-color: #2f3546;
+  box-shadow: inset 0 0 0 1px var(--color-dark-post);
+}
+
+.board-cell.is-live-post {
+  background-color: #4a3c10;
+  box-shadow: inset 0 0 0 2px var(--color-live-post);
+}
+
+.board-cell.is-highlighted {
+  background-color: #1d4a2c;
+  box-shadow: inset 0 0 0 2px var(--color-success);
 }
 
 .board-cell:active {
-  background-color: var(--color-cell-hover);
+  filter: brightness(1.35);
 }
 
-.board-cell.live-post {
-  background-color: rgba(255, 212, 59, 0.3);
-  border-color: var(--color-live-post);
-}
-
-.board-cell.dark-post {
-  background-color: rgba(102, 102, 102, 0.2);
-  border-color: var(--color-dark-post);
-}
-
-.board-cell.centre-star {
-  background-color: rgba(74, 158, 255, 0.2);
-}
-
-.board-cell.pending {
-  background-color: rgba(81, 207, 102, 0.3);
-}
-
+/* Tile fills its cell, so letter and value can never sit outside the square. */
 .board-tile {
-  width: 90%;
-  height: 90%;
+  position: absolute;
+  inset: 3%;
+  border-radius: calc(var(--cell) * 0.12);
   background-color: var(--color-tile);
   color: var(--color-tile-text);
-  border-radius: 4px;
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  font-weight: bold;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
 }
 
-.tile-letter {
-  font-size: 0.75rem;
+.board-tile.is-pending {
+  background-color: #b9f0c6;
+  box-shadow: 0 0 0 1px var(--color-success);
+}
+
+.board-tile.is-blank {
+  background-color: var(--color-tile-blank);
+}
+
+.board-tile .tile-letter {
+  font-size: calc(var(--cell) * 0.52);
+  font-weight: 800;
   line-height: 1;
+  /* Optical centring: leave room for the value in the bottom-right corner. */
+  transform: translate(-7%, -6%);
 }
 
-.tile-value {
-  font-size: 0.5rem;
-  margin-top: 1px;
-  opacity: 0.7;
+/* The value has to stay legible at a ~32px cell, so it is deliberately larger
+   and darker than a typical corner subscript. */
+.board-tile .tile-value {
+  position: absolute;
+  right: 4%;
+  bottom: 0;
+  font-size: calc(var(--cell) * 0.34);
+  font-weight: 800;
+  line-height: 1.05;
+  color: #6a5f47;
 }
 
-.star {
-  font-size: 1rem;
+.cell-mark {
+  font-size: calc(var(--cell) * 0.5);
+  line-height: 1;
   color: var(--color-primary);
+  pointer-events: none;
 }
 
-.flag-icon {
-  font-size: 1rem;
-}
-
-@media (max-width: 380px) {
-  .board {
-    padding: 2px;
-  }
-
-  .board-cell {
-    border-width: 0.5px;
-  }
-
-  .tile-letter {
-    font-size: 0.65rem;
-  }
-
-  .tile-value {
-    font-size: 0.45rem;
-  }
-
-  .star,
-  .flag-icon {
-    font-size: 0.875rem;
-  }
-}
-
-@media (min-width: 600px) {
-  .board-cell {
-    width: 48px;
-    height: 48px;
-  }
-
-  .tile-letter {
-    font-size: 1rem;
-  }
-
-  .tile-value {
-    font-size: 0.625rem;
-  }
-
-  .star,
-  .flag-icon {
-    font-size: 1.25rem;
-  }
+.cell-mark.cell-flag {
+  color: var(--color-live-post);
 }

@@ -1,4 +1,4 @@
-// Menu component
+// Main menu. Fits the viewport with no scrolling, like every other screen.
 
 import type { GameMode, AIOpponent } from '../App';
 import './Menu.css';
@@ -9,56 +9,39 @@ interface MenuProps {
 
 function Menu({ onSelectMode }: MenuProps) {
   return (
-    <div className="menu">
-      <div className="menu-content">
-        <h1 className="menu-title">Flag</h1>
-        <p className="menu-subtitle">Two-player word game</p>
+    <div className="screen menu">
+      <div className="screen-panel menu-panel">
+        <div className="menu-head">
+          <h1 className="menu-title">Flag</h1>
+          <p className="menu-subtitle">11×11 · cover the live post to end it</p>
+        </div>
 
         <div className="menu-buttons">
-          <button
-            className="menu-button"
-            onClick={() => onSelectMode('vs-ai', 'hunter')}
-          >
+          <button type="button" className="menu-button is-primary" onClick={() => onSelectMode('vs-ai', 'hunter')}>
             vs Hunter
+            <small>Hunts the flag</small>
           </button>
-
-          <button
-            className="menu-button"
-            onClick={() => onSelectMode('hotseat')}
-          >
+          <button type="button" className="menu-button" onClick={() => onSelectMode('hotseat')}>
             Hotseat
+            <small>Two players, one phone</small>
           </button>
-
-          <button
-            className="menu-button"
-            onClick={() => onSelectMode('vs-ai', 'greedy')}
-          >
-            vs Greedy
-          </button>
-
-          <button
-            className="menu-button"
-            onClick={() => onSelectMode('vs-ai', 'sleeper')}
-          >
-            vs Sleeper
-          </button>
-
-          <button
-            className="menu-button menu-button-secondary"
-            onClick={() => onSelectMode('online')}
-          >
-            Remote 2P
+          <div className="menu-split">
+            <button type="button" className="menu-button is-small" onClick={() => onSelectMode('vs-ai', 'greedy')}>
+              vs Greedy
+            </button>
+            <button type="button" className="menu-button is-small" onClick={() => onSelectMode('vs-ai', 'sleeper')}>
+              vs Sleeper
+            </button>
+          </div>
+          <button type="button" className="menu-button is-small" onClick={() => onSelectMode('online')}>
+            Remote 2-player
           </button>
         </div>
 
-        <div className="menu-info">
-          <p>
-            <strong>Goal:</strong> Score points by forming words. Cover the live flag post to end the game.
-          </p>
-          <p>
-            <strong>Turn:</strong> Draw tiles from the market OR play tiles from your rack.
-          </p>
-        </div>
+        <p className="menu-note">
+          Draw from the market <strong>or</strong> play tiles — never both. Pass only exists when
+          you are stuck.
+        </p>
       </div>
     </div>
   );

@@ -1,0 +1,89 @@
+// Hotseat check: the pass-the-phone interstitial must appear between turns, and
+// only the active seat's letters may ever be on screen.
+import { chromium, devices } from 'playwright';
+
+const URL = process.env.FLAG_URL ?? 'http://localhost:4173/flag-game/';
+
+const browser = await chromium.launch();
+const context = await browser.newContext({
+  viewport: { width: 393, height: 852 },
+  deviceScaleFactor: 3,
+  isMobile: true,
+  hasTouch: true,
+  userAgent: devices['iPhone 13'].userAgent,
+});
+const page = await context.newPage();
+const errors = [];
+page.on('pageerror', e => errors.push(String(e)));
+page.on('console', m => m.type() === 'error' && errors.push(m.text()));
+
+const problems = [];
+
+const snapshot = () =>
+  page.evaluate(() => ({
+    handover: Boolean(document.querySelector('.handover')),
+    handoverText: document.querySelector('.handover h1')?.textContent ?? null,
+    seatLabel: document.querySelector('.hud-you .hud-key')?.textContent ?? null,
+    rackLabel: document.querySelector('.rack-row .tray-label')?.textContent ?? null,
+    myLetters: [...document.querySelectorAll('.rack-row .tray-tile .tile-letter')].map(s => s.textContent),
+    opponentLabel: document.querySelector('.opponent-name')?.textContent ?? null,
+    opponentCount: document.querySelector('.opponent-count')?.textContent.trim() ?? null,
+    opponentLetters: [...document.querySelectorAll('.opponent-inner .tile-letter')].map(s => s.textContent),
+    opponentBacks: document.querySelectorAll('.opponent-back').length,
+    scrollH: document.documentElement.scrollHeight,
+    clientH: document.documentElement.clientHeight,
+  }));
+
+await page.goto(URL, { waitUntil: 'networkidle' });
+await page.getByRole('button', { name: /Hotseat/ }).click();
+await page.waitForSelector('.play-shell');
+await page.waitForTimeout(300);
+
+const p1 = await snapshot();
+console.log('P1 turn:', JSON.stringify(p1));
+if (p1.seatLabel !== 'P1') problems.push(`expected to start on P1, got ${p1.seatLabel}`);
+if (p1.opponentLabel !== 'P2') problems.push(`expected opponent P2, got ${p1.opponentLabel}`);
+if (p1.opponentLetters.length > 0) problems.push('P2 letters visible during P1 turn');
+if (!/\d+\s*tiles/i.test(p1.opponentCount ?? '')) problems.push('opponent count not readable');
+
+// Take a turn as P1 so the seat changes.
+const market = page.locator('.market-row .tray-tile');
+await market.nth(0).click();
+await market.nth(1).click();
+await page.waitForTimeout(120);
+if (await page.locator('.actions .action-draw').isDisabled()) {
+  // A blank take is a single tile, which is legal on its own.
+  await market.nth(1).click();
+  await page.waitForTimeout(120);
+}
+await page.locator('.actions .action-draw').click();
+await page.waitForTimeout(400);
+
+const between = await snapshot();
+console.log('between turns:', JSON.stringify({ handover: between.handover, text: between.handoverText }));
+if (!between.handover) problems.push('no pass-the-phone interstitial between turns');
+if (!/P2/.test(between.handoverText ?? '')) problems.push(`interstitial should name P2, got ${between.handoverText}`);
+if (between.myLetters.length > 0) problems.push('rack letters visible on the handover screen');
+if (between.scrollH > between.clientH) problems.push('handover screen overflows');
+
+await page.getByRole('button', { name: /^Ready$/ }).click();
+await page.waitForTimeout(300);
+
+const p2 = await snapshot();
+console.log('P2 turn:', JSON.stringify(p2));
+if (p2.seatLabel !== 'P2') problems.push(`expected P2 seat after handover, got ${p2.seatLabel}`);
+if (p2.opponentLabel !== 'P1') problems.push(`expected opponent P1, got ${p2.opponentLabel}`);
+if (p2.opponentLetters.length > 0) problems.push('P1 letters visible during P2 turn');
+if (p2.rackLabel !== 'P2') problems.push(`rack should be labelled P2, got ${p2.rackLabel}`);
+if (p2.myLetters.length === 0) problems.push('P2 has no visible letters on their own turn');
+if (p2.opponentBacks !== 4) {
+  // P1 drew 2 on top of their opening 2.
+  problems.push(`expected 4 facedown backs for P1, got ${p2.opponentBacks}`);
+}
+if (p2.scrollH > p2.clientH) problems.push('play screen overflows on P2 turn');
+
+if (errors.length) problems.push(`console errors: ${errors.join(' | ')}`);
+
+await browser.close();
+console.log(problems.length ? `\nFAIL:\n - ${problems.join('\n - ')}` : '\nHotseat verified clean');
+process.exit(problems.length ? 1 : 0);
