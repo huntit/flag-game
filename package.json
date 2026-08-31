@@ -10,7 +10,9 @@
     "test": "vitest",
     "sim": "tsx src/cli/flag-sim.ts",
     "verify:layout": "node scripts/verify-layout.mjs",
-    "verify:play": "node scripts/verify-play.mjs"
+    "verify:play": "node scripts/verify-play.mjs",
+    "verify:hotseat": "node scripts/verify-hotseat.mjs",
+    "verify:modes": "node scripts/verify-modes.mjs"
   },
   "dependencies": {
     "react": "^18.3.1",
