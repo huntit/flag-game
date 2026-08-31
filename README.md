@@ -8,6 +8,8 @@ A two-player word game combining crossword mechanics with a shared tile market a
 
 Documentation for v0 playable slice. No implementation yet. Ada will build from the prototype specification.
 
+**Stack:** Phone-first static web app (Vite + React + TypeScript, Vercel hosting, iPhone Safari as primary target)
+
 **Data files:**
 - ✅ Word list available at `data/words.txt` (175,030 words from Word Eagle)
 - ✅ Tile set available at `data/tiles.json` (WWF English bag: 104 tiles, 2 blanks + Word Eagle WWF values)
