@@ -17,13 +17,17 @@ A two-player digital prototype combining crossword mechanics, a Splendor-style g
 2. **Human vs AI** — Play against Greedy, Hunter, or Sleeper personality (opponent rack hidden)
 3. **AI vs AI lab** — Headless simulation for game balance analysis
 
-**Constraints:**
+**Tech stack (locked):**
 
-- Desktop-playable (phone layout nice but not required)
-- Dictionary loaded from a text file Peter will supply
-- Headless simulation must run with no UI
-
-**Tech stack:** Ada's call.
+- **Phone-first static web app** — NOT native iOS / TestFlight / App Store for v0
+- **TypeScript rules engine** — Shared by UI and CLI
+- **UI:** Vite + React (tap-to-place input for iPhone Safari; do NOT rely on desktop HTML5 drag)
+- **CLI:** Node.js for `flag-sim` headless simulation
+- **Hosting:** Vercel or Cloudflare Pages from huntit/flag-game (every push gets a preview URL)
+- **Deployment workflow:** Iterate in iPhone Safari, Add to Home Screen for feel-test
+- **No backend** — Dictionary loaded from `data/words.txt` bundled with app
+- **Hotseat = pass-the-phone** (two humans on one iPhone)
+- **Human vs Hunter = iPhone feel-test loop** (play against AI on phone)
 
 ## 2. Success Criteria
 
