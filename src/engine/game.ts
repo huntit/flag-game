@@ -1,4 +1,4 @@
-// Game initialization and tile bag management
+// Game initialization, board helpers and tile bag management
 
 import type { Tile, TileId, TileData, FlagPost, GameState, Board, Player } from './types';
 import { FLAG_POSTS, BOARD_SIZE, MARKET_SIZE, STARTING_RACK_TILES } from './types';
@@ -9,11 +9,38 @@ function generateTileId(): TileId {
   return `tile_${tileIdCounter++}`;
 }
 
+// Randomness is pluggable so the flag-sim CLI can reproduce a game from a seed
+// and tests can pin shuffles. Everything in the engine draws from here.
+let randomSource: () => number = Math.random;
+
+export function setRandomSource(source: () => number): void {
+  randomSource = source;
+}
+
+export function resetRandomSource(): void {
+  randomSource = Math.random;
+}
+
+export function random(): number {
+  return randomSource();
+}
+
+/** Deterministic PRNG for seeded simulation runs. */
+export function mulberry32(seed: number): () => number {
+  let a = seed >>> 0;
+  return () => {
+    a = (a + 0x6d2b79f5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
 export function createTileBag(tileData: TileData): Tile[] {
   const tiles: Tile[] = [];
   const wwfSet = tileData.tileSets.wwf;
 
-  // Add letter tiles
   for (const tileSet of wwfSet.tiles) {
     for (let i = 0; i < tileSet.count; i++) {
       tiles.push({
@@ -25,7 +52,6 @@ export function createTileBag(tileData: TileData): Tile[] {
     }
   }
 
-  // Add blank tiles
   for (let i = 0; i < wwfSet.blanks.count; i++) {
     tiles.push({
       id: generateTileId(),
@@ -40,9 +66,22 @@ export function createTileBag(tileData: TileData): Tile[] {
 
 export function shuffleBag(bag: Tile[]): void {
   for (let i = bag.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
+    const j = Math.floor(random() * (i + 1));
     [bag[i], bag[j]] = [bag[j], bag[i]];
   }
+}
+
+/**
+ * Reorder a player's own rack. Shuffling is a display convenience, not a turn:
+ * it never changes which tiles you hold, only the order they are drawn in.
+ */
+export function shuffleRack(rack: Tile[]): Tile[] {
+  const next = [...rack];
+  for (let i = next.length - 1; i > 0; i--) {
+    const j = Math.floor(random() * (i + 1));
+    [next[i], next[j]] = [next[j], next[i]];
+  }
+  return next;
 }
 
 export function drawFromBag(bag: Tile[], count: number): Tile[] {
@@ -59,13 +98,14 @@ function createEmptyBoard(): Board {
 
 function randomFlagPost(): FlagPost {
   const posts: FlagPost[] = ['NW', 'NE', 'SE', 'SW'];
-  return posts[Math.floor(Math.random() * posts.length)];
+  return posts[Math.floor(random() * posts.length)];
 }
 
 export function initializeGame(tileData: TileData): GameState {
   const bag = createTileBag(tileData);
   shuffleBag(bag);
 
+  // Market is dealt first, then two tiles per player straight from the bag.
   const market = drawFromBag(bag, MARKET_SIZE);
 
   const players: [Player, Player] = [
@@ -101,7 +141,7 @@ export function getBoardTile(board: Board, pos: { row: number; col: number }) {
   return board[pos.row - 1][pos.col - 1];
 }
 
-export function setBoardTile(board: Board, pos: { row: number; col: number }, tile: any) {
+export function setBoardTile(board: Board, pos: { row: number; col: number }, tile: Board[number][number]) {
   if (!isValidPosition(pos)) return;
   board[pos.row - 1][pos.col - 1] = tile;
 }
@@ -109,7 +149,7 @@ export function setBoardTile(board: Board, pos: { row: number; col: number }, ti
 export function getNextFlagPost(current: FlagPost, board: Board): FlagPost | null {
   const order: FlagPost[] = ['NW', 'NE', 'SE', 'SW'];
   const currentIndex = order.indexOf(current);
-  
+
   for (let i = 1; i <= 4; i++) {
     const nextPost = order[(currentIndex + i) % 4];
     const pos = FLAG_POSTS[nextPost];
@@ -117,7 +157,7 @@ export function getNextFlagPost(current: FlagPost, board: Board): FlagPost | nul
       return nextPost;
     }
   }
-  
+
   return null; // All posts are occupied
 }
 

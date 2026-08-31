@@ -1,35 +1,109 @@
-// Move validation and word formation logic
+// Placement validation, word formation and scoring.
+//
+// Every new straight-line word of two or more letters formed by a play must be
+// in the dictionary, and each such word scores the sum of the letter values of
+// every tile in it (blanks score 0). No premium squares, no bingo, no capture
+// bonus — see docs/prototype-spec.md sections 7.2 and 2 ("Out of scope").
 
 import type { Board, Position, PlacedTile, Tile, Letter } from './types';
 import { getBoardTile, setBoardTile, isValidPosition, positionEquals, isFirstWord } from './game';
-import { CENTRE_STAR, FLAG_POSTS, BOARD_SIZE } from './types';
+import { CENTRE_STAR, FLAG_POSTS, BOARD_SIZE, MIN_WORD_LENGTH } from './types';
 import type { Dictionary } from './dictionary';
 
-interface WordInfo {
+export interface WordInfo {
   word: string;
   positions: Position[];
   score: number;
 }
 
-function getLetterForTile(tile: PlacedTile): string {
-  if (tile.isBlank && tile.assignedLetter) {
-    return tile.assignedLetter;
+export interface Placement {
+  tile: Tile;
+  position: Position;
+  assignedLetter?: Letter;
+}
+
+export interface PlayEvaluation {
+  valid: boolean;
+  reason?: string;
+  words?: WordInfo[];
+  totalScore?: number;
+  captures?: boolean;
+}
+
+/** The letter a tile shows on the board; a blank shows its assigned letter. */
+export function effectiveLetter(tile: PlacedTile): string {
+  if (tile.isBlank) return tile.assignedLetter ?? '';
+  return tile.letter ?? '';
+}
+
+/** Blanks score 0 no matter which letter they stand for. */
+export function tileScore(tile: PlacedTile): number {
+  return tile.isBlank ? 0 : tile.value;
+}
+
+function cloneBoard(board: Board): Board {
+  return board.map(row => row.map(cell => (cell ? { ...cell } : null)));
+}
+
+function step(pos: Position, horizontal: boolean, delta: number): Position {
+  return horizontal
+    ? { row: pos.row, col: pos.col + delta }
+    : { row: pos.row + delta, col: pos.col };
+}
+
+/**
+ * Read the full contiguous run of tiles through `pos` along one axis.
+ * Returns null when the run is a single tile (a lone letter is not a word).
+ */
+export function readWord(board: Board, pos: Position, horizontal: boolean): WordInfo | null {
+  if (!getBoardTile(board, pos)) return null;
+
+  let start = pos;
+  while (true) {
+    const previous = step(start, horizontal, -1);
+    if (!isValidPosition(previous) || !getBoardTile(board, previous)) break;
+    start = previous;
   }
-  return tile.letter || '';
+
+  const positions: Position[] = [];
+  let word = '';
+  let score = 0;
+  let cursor = start;
+  while (isValidPosition(cursor)) {
+    const tile = getBoardTile(board, cursor);
+    if (!tile) break;
+    positions.push(cursor);
+    word += effectiveLetter(tile);
+    score += tileScore(tile);
+    cursor = step(cursor, horizontal, 1);
+  }
+
+  if (positions.length < MIN_WORD_LENGTH) return null;
+  return { word, positions, score };
 }
 
-function getValueForTile(tile: PlacedTile): number {
-  return tile.value;
+function wordKey(word: WordInfo): string {
+  const first = word.positions[0];
+  const last = word.positions[word.positions.length - 1];
+  return `${first.row},${first.col}-${last.row},${last.col}`;
 }
 
+/**
+ * Collect every new word a play forms: the main word along the play axis plus
+ * one crossword per placed tile on the perpendicular axis. A single tile has no
+ * axis of its own, so both of its runs count.
+ */
 export function findWordsFormed(
   board: Board,
-  placements: { tile: Tile; position: Position; assignedLetter?: Letter }[],
+  placements: Placement[],
   dictionary: Dictionary
 ): { words: WordInfo[]; valid: boolean; reason?: string } {
-  // Create a temporary board with the new tiles
-  const tempBoard: Board = board.map(row => row.map(cell => cell ? { ...cell } : null));
-  
+  const layout = describeLayout(placements);
+  if (!layout.valid) {
+    return { words: [], valid: false, reason: layout.reason };
+  }
+
+  const tempBoard = cloneBoard(board);
   for (const placement of placements) {
     const placedTile: PlacedTile = {
       ...placement.tile,
@@ -38,270 +112,157 @@ export function findWordsFormed(
     setBoardTile(tempBoard, placement.position, placedTile);
   }
 
-  const words: WordInfo[] = [];
-
-  // Find main word (horizontal or vertical line through placements)
-  const mainWord = findMainWord(tempBoard, placements);
-  if (mainWord && mainWord.word.length > 1) {
-    words.push(mainWord);
-  }
-
-  // Find crosswords
-  for (const placement of placements) {
-    const crossWords = findCrossWords(tempBoard, placement.position, mainWord);
-    words.push(...crossWords);
-  }
-
-  // Validate single tile placement forms at least one word
-  if (placements.length === 1 && words.length === 0) {
-    return { words: [], valid: false, reason: 'Single tile must form a word' };
-  }
-
-  // Validate all words are in dictionary
-  for (const word of words) {
-    if (!dictionary.isValid(word.word)) {
-      return { words: [], valid: false, reason: `Word not in dictionary: ${word.word}` };
-    }
-  }
-
-  return { words, valid: true };
-}
-
-function findMainWord(board: Board, placements: { tile: Tile; position: Position; assignedLetter?: string }[]): WordInfo | null {
-  if (placements.length === 0) return null;
-
-  // Determine direction
-  const positions = placements.map(p => p.position);
-  const rows = positions.map(p => p.row);
-  const cols = positions.map(p => p.col);
-  const allSameRow = rows.every(r => r === rows[0]);
-  const allSameCol = cols.every(c => c === cols[0]);
-
-  if (!allSameRow && !allSameCol) {
-    return null; // Invalid placement
-  }
-
-  const isHorizontal = allSameRow;
-  const row = isHorizontal ? rows[0] : -1;
-  const col = allSameCol ? cols[0] : -1;
-
-  // Find the full word extent
-  let wordPositions: Position[] = [];
-  let word = '';
-  let score = 0;
-
-  if (isHorizontal) {
-    const minCol = Math.min(...cols);
-    const maxCol = Math.max(...cols);
-    
-    // Extend left
-    let startCol = minCol;
-    while (startCol > 1 && getBoardTile(board, { row, col: startCol - 1 })) {
-      startCol--;
-    }
-    
-    // Extend right
-    let endCol = maxCol;
-    while (endCol < BOARD_SIZE && getBoardTile(board, { row, col: endCol + 1 })) {
-      endCol++;
-    }
-
-    // Check contiguity
-    for (let c = startCol; c <= endCol; c++) {
-      const tile = getBoardTile(board, { row, col: c });
-      if (!tile) {
-        return null; // Gap in word
+  // Placed tiles must read as one unbroken run on the play axis, allowing for
+  // board tiles that sit between them.
+  if (layout.horizontal !== null) {
+    const horizontal = layout.horizontal;
+    const positions = placements.map(p => p.position);
+    const from = horizontal
+      ? Math.min(...positions.map(p => p.col))
+      : Math.min(...positions.map(p => p.row));
+    const to = horizontal
+      ? Math.max(...positions.map(p => p.col))
+      : Math.max(...positions.map(p => p.row));
+    const line = horizontal ? positions[0].row : positions[0].col;
+    for (let i = from; i <= to; i++) {
+      const cell = horizontal ? { row: line, col: i } : { row: i, col: line };
+      if (!getBoardTile(tempBoard, cell)) {
+        return { words: [], valid: false, reason: 'Tiles must be contiguous' };
       }
-      wordPositions.push({ row, col: c });
-      word += getLetterForTile(tile);
-      score += getValueForTile(tile);
     }
+  }
+
+  const found: WordInfo[] = [];
+  const seen = new Set<string>();
+  const push = (word: WordInfo | null) => {
+    if (!word) return;
+    const key = wordKey(word);
+    if (seen.has(key)) return;
+    seen.add(key);
+    found.push(word);
+  };
+
+  if (layout.horizontal === null) {
+    // Single tile: whichever runs exist are new words.
+    push(readWord(tempBoard, placements[0].position, true));
+    push(readWord(tempBoard, placements[0].position, false));
   } else {
-    const minRow = Math.min(...rows);
-    const maxRow = Math.max(...rows);
-    
-    // Extend up
-    let startRow = minRow;
-    while (startRow > 1 && getBoardTile(board, { row: startRow - 1, col })) {
-      startRow--;
-    }
-    
-    // Extend down
-    let endRow = maxRow;
-    while (endRow < BOARD_SIZE && getBoardTile(board, { row: endRow + 1, col })) {
-      endRow++;
-    }
-
-    // Check contiguity
-    for (let r = startRow; r <= endRow; r++) {
-      const tile = getBoardTile(board, { row: r, col });
-      if (!tile) {
-        return null; // Gap in word
-      }
-      wordPositions.push({ row: r, col });
-      word += getLetterForTile(tile);
-      score += getValueForTile(tile);
+    push(readWord(tempBoard, placements[0].position, layout.horizontal));
+    for (const placement of placements) {
+      push(readWord(tempBoard, placement.position, !layout.horizontal));
     }
   }
 
-  if (word.length <= 1) return null;
+  if (found.length === 0) {
+    return { words: [], valid: false, reason: 'Placement must form a word' };
+  }
 
-  return { word, positions: wordPositions, score };
+  const invalid = found.find(word => !dictionary.isValid(word.word));
+  if (invalid) {
+    return { words: [], valid: false, reason: `Not a word: ${invalid.word}` };
+  }
+
+  return { words: found, valid: true };
 }
 
-function findCrossWords(board: Board, pos: Position, mainWord: WordInfo | null): WordInfo[] {
-  const words: WordInfo[] = [];
-
-  // Check if this position is part of the main word
-  const isPartOfMainWord = mainWord?.positions.some(p => positionEquals(p, pos)) || false;
-
-  // If main word is horizontal, check vertical; if vertical, check horizontal
-  const mainIsHorizontal = mainWord && mainWord.positions.length > 1 && 
-    mainWord.positions[0].row === mainWord.positions[1].row;
-
-  // Check vertical word
-  if (!mainIsHorizontal || !isPartOfMainWord) {
-    const vertWord = extractWord(board, pos, false);
-    if (vertWord && vertWord.word.length > 1) {
-      words.push(vertWord);
-    }
-  }
-
-  // Check horizontal word
-  if (mainIsHorizontal === false || !isPartOfMainWord) {
-    const horizWord = extractWord(board, pos, true);
-    if (horizWord && horizWord.word.length > 1) {
-      words.push(horizWord);
-    }
-  }
-
-  return words;
-}
-
-function extractWord(board: Board, pos: Position, horizontal: boolean): WordInfo | null {
-  const { row, col } = pos;
-  let wordPositions: Position[] = [pos];
-  let word = '';
-  let score = 0;
-
-  const tile = getBoardTile(board, pos);
-  if (!tile) return null;
-
-  if (horizontal) {
-    // Extend left
-    let c = col - 1;
-    while (c >= 1) {
-      const t = getBoardTile(board, { row, col: c });
-      if (!t) break;
-      wordPositions.unshift({ row, col: c });
-      c--;
-    }
-
-    // Extend right
-    c = col + 1;
-    while (c <= BOARD_SIZE) {
-      const t = getBoardTile(board, { row, col: c });
-      if (!t) break;
-      wordPositions.push({ row, col: c });
-      c++;
-    }
-  } else {
-    // Extend up
-    let r = row - 1;
-    while (r >= 1) {
-      const t = getBoardTile(board, { row: r, col });
-      if (!t) break;
-      wordPositions.unshift({ row: r, col });
-      r--;
-    }
-
-    // Extend down
-    r = row + 1;
-    while (r <= BOARD_SIZE) {
-      const t = getBoardTile(board, { row: r, col });
-      if (!t) break;
-      wordPositions.push({ row: r, col });
-      r++;
-    }
-  }
-
-  if (wordPositions.length <= 1) return null;
-
-  for (const p of wordPositions) {
-    const t = getBoardTile(board, p);
-    if (t) {
-      word += getLetterForTile(t);
-      score += getValueForTile(t);
-    }
-  }
-
-  return { word, positions: wordPositions, score };
-}
-
-export function validatePlay(
-  board: Board,
-  placements: { tile: Tile; position: Position; assignedLetter?: Letter }[],
-  dictionary: Dictionary,
-  livePost: string
-): { valid: boolean; words?: WordInfo[]; totalScore?: number; captures?: boolean; reason?: string } {
+/**
+ * Work out the play axis. `horizontal` is null for a single tile, which has no
+ * axis of its own.
+ */
+function describeLayout(
+  placements: Placement[]
+): { valid: true; horizontal: boolean | null } | { valid: false; reason: string } {
   if (placements.length === 0) {
     return { valid: false, reason: 'No tiles placed' };
   }
 
-  // Check all positions are empty
   for (const placement of placements) {
+    if (!isValidPosition(placement.position)) {
+      return { valid: false, reason: 'Placement is off the board' };
+    }
+  }
+
+  const cells = new Set(placements.map(p => `${p.position.row},${p.position.col}`));
+  if (cells.size !== placements.length) {
+    return { valid: false, reason: 'Two tiles cannot share a square' };
+  }
+
+  if (placements.length === 1) {
+    return { valid: true, horizontal: null };
+  }
+
+  const rows = placements.map(p => p.position.row);
+  const cols = placements.map(p => p.position.col);
+  const sameRow = rows.every(r => r === rows[0]);
+  const sameCol = cols.every(c => c === cols[0]);
+
+  if (sameRow) return { valid: true, horizontal: true };
+  if (sameCol) return { valid: true, horizontal: false };
+  return { valid: false, reason: 'Tiles must be in one straight line' };
+}
+
+/** Does the play touch anything already on the board? */
+function attachesToBoard(board: Board, placements: Placement[]): boolean {
+  return placements.some(placement => {
+    const { row, col } = placement.position;
+    const neighbours = [
+      { row: row - 1, col },
+      { row: row + 1, col },
+      { row, col: col - 1 },
+      { row, col: col + 1 },
+    ];
+    return neighbours.some(n => isValidPosition(n) && getBoardTile(board, n));
+  });
+}
+
+export function validatePlay(
+  board: Board,
+  placements: Placement[],
+  dictionary: Dictionary,
+  livePost: string
+): PlayEvaluation {
+  if (placements.length === 0) {
+    return { valid: false, reason: 'No tiles placed' };
+  }
+
+  if (placements.length > BOARD_SIZE) {
+    return { valid: false, reason: 'Too many tiles for one line' };
+  }
+
+  for (const placement of placements) {
+    if (!isValidPosition(placement.position)) {
+      return { valid: false, reason: 'Placement is off the board' };
+    }
     if (getBoardTile(board, placement.position)) {
-      return { valid: false, reason: 'Position already occupied' };
+      return { valid: false, reason: 'Square already taken' };
     }
-  }
-
-  // Check if first word covers centre star
-  if (isFirstWord(board)) {
-    const coversCenter = placements.some(p => positionEquals(p.position, CENTRE_STAR));
-    if (!coversCenter) {
-      return { valid: false, reason: 'First word must cover centre star' };
-    }
-  } else {
-    // Check if play attaches to existing words
-    const attaches = placements.some(p => {
-      const { row, col } = p.position;
-      const neighbors = [
-        { row: row - 1, col },
-        { row: row + 1, col },
-        { row, col: col - 1 },
-        { row, col: col + 1 },
-      ];
-      return neighbors.some(n => isValidPosition(n) && getBoardTile(board, n));
-    });
-
-    if (!attaches) {
-      return { valid: false, reason: 'Play must attach to existing words' };
-    }
-  }
-
-  // Check if blank tiles have assigned letters
-  for (const placement of placements) {
     if (placement.tile.isBlank && !placement.assignedLetter) {
-      return { valid: false, reason: 'Blank tile must have assigned letter' };
+      return { valid: false, reason: 'Choose a letter for the blank' };
     }
   }
 
-  // Find and validate words
+  if (isFirstWord(board)) {
+    if (!placements.some(p => positionEquals(p.position, CENTRE_STAR))) {
+      return { valid: false, reason: 'First word must cover the centre star' };
+    }
+  } else if (!attachesToBoard(board, placements)) {
+    return { valid: false, reason: 'Play must touch a tile already on the board' };
+  }
+
   const result = findWordsFormed(board, placements, dictionary);
   if (!result.valid) {
     return { valid: false, reason: result.reason };
   }
 
-  const totalScore = result.words.reduce((sum, w) => sum + w.score, 0);
-
-  // Check if captures flag
   const livePostPos = FLAG_POSTS[livePost as keyof typeof FLAG_POSTS];
-  const captures = placements.some(p => positionEquals(p.position, livePostPos));
+  const captures = livePostPos
+    ? placements.some(p => positionEquals(p.position, livePostPos))
+    : false;
 
   return {
     valid: true,
     words: result.words,
-    totalScore,
+    totalScore: result.words.reduce((sum, w) => sum + w.score, 0),
     captures,
   };
 }

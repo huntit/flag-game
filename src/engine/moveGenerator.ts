@@ -1,147 +1,178 @@
-// Move generator for finding all legal plays
+// Legal play generation.
+//
+// Used both to pick AI moves and to answer "is any Play legal?" (which decides
+// whether Pass is available). The search walks every line of the board, enumerates
+// the candidate word spans on it, and fills the empty squares of each span with
+// rack letters, pruning against the dictionary's prefix ranges. That pruning is
+// what makes 11x11 tractable — a naive permutation of a 7-tile rack over every
+// anchor is hundreds of thousands of full-board validations per turn.
 
 import type { Board, Tile, Position, WordPlacement, Letter } from './types';
-import { getBoardTile, isFirstWord } from './game';
-import { validatePlay } from './validator';
-import type { Dictionary } from './dictionary';
-import { CENTRE_STAR, BOARD_SIZE } from './types';
+import { getBoardTile, isFirstWord, isValidPosition } from './game';
+import { validatePlay, effectiveLetter, type Placement } from './validator';
+import type { Dictionary, PrefixRange } from './dictionary';
+import { CENTRE_STAR, BOARD_SIZE, MIN_WORD_LENGTH, RACK_MAX } from './types';
+
+const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('') as Letter[];
+
+export interface GenerateOptions {
+  /** Stop once this many plays have been found. Use 1 for "is a play legal?". */
+  limit?: number;
+}
+
+interface RackPool {
+  /** Remaining real tiles for each letter. */
+  byLetter: Map<string, Tile[]>;
+  /** Remaining blanks, usable as any letter for 0 points. */
+  blanks: Tile[];
+  size: number;
+}
+
+function buildPool(rack: Tile[]): RackPool {
+  const byLetter = new Map<string, Tile[]>();
+  const blanks: Tile[] = [];
+  for (const tile of rack) {
+    if (tile.isBlank) {
+      blanks.push(tile);
+      continue;
+    }
+    const letter = tile.letter ?? '';
+    const bucket = byLetter.get(letter);
+    if (bucket) bucket.push(tile);
+    else byLetter.set(letter, [tile]);
+  }
+  return { byLetter, blanks, size: rack.length };
+}
+
+function boardLetter(board: Board, pos: Position): string | null {
+  const tile = getBoardTile(board, pos);
+  return tile ? effectiveLetter(tile) : null;
+}
+
+function cellOf(line: number, index: number, horizontal: boolean): Position {
+  return horizontal ? { row: line, col: index } : { row: index, col: line };
+}
+
+/**
+ * Which letters may be placed on an empty square without creating an invalid
+ * word on the perpendicular axis. Squares with no perpendicular neighbours
+ * accept anything.
+ */
+function crossChecks(
+  board: Board,
+  pos: Position,
+  horizontal: boolean,
+  dictionary: Dictionary,
+  cache: Map<string, Set<string> | null>
+): Set<string> | null {
+  const key = `${horizontal ? 'h' : 'v'}:${pos.row},${pos.col}`;
+  const cached = cache.get(key);
+  if (cached !== undefined) return cached;
+
+  const before: string[] = [];
+  const after: string[] = [];
+  const delta = horizontal ? { row: 1, col: 0 } : { row: 0, col: 1 };
+
+  let cursor = { row: pos.row - delta.row, col: pos.col - delta.col };
+  while (isValidPosition(cursor)) {
+    const letter = boardLetter(board, cursor);
+    if (!letter) break;
+    before.unshift(letter);
+    cursor = { row: cursor.row - delta.row, col: cursor.col - delta.col };
+  }
+
+  cursor = { row: pos.row + delta.row, col: pos.col + delta.col };
+  while (isValidPosition(cursor)) {
+    const letter = boardLetter(board, cursor);
+    if (!letter) break;
+    after.push(letter);
+    cursor = { row: cursor.row + delta.row, col: cursor.col + delta.col };
+  }
+
+  // No perpendicular word would be formed, so every letter is fine.
+  if (before.length === 0 && after.length === 0) {
+    cache.set(key, null);
+    return null;
+  }
+
+  const prefix = before.join('');
+  const suffix = after.join('');
+  const allowed = new Set<string>();
+  for (const letter of ALPHABET) {
+    if (dictionary.isValid(prefix + letter + suffix)) allowed.add(letter);
+  }
+  cache.set(key, allowed);
+  return allowed;
+}
 
 export function generateLegalPlays(
   board: Board,
   rack: Tile[],
   dictionary: Dictionary,
-  livePost: string
+  livePost: string,
+  options: GenerateOptions = {}
 ): WordPlacement[] {
+  const limit = options.limit ?? Infinity;
   const plays: WordPlacement[] = [];
+  if (rack.length === 0 || limit <= 0) return plays;
 
-  if (rack.length === 0) return plays;
+  const first = isFirstWord(board);
+  const pool = buildPool(rack);
+  const maxTiles = Math.min(pool.size, RACK_MAX);
+  const crossCache = new Map<string, Set<string> | null>();
+  const seen = new Set<string>();
 
-  if (isFirstWord(board)) {
-    // Generate plays through centre star
-    const centreRow = CENTRE_STAR.row;
-    const centreCol = CENTRE_STAR.col;
+  const record = (placements: Placement[]): boolean => {
+    const key = placements
+      .map(p => `${p.position.row},${p.position.col}:${p.assignedLetter ?? p.tile.letter}`)
+      .sort()
+      .join('|');
+    if (seen.has(key)) return false;
+    seen.add(key);
 
-    // Try horizontal words through centre
-    for (let startCol = Math.max(1, centreCol - (BOARD_SIZE - 1)); startCol <= centreCol; startCol++) {
-      const endCol = Math.min(BOARD_SIZE, startCol + (BOARD_SIZE - 1));
-      for (let len = 2; len <= Math.min(rack.length, endCol - startCol + 1); len++) {
-        if (startCol <= centreCol && startCol + len - 1 >= centreCol) {
-          const placements = generatePermutations(rack, len, (i) => ({
-            row: centreRow,
-            col: startCol + i
-          }));
-          for (const placement of placements) {
-            const result = validatePlay(board, placement, dictionary, livePost);
-            if (result.valid && result.words) {
-              plays.push({
-                tiles: placement,
-                words: result.words,
-                totalScore: result.totalScore || 0,
-                captures: result.captures || false,
-              });
-            }
-          }
-        }
-      }
-    }
+    const result = validatePlay(board, placements, dictionary, livePost);
+    if (!result.valid || !result.words) return false;
 
-    // Try vertical words through centre
-    for (let startRow = Math.max(1, centreRow - (BOARD_SIZE - 1)); startRow <= centreRow; startRow++) {
-      const endRow = Math.min(BOARD_SIZE, startRow + (BOARD_SIZE - 1));
-      for (let len = 2; len <= Math.min(rack.length, endRow - startRow + 1); len++) {
-        if (startRow <= centreRow && startRow + len - 1 >= centreRow) {
-          const placements = generatePermutations(rack, len, (i) => ({
-            row: startRow + i,
-            col: centreCol
-          }));
-          for (const placement of placements) {
-            const result = validatePlay(board, placement, dictionary, livePost);
-            if (result.valid && result.words) {
-              plays.push({
-                tiles: placement,
-                words: result.words,
-                totalScore: result.totalScore || 0,
-                captures: result.captures || false,
-              });
-            }
-          }
-        }
-      }
-    }
-  } else {
-    // Generate plays that attach to existing tiles
-    // This is a simplified brute-force approach for BOARD_SIZE×BOARD_SIZE
-    
-    // Find all anchor points (empty cells adjacent to filled cells)
-    const anchors: Position[] = [];
-    for (let row = 1; row <= BOARD_SIZE; row++) {
-      for (let col = 1; col <= BOARD_SIZE; col++) {
-        if (!getBoardTile(board, { row, col })) {
-          const hasNeighbor = [
-            { row: row - 1, col },
-            { row: row + 1, col },
-            { row, col: col - 1 },
-            { row, col: col + 1 },
-          ].some(n => n.row >= 1 && n.row <= BOARD_SIZE && n.col >= 1 && n.col <= BOARD_SIZE && getBoardTile(board, n));
-          
-          if (hasNeighbor) {
-            anchors.push({ row, col });
-          }
-        }
-      }
-    }
+    plays.push({
+      tiles: placements.map(p => ({ ...p })),
+      words: result.words,
+      totalScore: result.totalScore ?? 0,
+      captures: result.captures ?? false,
+    });
+    return true;
+  };
 
-    // For each anchor, try placing tiles horizontally and vertically
-    for (const anchor of anchors) {
-      // Try single tile placement
-      for (const tile of rack) {
-        const placement = [{ tile, position: anchor, assignedLetter: (tile.isBlank ? ('A' as Letter) : undefined) }];
-        const result = validatePlay(board, placement, dictionary, livePost);
-        if (result.valid && result.words) {
-          plays.push({
-            tiles: placement,
-            words: result.words,
-            totalScore: result.totalScore || 0,
-            captures: result.captures || false,
+  for (const horizontal of [true, false]) {
+    for (let line = 1; line <= BOARD_SIZE; line++) {
+      for (let start = 1; start <= BOARD_SIZE - (MIN_WORD_LENGTH - 1); start++) {
+        const beforeSpan = cellOf(line, start - 1, horizontal);
+        if (isValidPosition(beforeSpan) && boardLetter(board, beforeSpan)) continue;
+
+        for (let end = start + MIN_WORD_LENGTH - 1; end <= BOARD_SIZE; end++) {
+          const afterSpan = cellOf(line, end + 1, horizontal);
+          if (isValidPosition(afterSpan) && boardLetter(board, afterSpan)) continue;
+
+          const span: Position[] = [];
+          for (let i = start; i <= end; i++) span.push(cellOf(line, i, horizontal));
+
+          const empties = span.filter(pos => !boardLetter(board, pos));
+          if (empties.length === 0) continue;
+          if (empties.length > maxTiles) continue;
+
+          if (!spanIsPlayable(board, span, empties, first)) continue;
+
+          fillSpan({
+            board,
+            dictionary,
+            span,
+            horizontal,
+            pool,
+            crossCache,
+            onComplete: record,
+            shouldStop: () => plays.length >= limit,
           });
-        }
-      }
 
-      // Try multi-tile placements (horizontal)
-      for (let len = 2; len <= Math.min(rack.length, BOARD_SIZE - anchor.col + 1); len++) {
-        const placements = generatePermutations(rack, len, (i) => ({
-          row: anchor.row,
-          col: anchor.col + i
-        }));
-        for (const placement of placements) {
-          const result = validatePlay(board, placement, dictionary, livePost);
-          if (result.valid && result.words) {
-            plays.push({
-              tiles: placement,
-              words: result.words,
-              totalScore: result.totalScore || 0,
-              captures: result.captures || false,
-            });
-          }
-        }
-      }
-
-      // Try multi-tile placements (vertical)
-      for (let len = 2; len <= Math.min(rack.length, BOARD_SIZE - anchor.row + 1); len++) {
-        const placements = generatePermutations(rack, len, (i) => ({
-          row: anchor.row + i,
-          col: anchor.col
-        }));
-        for (const placement of placements) {
-          const result = validatePlay(board, placement, dictionary, livePost);
-          if (result.valid && result.words) {
-            plays.push({
-              tiles: placement,
-              words: result.words,
-              totalScore: result.totalScore || 0,
-              captures: result.captures || false,
-            });
-          }
+          if (plays.length >= limit) return plays;
         }
       }
     }
@@ -150,33 +181,97 @@ export function generateLegalPlays(
   return plays;
 }
 
-function generatePermutations(
-  rack: Tile[],
-  length: number,
-  positionFn: (index: number) => Position
-): { tile: Tile; position: Position; assignedLetter?: Letter }[][] {
-  const results: { tile: Tile; position: Position; assignedLetter?: Letter }[][] = [];
-  
-  function permute(selected: Tile[], remaining: Tile[], depth: number) {
-    if (depth === length) {
-      const placement = selected.map((tile, i) => ({
-        tile,
-        position: positionFn(i),
-        assignedLetter: (tile.isBlank ? 'A' : undefined) as Letter | undefined,
-      }));
-      results.push(placement);
+/**
+ * Cheap pre-filter: the first word must cover the centre star, and every later
+ * play must touch something already on the board.
+ */
+function spanIsPlayable(
+  board: Board,
+  span: Position[],
+  empties: Position[],
+  first: boolean
+): boolean {
+  if (first) {
+    return span.some(pos => pos.row === CENTRE_STAR.row && pos.col === CENTRE_STAR.col);
+  }
+
+  if (span.length !== empties.length) return true; // span reads through a board tile
+
+  return empties.some(pos => {
+    const neighbours = [
+      { row: pos.row - 1, col: pos.col },
+      { row: pos.row + 1, col: pos.col },
+      { row: pos.row, col: pos.col - 1 },
+      { row: pos.row, col: pos.col + 1 },
+    ];
+    return neighbours.some(n => isValidPosition(n) && boardLetter(board, n));
+  });
+}
+
+interface FillContext {
+  board: Board;
+  dictionary: Dictionary;
+  span: Position[];
+  horizontal: boolean;
+  pool: RackPool;
+  crossCache: Map<string, Set<string> | null>;
+  onComplete: (placements: Placement[]) => boolean;
+  shouldStop: () => boolean;
+}
+
+function fillSpan(ctx: FillContext): void {
+  const { board, dictionary, span, horizontal, pool, crossCache } = ctx;
+  const length = span.length;
+  const chosen: Placement[] = [];
+
+  const walk = (index: number, range: PrefixRange): void => {
+    if (ctx.shouldStop()) return;
+
+    if (index === length) {
+      if (chosen.length > 0 && dictionary.isCompleteWord(range, length)) {
+        ctx.onComplete(chosen.map(p => ({ ...p })));
+      }
       return;
     }
 
-    for (let i = 0; i < remaining.length; i++) {
-      const tile = remaining[i];
-      const newRemaining = [...remaining.slice(0, i), ...remaining.slice(i + 1)];
-      permute([...selected, tile], newRemaining, depth + 1);
+    const pos = span[index];
+    const existing = boardLetter(board, pos);
+    if (existing) {
+      const next = dictionary.narrow(range, existing, index);
+      if (dictionary.hasWords(next)) walk(index + 1, next);
+      return;
     }
-  }
 
-  permute([], rack, 0);
-  return results;
+    const allowed = crossChecks(board, pos, horizontal, dictionary, crossCache);
+
+    for (const letter of ALPHABET) {
+      if (allowed && !allowed.has(letter)) continue;
+
+      const next = dictionary.narrow(range, letter, index);
+      if (!dictionary.hasWords(next)) continue;
+
+      // Prefer a real tile; fall back to a blank only when no real tile of that
+      // letter is left, so we never emit a strictly lower-scoring duplicate.
+      const real = pool.byLetter.get(letter);
+      if (real && real.length > 0) {
+        const tile = real.pop()!;
+        chosen.push({ tile, position: pos });
+        walk(index + 1, next);
+        chosen.pop();
+        real.push(tile);
+      } else if (pool.blanks.length > 0) {
+        const tile = pool.blanks.pop()!;
+        chosen.push({ tile, position: pos, assignedLetter: letter });
+        walk(index + 1, next);
+        chosen.pop();
+        pool.blanks.push(tile);
+      }
+
+      if (ctx.shouldStop()) return;
+    }
+  };
+
+  walk(0, dictionary.fullRange());
 }
 
 export function hasLegalPlay(
@@ -185,11 +280,5 @@ export function hasLegalPlay(
   dictionary: Dictionary,
   livePost: string
 ): boolean {
-  // Quick check: if rack is empty, no legal play
-  if (rack.length === 0) return false;
-  
-  // For performance, we can do a quick check instead of generating all moves
-  // For now, just generate and check if any exist
-  const plays = generateLegalPlays(board, rack, dictionary, livePost);
-  return plays.length > 0;
+  return generateLegalPlays(board, rack, dictionary, livePost, { limit: 1 }).length > 0;
 }

@@ -26,6 +26,7 @@ export type FlagPost = 'NW' | 'NE' | 'SE' | 'SW';
 export const BOARD_SIZE = 11;
 export const RACK_MAX = 7;
 export const MARKET_SIZE = 4;
+export const MAX_MARKET_TAKE = 2;
 export const STARTING_RACK_TILES = 2; // drawn from bag, not market
 export const MIN_WORD_LENGTH = 2;
 export const MAX_WORD_LENGTH = 11;
@@ -49,9 +50,15 @@ export interface Player {
   score: number;
 }
 
+export interface ScoredWord {
+  word: string;
+  positions: Position[];
+  score: number;
+}
+
 export interface WordPlacement {
   tiles: { tile: Tile; position: Position; assignedLetter?: Letter }[];
-  words: { word: string; positions: Position[]; score: number }[];
+  words: ScoredWord[];
   totalScore: number;
   captures: boolean;
 }
@@ -90,6 +97,13 @@ export interface GameState {
   winner?: 'P1' | 'P2' | 'draw';
   turnCount: number;
   moveHistory: { player: 'P1' | 'P2'; action: GameAction }[];
+  /** Result of the most recent Play, for the "STAR +4" turn readout. */
+  lastPlay?: {
+    player: 'P1' | 'P2';
+    words: ScoredWord[];
+    totalScore: number;
+    captures: boolean;
+  };
 }
 
 export type AIPersonality = 'greedy' | 'hunter' | 'sleeper';
