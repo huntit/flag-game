@@ -15,7 +15,7 @@ A two-player digital prototype combining crossword mechanics, a Splendor-style g
 
 1. **Solo vs Hunter** — Play against Greedy, Hunter, or Sleeper personality (opponent rack **letters** hidden; rack **count** public as 0–7 facedown tile backs with empty slots **plus a readable number**). Local TypeScript engine in the browser. No room server. This is the iPhone Safari feel-test.
 2. **Hotseat** — Two humans on one device, local engine. Pass-the-phone. No room.
-3. **Remote 2-player** — Live and correspondence are ONE mode (persistent game links). Secret unguessable game/seat links. No 4-letter room codes. Host creates a game and gets a P2 invite link to send. Each seat is a secret token so players can return for days on another device without accounts. No logins, no matchmaking, no friend lists, no accounts for v0. Transport: PartyKit (one Cloudflare Durable Object per game). UI can stay on Vercel; rooms on PartyKit. Authority: the same TypeScript rules engine is room-authoritative. Clients send actions (Draw, Play, Pass). The room validates, applies, and broadcasts public state. Opponent rack **letters** must not leak in the URL or in the other client's payload. Opponent rack **count** is public state. Bag, market, board, scores, flag, whose-turn, and rack counts live on the room. Persistence: store the engine snapshot in room storage. Do NOT destroy the room when tabs close or both players go offline. A game may sit for days. If both players are online it feels live; if not, it waits. Pass is an explicit button. Never treat silence, a closed tab, or elapsed time as a pass. Consecutive double-pass still ends the game only after two explicit passes in a row. Notifications are out of scope for v0. Testers ping each other (iMessage etc.) for "your turn" until later.
+3. **Remote 2-player** — Live and correspondence are ONE mode (persistent game links). Secret unguessable game/seat links. No 4-letter room codes. Host creates a game and gets a P2 invite link to send. Each seat is a secret token so players can return for days on another device without accounts. No logins, no matchmaking, no friend lists, no accounts for v0. Transport: PartyKit (one Cloudflare Durable Object per game). UI can stay on Vercel; rooms on PartyKit. Authority: the same TypeScript rules engine is room-authoritative. Clients send actions (Draw, Play, Pass). The room validates, applies, and broadcasts public state. Opponent rack **letters** must not leak in the URL or in the other client's payload. Opponent rack **count** is public state. Bag, market, board, scores, flag, whose-turn, and rack counts live on the room. Persistence: store the engine snapshot in room storage. Do NOT destroy the room when tabs close or both players go offline. A game may sit for days. If both players are online it feels live; if not, it waits. Pass is an explicit button. Never treat silence, a closed tab, or elapsed time as a pass. Consecutive double-pass still ends the game only after two explicit Passes in a row (an exchange between Passes breaks the streak). See section 7.3. Notifications are out of scope for v0. Testers ping each other (iMessage etc.) for "your turn" until later.
 4. **AI vs AI lab** — Headless simulation for game balance analysis
 
 **Constraints:**
@@ -216,30 +216,43 @@ If the bag runs out during market refill, set `bagDepleted = true`. The game wil
 
 ### 7.3 Pass (Stuck-Only)
 
-**Pass is NOT a voluntary third action.** It exists solely for the stuck case where the active player has no legal moves.
+**Locked (Finch, 31 August 2026).** Ada's full-rack Pass rule is confirmed. Do not treat Pass as a voluntary third action. Do not invent a fifth `endReason`.
+
+**Pass is NOT a voluntary third action.** It exists solely for the stuck case. Never silence, a closed tab, or elapsed time. Never a third choice when the player can Play **or** can add tiles to the rack.
 
 **When Pass is legal:**
 
-- Pass is legal **only when** the player has:
-  - No legal Draw (market and bag both empty), AND
-  - No legal Play (no valid word placements possible)
+Pass is legal **only when** both are true:
 
-**TODO(Finch) — stuck-exchange gap.** "No legal Draw" as written (market and bag both empty) leaves a state where the game can never end. With a **full 7-tile rack**, a Draw can only be an exchange: return N tiles to the bag, take N from the market, refill the market from the bag. That is tile-neutral, so `bagDepleted` can never become true. If both players also have no legal Play — reachable on a crowded board, and hit by `flag-sim` — neither Draw, Play, Pass, capture, bag, nor posts-full can ever fire, and the game runs forever.
+- **No legal Play** (no valid word placements possible), AND
+- **No legal Draw for Pass purposes**
 
-The implementation therefore treats **a full rack as no legal Draw** for the purposes of Pass legality only, so a genuinely stuck player can reach for the Pass button and the existing double-pass ending finishes the game. Pass stays stuck-only: it still requires no legal Play, a player with room in their rack still cannot pass, and exchanging with a full rack is still allowed for anyone who wants it. No new `endReason` was invented. Please confirm or replace this rule.
+**"Legal Draw" for Pass purposes** means a Draw that would **ADD at least one tile to the rack**: an empty slot exists (`rack.size < 7`) AND at least one takeable tile exists (market and/or bag). A full rack (7) is therefore **no legal Draw for Pass purposes**, even if the market and bag still have tiles.
+
+**Full-rack exchange remains a legal Draw ACTION.** With a full rack the player may still Draw: discard into the bag first, then take 1–2 from the market (1 if blank). No facedown bag tile on a full-rack refresh. That exchange does **not** make Pass illegal.
+
+**Consequences:**
+
+- Full rack + no legal Play → the player may **Pass OR exchange**
+- Rack space + takeable tiles → Pass is **illegal** even if they cannot Play (they must Draw or Play)
+- Market and bag both empty + no legal Play → Pass (classic stuck case)
+
+**Why:** otherwise two full unplayable racks can exchange forever (tile-neutral with bag/market) and the game never hits bag-empty, capture, or double-pass.
 
 **UI requirement:**
 
 - Pass is an **explicit button** the player must tap
-- The Pass button is **disabled or hidden** when Draw or Play is legal
+- The Pass button is **disabled or hidden** when the player can Play, or when a Draw would add a tile to the rack
+- The Pass button may be enabled at the same time as a full-rack exchange (both are legal)
 - **Never auto-pass:** Do not treat silence, a closed tab, or elapsed time as a pass (critical for remote/correspondence multiplayer)
 
 **After a pass:**
 
 - Still rotate the flag
-- Consecutive double-pass (two explicit stuck-passes in a row) ends the game
+- Consecutive double-pass ends the game **only after two consecutive explicit Passes** (one from each player)
+- An exchange (or any Draw or Play) between Passes **breaks the streak**
 
-**Important:** Draw XOR Play remains the normal turn action. Pass is a stuck-only escape valve, not a stalling tactic.
+**Important:** Draw XOR Play remains the normal turn action. Pass is a stuck-only escape valve, not a stalling tactic, and not a voluntary skip when tiles can be added.
 
 ### 7.4 Flag Rotation (if no capture)
 
@@ -256,7 +269,7 @@ The game ends when:
 - **Capture** — A player covers the live post
 - **Bag depleted** — After flag rotation, if `bagDepleted` is true
 - **Posts full** — All four posts are occupied
-- **Double pass** — Both players pass consecutively
+- **Double pass** — Two consecutive explicit Passes (one from each player). An exchange between Passes breaks the streak.
 
 **Winner:** Higher score. Ties are draws (no tiebreaker).
 
@@ -368,7 +381,7 @@ Art is Skye's domain later. For v0:
 
 ### Pass Behavior
 
-Pass is an explicit button. Never treat silence, a closed tab, or elapsed time as a pass. Consecutive double-pass still ends the game only after two explicit passes in a row.
+Pass is an explicit button. Never treat silence, a closed tab, or elapsed time as a pass. Consecutive double-pass still ends the game only after two explicit Passes in a row (one from each player). An exchange between Passes breaks the streak. See section 7.3 for Pass legality (full-rack exchange does not make Pass illegal).
 
 ### Notifications
 

@@ -59,6 +59,8 @@ On your turn, choose one:
 - **Draw** — Take tiles from the market to build your rack
 - **Play** — Place tiles from your rack onto the board to score
 
+Pass is not a third choice when you can Play or when a Draw would add a tile. If your rack is full and you cannot Play, you may Pass or exchange — see Pass below.
+
 ### Draw
 
 1. Take up to 2 tiles from the 4-tile market
@@ -93,23 +95,33 @@ Covering a **dark post** (not currently live) is legal and does not capture the 
 
 ### Pass (Stuck-Only)
 
-**Pass is NOT a voluntary third action.** You cannot choose to pass instead of drawing or playing. Pass exists only for the stuck case where you have no legal moves.
+**Pass is NOT a voluntary third action.** You cannot pass when you can Play, or when a Draw would add at least one tile to your rack. Pass is never silence, a closed tab, or a timeout. It exists only for the stuck case.
 
-**When you can pass:**
+**When you can pass** — both must be true:
 
-- You have no legal Draw (market and bag both empty), AND
-- You have no legal Play (no valid word placements possible)
+- You have **no legal Play** (no valid word placements), AND
+- A Draw would **not add a tile** to your rack. That means either the market and bag are both empty, **or your rack is already full (7)**. A full rack is not a legal Draw for Pass purposes, even if tiles remain in the market or bag.
+
+**Full-rack exchange is still a legal Draw.** If your rack is full you may still Draw by discarding into the bag first, then taking 1–2 from the market (1 if blank). You do not get a facedown bag tile on that refresh. That exchange does **not** make Pass illegal.
+
+So:
+
+- Full rack and no legal Play → you may **Pass or exchange**
+- Rack space and takeable tiles → you **cannot Pass**, even if you cannot Play (you must Draw or Play)
 
 **How to pass:**
 
 - Pass is an **explicit button** you must tap
-- The Pass button is disabled when Draw or Play is legal
+- The Pass button is disabled when you can Play, or when a Draw would add a tile to your rack
 - In remote or correspondence games, **never treat silence, a closed tab, or elapsed time as a pass**
 
 **After you pass:**
 
 - The flag still rotates
-- If both players pass consecutively, the game ends
+- The game ends only after **two consecutive explicit Passes** (one from each player)
+- An exchange between Passes breaks the streak — the game does not end
+
+**Why:** otherwise two full unplayable racks can exchange forever (the swap is tile-neutral with the bag and market) and the game never hits bag-empty, capture, or double-pass.
 
 **Important:** Draw OR Play is the normal turn. Pass is a stuck-only escape valve, not a stalling tactic.
 
@@ -132,7 +144,7 @@ The game ends when:
 - A player captures the flag (covers the live post)
 - The bag cannot refill the market to 4 tiles (finish that turn, no extra opponent turn)
 - All four flag posts are occupied
-- Both players pass consecutively
+- Both players pass consecutively (two explicit Passes in a row; an exchange between Passes does not count)
 
 **Winner:** Highest score. Ties are draws (no tiebreaker).
 
