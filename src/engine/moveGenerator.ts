@@ -4,7 +4,7 @@ import type { Board, Tile, Position, WordPlacement, Letter } from './types';
 import { getBoardTile, isFirstWord } from './game';
 import { validatePlay } from './validator';
 import type { Dictionary } from './dictionary';
-import { CENTRE_STAR } from './types';
+import { CENTRE_STAR, BOARD_SIZE } from './types';
 
 export function generateLegalPlays(
   board: Board,
@@ -22,8 +22,8 @@ export function generateLegalPlays(
     const centreCol = CENTRE_STAR.col;
 
     // Try horizontal words through centre
-    for (let startCol = Math.max(1, centreCol - 8); startCol <= centreCol; startCol++) {
-      const endCol = Math.min(9, startCol + 8);
+    for (let startCol = Math.max(1, centreCol - (BOARD_SIZE - 1)); startCol <= centreCol; startCol++) {
+      const endCol = Math.min(BOARD_SIZE, startCol + (BOARD_SIZE - 1));
       for (let len = 2; len <= Math.min(rack.length, endCol - startCol + 1); len++) {
         if (startCol <= centreCol && startCol + len - 1 >= centreCol) {
           const placements = generatePermutations(rack, len, (i) => ({
@@ -46,8 +46,8 @@ export function generateLegalPlays(
     }
 
     // Try vertical words through centre
-    for (let startRow = Math.max(1, centreRow - 8); startRow <= centreRow; startRow++) {
-      const endRow = Math.min(9, startRow + 8);
+    for (let startRow = Math.max(1, centreRow - (BOARD_SIZE - 1)); startRow <= centreRow; startRow++) {
+      const endRow = Math.min(BOARD_SIZE, startRow + (BOARD_SIZE - 1));
       for (let len = 2; len <= Math.min(rack.length, endRow - startRow + 1); len++) {
         if (startRow <= centreRow && startRow + len - 1 >= centreRow) {
           const placements = generatePermutations(rack, len, (i) => ({
@@ -70,19 +70,19 @@ export function generateLegalPlays(
     }
   } else {
     // Generate plays that attach to existing tiles
-    // This is a simplified brute-force approach for 9x9 board
+    // This is a simplified brute-force approach for BOARD_SIZE×BOARD_SIZE
     
     // Find all anchor points (empty cells adjacent to filled cells)
     const anchors: Position[] = [];
-    for (let row = 1; row <= 9; row++) {
-      for (let col = 1; col <= 9; col++) {
+    for (let row = 1; row <= BOARD_SIZE; row++) {
+      for (let col = 1; col <= BOARD_SIZE; col++) {
         if (!getBoardTile(board, { row, col })) {
           const hasNeighbor = [
             { row: row - 1, col },
             { row: row + 1, col },
             { row, col: col - 1 },
             { row, col: col + 1 },
-          ].some(n => n.row >= 1 && n.row <= 9 && n.col >= 1 && n.col <= 9 && getBoardTile(board, n));
+          ].some(n => n.row >= 1 && n.row <= BOARD_SIZE && n.col >= 1 && n.col <= BOARD_SIZE && getBoardTile(board, n));
           
           if (hasNeighbor) {
             anchors.push({ row, col });
@@ -108,7 +108,7 @@ export function generateLegalPlays(
       }
 
       // Try multi-tile placements (horizontal)
-      for (let len = 2; len <= Math.min(rack.length, 9 - anchor.col + 1); len++) {
+      for (let len = 2; len <= Math.min(rack.length, BOARD_SIZE - anchor.col + 1); len++) {
         const placements = generatePermutations(rack, len, (i) => ({
           row: anchor.row,
           col: anchor.col + i
@@ -127,7 +127,7 @@ export function generateLegalPlays(
       }
 
       // Try multi-tile placements (vertical)
-      for (let len = 2; len <= Math.min(rack.length, 9 - anchor.row + 1); len++) {
+      for (let len = 2; len <= Math.min(rack.length, BOARD_SIZE - anchor.row + 1); len++) {
         const placements = generatePermutations(rack, len, (i) => ({
           row: anchor.row + i,
           col: anchor.col

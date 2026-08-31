@@ -13,7 +13,7 @@ export class Dictionary {
     const words = text
       .split('\n')
       .map(line => line.trim().toUpperCase())
-      .filter(word => word.length >= 2 && word.length <= 9);
+      .filter(word => word.length >= 2 && word.length <= 11);
     return new Dictionary(words);
   }
 

@@ -37,6 +37,7 @@ function Game({ tileData, dictionary, mode, aiOpponent, onBackToMenu }: GameProp
   const isVsAI = mode === 'vs-ai';
   const isHotseat = mode === 'hotseat';
   const currentPlayer = gameState.players[gameState.currentPlayer];
+  const opponent = gameState.players[gameState.currentPlayer === 0 ? 1 : 0];
   const isAITurn = isVsAI && currentPlayer.id === 'P2';
 
   // AI turn handler
@@ -221,6 +222,16 @@ function Game({ tileData, dictionary, mode, aiOpponent, onBackToMenu }: GameProp
       />
 
       <Rack
+        tiles={opponent.rack}
+        selectedTileIds={[]}
+        placedTileIds={[]}
+        onTileClick={() => {}}
+        disabled
+        hidden
+        label="Opponent"
+      />
+
+      <Rack
         tiles={currentPlayer.rack}
         selectedTileIds={selectedTiles.filter(st => st.source === 'rack').map(st => st.tile.id)}
         placedTileIds={pendingPlacements.map(p => p.tileId)}
@@ -256,6 +267,7 @@ function Game({ tileData, dictionary, mode, aiOpponent, onBackToMenu }: GameProp
 
         <button
           className="action-button action-pass"
+          data-pass-stuck-only="true"
           onClick={handlePass}
           disabled={isAITurn || gameState.gameOver || !canPassNow}
         >

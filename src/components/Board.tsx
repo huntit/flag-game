@@ -1,7 +1,7 @@
 // Board component
 
 import type { Board, FlagPost, Position } from '../engine/types';
-import { FLAG_POSTS, CENTRE_STAR } from '../engine/types';
+import { FLAG_POSTS, CENTRE_STAR, BOARD_SIZE } from '../engine/types';
 import { getBoardTile, positionEquals, isFirstWord } from '../engine/game';
 import './Board.css';
 
@@ -38,6 +38,8 @@ function Board({ board, livePost, pendingPlacements, onCellClick }: BoardProps) 
       <div
         key={`${row}-${col}`}
         className={cellClasses}
+        data-row={row}
+        data-col={col}
         onClick={() => onCellClick(position)}
       >
         {tile && (
@@ -55,11 +57,19 @@ function Board({ board, livePost, pendingPlacements, onCellClick }: BoardProps) 
   };
 
   return (
-    <div className="board-container">
+    <div
+      className="board-container"
+      data-board-size={BOARD_SIZE}
+      data-centre={`${CENTRE_STAR.row},${CENTRE_STAR.col}`}
+      data-post-nw={`${FLAG_POSTS.NW.row},${FLAG_POSTS.NW.col}`}
+      data-post-ne={`${FLAG_POSTS.NE.row},${FLAG_POSTS.NE.col}`}
+      data-post-se={`${FLAG_POSTS.SE.row},${FLAG_POSTS.SE.col}`}
+      data-post-sw={`${FLAG_POSTS.SW.row},${FLAG_POSTS.SW.col}`}
+    >
       <div className="board">
-        {Array.from({ length: 9 }, (_, row) => (
+        {Array.from({ length: BOARD_SIZE }, (_, row) => (
           <div key={row} className="board-row">
-            {Array.from({ length: 9 }, (_, col) => renderCell(row + 1, col + 1))}
+            {Array.from({ length: BOARD_SIZE }, (_, col) => renderCell(row + 1, col + 1))}
           </div>
         ))}
       </div>
