@@ -19,6 +19,7 @@ Documentation for v0 playable slice. No implementation yet. Ada will build from 
 - [How to Play](docs/how-to-play.md) — Human-readable rules for v0
 - [Prototype Specification](docs/prototype-spec.md) — Technical build spec for Ada
 - [Assets](docs/assets.md) — Word list ✅, tile set ✅ (WWF English bag + Word Eagle values)
+- [Cloudflare Pages + GitHub autodeploy](docs/cloudflare-pages.md) — Hosting setup walkthrough
 
 ## Distinctiveness
 
