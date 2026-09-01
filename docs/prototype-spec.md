@@ -45,7 +45,7 @@ A two-player digital prototype combining crossword mechanics, a Splendor-style g
 - Human can play vs Hunter AI on 11×11 with opponent rack **letters** hidden and rack **count** public (0–7 facedown backs with empty slots; local engine, no room)
 - `flag-sim --games 200 --p1 greedy --p2 greedy` writes summary JSON with:
   - P1 win rate
-  - End-reason breakdown (self-capture, second-steal, no-spare-replacement, double-pass, stuck-out)
+  - End-reason breakdown (self-capture, second-steal, no-spare-replacement, exchange-three, double-pass, stuck-out)
   - Self-capturer win rate
   - Mean/median scores
   - Mean turn count
@@ -61,6 +61,8 @@ A two-player digital prototype combining crossword mechanics, a Splendor-style g
   - Market: 4 face-up + 2 face-down; Draw takes exactly 2 from showing tiles; orientation-preserving refill
   - Draw illegal when market showing < 2
   - Full rack does not block Draw (draw 2, discard to 7)
+  - Exchange: Draw when rack size was 7 before taking (Draw 2 + discard 2); three consecutive Exchanges end the game
+  - `consecutiveExchanges` resets on Play, non-Exchange Draw, and Pass
   - Pass legal only when no legal Play AND Draw illegal
   - Remote game persistence across disconnects/days
   - Opponent rack letters not leaked in URL or client payload; rack count is public
@@ -219,7 +221,23 @@ If the bag runs short, refill what you can; unfilled slots stay empty.
 
 **Rack cap:** If `rack.size > 7` after taking, player discards down to 7 (may discard tiles just taken). Discarded tiles are shuffled into the bag.
 
-**No optional +1 bag draw.** No separate facedown-from-bag action. Full rack does **not** block Draw — draw 2 then discard to 7 is the exchange.
+**No optional +1 bag draw.** No separate facedown-from-bag action. Full rack does **not** block Draw — draw 2 then discard to 7 is an **Exchange**.
+
+**Exchange (locked):** An Exchange is a Draw taken when that player's rack **already held 7 tiles** before taking from the market: they must take exactly 2 from the market, then discard exactly 2 (back to 7). That is Draw 2 + Discard 2. A Draw 2 that does **not** discard 2 (rack was under 7 before the take; they discard 0 or 1) is **not** an Exchange and does not increment the counter.
+
+**Exchange stall counter:** Maintain `consecutiveExchanges` (integer, starts at 0).
+
+- After an Exchange turn: increment `consecutiveExchanges`. If it reaches **3**, end the game immediately (`endReason = exchange_three`). Winner = highest score; tie = draw.
+- Reset `consecutiveExchanges` to **0** on any **Play**, on any **Draw that is not an Exchange**, and on any **Pass**.
+- Count Exchanges **across both players** in turn order (not per player, not three Exchanges in the whole game).
+
+**Examples** (7 = Exchange from full rack; 6 = Draw from 6-tile rack, not an Exchange):
+
+| Turn sequence | `consecutiveExchanges` after last turn |
+|---------------|----------------------------------------|
+| 7-draw, 7-draw, 7-draw | 3 → game ends |
+| 7-draw, 6-draw, 7-draw | 1 (reset on 6-draw) |
+| 7-draw, Play, 7-draw | 1 (reset on Play) |
 
 **Illegal draw:** Fewer than 2 tiles showing in the market.
 
@@ -275,10 +293,11 @@ If the bag runs short, refill what you can; unfilled slots stay empty.
 
 **After a pass:**
 
+- Reset `consecutiveExchanges` to 0
 - Consecutive double-pass ends the game **only after two consecutive explicit Passes** (one from each player)
 - A Draw or Play between Passes **breaks the streak**
 
-**Important:** Draw XOR Play remains the normal turn action. Pass is a stuck-only escape valve.
+**Important:** Draw XOR Play remains the normal turn action. Pass is a stuck-only escape valve when Draw is illegal (market showing < 2). **Exchange-three** is the separate stall end when Draw is still legal but players only full-rack Exchange; do not conflate with double-pass.
 
 ## 9. Game End
 
@@ -287,12 +306,13 @@ The game ends when:
 - **Self-capture** — Player covers own flag (triple-word on that word, then end)
 - **Second steal** — Opponent captures a player's flag for the second time (`flagsLost === 2`; double-word on that word, then end)
 - **No spare replacement** — Opponent steals but no empty spare true corner exists (double-word on that word, then end)
-- **Double pass** — Two consecutive explicit Passes (one from each player). A Draw or Play between Passes breaks the streak
+- **Exchange three** — Three consecutive Exchanges (full-rack Draw 2 + Discard 2; see section 8.1). Counted across both players. Play, non-Exchange Draw, or Pass between Exchanges resets `consecutiveExchanges` to 0
+- **Double pass** — Two consecutive explicit Passes (one from each player). Stuck-only — Draw illegal because market showing < 2. A Draw or Play between Passes breaks the streak
 - **Stuck out** — Draw permanently illegal for both players and they pass out (both stuck, both Pass)
 
 **Winner:** Higher score after all bonuses. Ties are draws (no tiebreaker).
 
-**Log `endReason`:** One of: `self_capture`, `second_steal`, `no_spare`, `double_pass`, `stuck_out`.
+**Log `endReason`:** One of: `self_capture`, `second_steal`, `no_spare`, `exchange_three`, `double_pass`, `stuck_out`.
 
 Do NOT tie-break by who captured.
 
@@ -519,7 +539,7 @@ Write one JSON object per line for each game:
 - `p2` (personality)
 - `first` (which personality went first)
 - `winner` (P1, P2, or draw)
-- `endReason` (`self_capture`, `second_steal`, `no_spare`, `double_pass`, `stuck_out`)
+- `endReason` (`self_capture`, `second_steal`, `no_spare`, `exchange_three`, `double_pass`, `stuck_out`)
 - `selfCapturer` (P1, P2, or null)
 - `selfCapturerWon` (boolean or null)
 - `scoreP1`
@@ -545,7 +565,7 @@ Write summary statistics in a separate file:
 - `drawRate` (ties)
 - `p1WinRate`
 - `personalityWinRate` (adjusting for swaps)
-- End-reason rates (`selfCaptureEndRate`, `secondStealEndRate`, `noSpareEndRate`, `doublePassEndRate`, `stuckOutEndRate`)
+- End-reason rates (`selfCaptureEndRate`, `secondStealEndRate`, `noSpareEndRate`, `exchangeThreeEndRate`, `doublePassEndRate`, `stuckOutEndRate`)
 - `selfCapturerWinRate` (when someone self-captured, did they win?)
 - Mean and median scores (per player, per game)
 - `meanTurns`
@@ -651,7 +671,7 @@ Peter's original idea (2 July 2018):
 - Per-player flags on true corners with TWS/DWS capture scoring (not a rotating shared post)
 - Market 6 (4 up + 2 down); Draw takes exactly 2; no +1 bag
 - P1=2 / P2=3 opening tiles from the bag; random P1 each game; first action may be Draw or Play
-- Second-steal and self-capture end conditions; double-pass and stuck-out backups
+- Second-steal and self-capture end conditions; exchange-three (full-rack stall), double-pass, and stuck-out backups
 
 ---
 

@@ -109,9 +109,17 @@ On your turn, choose one:
 
 **Draw is illegal** if fewer than 2 tiles are currently showing in the market.
 
-**Full rack does NOT block Draw.** Draw 2, then discard to 7 — that is the exchange.
+**Full rack does NOT block Draw.** When your rack already holds **7 tiles**, Draw 2 then discard 2 (back to 7) — that turn is an **Exchange**. A Draw from a rack of 6 or fewer (you take 2 but discard 0 or 1) is **not** an Exchange.
 
 There is no optional +1 draw from the bag. There is no separate facedown-from-bag action.
+
+**Exchange stall:** The game ends immediately after **three consecutive Exchanges** (full-rack Draw 2 + Discard 2 turns in a row, counted across both players); highest score wins, tie = draw. Any **Play**, any **Draw that is not an Exchange**, or any **Pass** resets the streak to zero.
+
+Examples (7 = Exchange from a full rack; 6 = Draw from a 6-tile rack, not an Exchange):
+
+- 7-draw, 7-draw, 7-draw → game ends after the third Exchange
+- 7-draw, 6-draw, 7-draw → streak was 1, reset to 0 on the 6-draw, then back to 1 after the last 7-draw
+- 7-draw, Play, 7-draw → streak was 1, reset to 0 on the Play, then back to 1 after the last 7-draw
 
 ### Play
 
@@ -145,10 +153,11 @@ There is no optional +1 draw from the bag. There is no separate facedown-from-ba
 
 **After you pass:**
 
+- Pass resets any **Exchange** streak (see Draw)
 - The game ends only after **two consecutive explicit Passes** (one from each player)
 - A Draw or Play between Passes breaks the streak
 
-**Important:** Draw OR Play is the normal turn. Pass is a stuck-only escape valve, not a stalling tactic.
+**Important:** Draw OR Play is the normal turn. Pass is a stuck-only escape valve when the market has fewer than 2 tiles showing — not a stalling tactic. **Exchange stall** (three consecutive full-rack Exchanges while Draw is still legal) is the separate end condition for rack-fishing; it does not replace double-pass.
 
 ## Game End
 
@@ -157,7 +166,8 @@ The game ends when:
 - A player captures **their own** flag (triple-word on that word, then end)
 - An opponent's **second steal** of the same player's flag (double-word on that word, then end)
 - A steal with **no spare empty corner** for replacement (double-word on that word, then end)
-- **Two consecutive explicit Passes**
+- **Three consecutive Exchanges** (full-rack Draw 2 + Discard 2 across both players; see Draw above)
+- **Two consecutive explicit Passes** (stuck-only — Draw illegal because market showing < 2)
 - Draw is permanently illegal for both players and they pass out
 
 After any end, **highest score wins**; tie = draw.
