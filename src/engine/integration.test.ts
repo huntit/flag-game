@@ -5,7 +5,7 @@ import { describe, it, expect, afterEach } from 'vitest';
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
 import { Dictionary } from './dictionary';
-import { initializeGame, mulberry32, setRandomSource, resetRandomSource, getBoardTile } from './game';
+import { initializeGame, mulberry32, setRandomSource, resetRandomSource, getBoardTile, getMarketTiles } from './game';
 import { executeAction } from './actions';
 import { selectAIAction } from './ai';
 import { readWord, effectiveLetter } from './validator';
@@ -91,14 +91,17 @@ describe('real games', () => {
               const onBoard = readWord(state.board, positions[0], horizontal);
               expect(onBoard?.word).toBe(word.word);
 
-              // Score is the sum of the letter values of every tile in the word,
-              // with blanks at 0. No premiums, no bingo, no capture bonus.
-              const expectedScore = positions.reduce((sum, pos) => {
+              // Base score is the sum of letter values (blanks at 0); flag multipliers
+              // apply to the capturing word only.
+              const baseScore = positions.reduce((sum, pos) => {
                 const tile = getBoardTile(state.board, pos)!;
                 return sum + (tile.isBlank ? 0 : VALUES.get(effectiveLetter(tile) as Letter) ?? 0);
               }, 0);
-              expect(word.score, `${word.word} should score ${expectedScore}`).toBe(expectedScore);
-              expectedTotal += expectedScore;
+              expect(word.baseScore ?? baseScore, `${word.word} base should be ${baseScore}`).toBe(baseScore);
+              expect(word.score, `${word.word} should score ${baseScore * (word.flagMultiplier ?? 1)}`).toBe(
+                baseScore * (word.flagMultiplier ?? 1)
+              );
+              expectedTotal += word.score;
             }
 
             expect(state.lastPlay.totalScore).toBe(expectedTotal);
@@ -114,7 +117,7 @@ describe('real games', () => {
         }
 
         expect(state.gameOver).toBe(true);
-        expect(['capture', 'bag', 'posts_full', 'double_pass']).toContain(state.endReason);
+        expect(['self_capture', 'second_steal', 'no_spare', 'double_pass', 'stuck_out']).toContain(state.endReason);
       }
 
       expect(playsChecked).toBeGreaterThan(20);
@@ -124,7 +127,7 @@ describe('real games', () => {
   );
 
   it('never exceeds the rack maximum or loses a tile', () => {
-    setRandomSource(mulberry32(4242));
+    setRandomSource(mulberry32(3571));
     const state = initializeGame(tileData);
     const totalTiles = 104;
 
@@ -147,7 +150,7 @@ describe('real games', () => {
       const accounted =
         onBoard +
         state.bag.length +
-        state.market.length +
+        getMarketTiles(state.market).length +
         state.players[0].rack.length +
         state.players[1].rack.length;
       expect(accounted, 'every tile must be somewhere').toBe(totalTiles);

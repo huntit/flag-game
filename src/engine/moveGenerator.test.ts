@@ -5,9 +5,10 @@
 import { describe, it, expect } from 'vitest';
 import { Dictionary } from './dictionary';
 import { generateLegalPlays, hasLegalPlay } from './moveGenerator';
-import { validatePlay } from './validator';
-import type { Board, Letter, Position, Tile } from './types';
+import { validatePlay, type FlagContext } from './validator';
+import type { Board, FlagPost, GameState, Letter, Position, Tile } from './types';
 import { BOARD_SIZE, CENTRE_STAR, FLAG_POSTS } from './types';
+import { emptySpareCorners } from './game';
 
 const VALUES: Record<string, number> = {
   A: 1, B: 4, C: 4, D: 2, E: 1, F: 4, G: 3, H: 3, I: 1, J: 10, K: 5, L: 2, M: 4,
@@ -15,7 +16,7 @@ const VALUES: Record<string, number> = {
 };
 
 const dictionary = new Dictionary([
-  'AT', 'AD', 'AS', 'CAT', 'CATS', 'DO', 'DOG', 'ID', 'IT', 'OD', 'OS', 'SO',
+  'AT', 'AD', 'AS', 'ART', 'CAT', 'CATS', 'DO', 'DOG', 'ID', 'IT', 'OD', 'OS', 'SO',
   'TO', 'TA', 'STAR', 'RAT', 'RATS', 'ARTS', 'TAR', 'TARS', 'SAT', 'AH', 'HA',
 ]);
 
@@ -40,9 +41,40 @@ function put(board: Board, word: string, at: Position, direction: 'h' | 'v'): vo
   });
 }
 
+function mockState(
+  board: Board,
+  flags: { P1: FlagPost | null; P2: FlagPost | null } = { P1: 'NW', P2: 'SE' }
+): GameState {
+  return {
+    board,
+    players: [
+      { id: 'P1', rack: [], score: 0, flagsLost: 0 },
+      { id: 'P2', rack: [], score: 0, flagsLost: 0 },
+    ],
+    currentPlayer: 0,
+    market: [],
+    bag: [],
+    flags,
+    consecutivePasses: 0,
+    gameOver: false,
+    turnCount: 0,
+    moveHistory: [],
+  };
+}
+
+function flagContext(state: GameState, playerId: 'P1' | 'P2'): FlagContext {
+  return {
+    flags: state.flags,
+    playerId,
+    flagsLost: { P1: state.players[0].flagsLost, P2: state.players[1].flagsLost },
+    emptySpareCount: emptySpareCorners(state).length,
+  };
+}
+
 describe('opening plays', () => {
   it('only generates plays that cover the centre star', () => {
-    const plays = generateLegalPlays(emptyBoard(), rackOf('CAT'), dictionary, 'NW');
+    const state = mockState(emptyBoard());
+    const plays = generateLegalPlays(state, rackOf('CAT'), dictionary, 'P1');
     expect(plays.length).toBeGreaterThan(0);
     for (const play of plays) {
       const coversCentre = play.tiles.some(
@@ -53,7 +85,8 @@ describe('opening plays', () => {
   });
 
   it('finds the opening word in both directions', () => {
-    const plays = generateLegalPlays(emptyBoard(), rackOf('CAT'), dictionary, 'NW');
+    const state = mockState(emptyBoard());
+    const plays = generateLegalPlays(state, rackOf('CAT'), dictionary, 'P1');
     const cats = plays.filter(p => p.words.some(w => w.word === 'CAT'));
     const across = cats.filter(p => p.tiles.every(t => t.position.row === p.tiles[0].position.row));
     const down = cats.filter(p => p.tiles.every(t => t.position.col === p.tiles[0].position.col));
@@ -62,18 +95,20 @@ describe('opening plays', () => {
   });
 
   it('finds nothing when the rack cannot make a word', () => {
+    const state = mockState(emptyBoard());
     // No two-letter or longer word in this dictionary uses only B and G.
-    expect(hasLegalPlay(emptyBoard(), rackOf('BG'), dictionary, 'NW')).toBe(false);
+    expect(hasLegalPlay(state, rackOf('BG'), dictionary, 'P1')).toBe(false);
   });
 });
 
 describe('every generated play is legal', () => {
   it('revalidates cleanly on an empty board', () => {
     const board = emptyBoard();
-    const plays = generateLegalPlays(board, rackOf('CATSO'), dictionary, 'NW');
+    const state = mockState(board);
+    const plays = generateLegalPlays(state, rackOf('CATSO'), dictionary, 'P1');
     expect(plays.length).toBeGreaterThan(0);
     for (const play of plays) {
-      const check = validatePlay(board, play.tiles, dictionary, 'NW');
+      const check = validatePlay(board, play.tiles, dictionary, flagContext(state, 'P1'));
       expect(check.valid, `${play.words.map(w => w.word).join('/')} should be legal`).toBe(true);
       expect(check.totalScore).toBe(play.totalScore);
     }
@@ -82,11 +117,12 @@ describe('every generated play is legal', () => {
   it('revalidates cleanly mid-game, including all crosswords', () => {
     const board = emptyBoard();
     put(board, 'STAR', { row: 6, col: 5 }, 'h');
+    const state = mockState(board);
 
-    const plays = generateLegalPlays(board, rackOf('CATOD'), dictionary, 'NE');
+    const plays = generateLegalPlays(state, rackOf('CATOD'), dictionary, 'P1');
     expect(plays.length).toBeGreaterThan(0);
     for (const play of plays) {
-      const check = validatePlay(board, play.tiles, dictionary, 'NE');
+      const check = validatePlay(board, play.tiles, dictionary, flagContext(state, 'P1'));
       expect(check.valid, `${play.words.map(w => w.word).join('/')} should be legal`).toBe(true);
       for (const word of check.words ?? []) {
         expect(dictionary.isValid(word.word)).toBe(true);
@@ -97,8 +133,9 @@ describe('every generated play is legal', () => {
   it('never places a tile on an occupied square', () => {
     const board = emptyBoard();
     put(board, 'STAR', { row: 6, col: 5 }, 'h');
+    const state = mockState(board);
 
-    for (const play of generateLegalPlays(board, rackOf('CATO'), dictionary, 'NW')) {
+    for (const play of generateLegalPlays(state, rackOf('CATO'), dictionary, 'P1')) {
       for (const placed of play.tiles) {
         expect(board[placed.position.row - 1][placed.position.col - 1]).toBeNull();
       }
@@ -108,8 +145,9 @@ describe('every generated play is legal', () => {
   it('never uses a rack tile twice in one play', () => {
     const board = emptyBoard();
     put(board, 'STAR', { row: 6, col: 5 }, 'h');
+    const state = mockState(board);
 
-    for (const play of generateLegalPlays(board, rackOf('SATOD'), dictionary, 'NW')) {
+    for (const play of generateLegalPlays(state, rackOf('SATOD'), dictionary, 'P1')) {
       const ids = play.tiles.map(t => t.tile.id);
       expect(new Set(ids).size).toBe(ids.length);
     }
@@ -120,8 +158,9 @@ describe('completeness', () => {
   it('finds the single-tile play that extends an existing word', () => {
     const board = emptyBoard();
     put(board, 'CAT', { row: 6, col: 5 }, 'h');
+    const state = mockState(board);
 
-    const plays = generateLegalPlays(board, rackOf('S'), dictionary, 'NW');
+    const plays = generateLegalPlays(state, rackOf('S'), dictionary, 'P1');
     const cats = plays.find(p => p.words.some(w => w.word === 'CATS'));
     expect(cats).toBeDefined();
     expect(cats!.tiles).toHaveLength(1);
@@ -132,9 +171,10 @@ describe('completeness', () => {
   it('finds a play that hooks perpendicular to an existing word', () => {
     const board = emptyBoard();
     put(board, 'AT', { row: 6, col: 6 }, 'h');
+    const state = mockState(board);
 
     // DO under AT makes AD and TO as well.
-    const plays = generateLegalPlays(board, rackOf('DO'), dictionary, 'NW');
+    const plays = generateLegalPlays(state, rackOf('DO'), dictionary, 'P1');
     const hook = plays.find(
       p => p.words.some(w => w.word === 'DO') && p.words.some(w => w.word === 'AD')
     );
@@ -143,8 +183,8 @@ describe('completeness', () => {
   });
 
   it('uses a blank when no real tile fits, scoring it zero', () => {
-    const board = emptyBoard();
-    const plays = generateLegalPlays(board, [tile('A'), blank()], dictionary, 'NW');
+    const state = mockState(emptyBoard());
+    const plays = generateLegalPlays(state, [tile('A'), blank()], dictionary, 'P1');
     const withBlank = plays.filter(p => p.tiles.some(t => t.tile.isBlank));
     expect(withBlank.length).toBeGreaterThan(0);
     for (const play of withBlank) {
@@ -154,20 +194,22 @@ describe('completeness', () => {
     }
   });
 
-  it('reports a capture when a play covers the live post', () => {
+  it('reports a capture when a play covers the opponent flag', () => {
     const board = emptyBoard();
-    // T sits directly below the NW post, so playing A onto (2,2) makes AT.
-    put(board, 'T', { row: 3, col: 2 }, 'v');
+    // RT sits beside the NW corner so playing A onto (1,1) makes ART and steals P2's flag.
+    put(board, 'RT', { row: 1, col: 2 }, 'h');
     put(board, 'STAR', { row: 6, col: 5 }, 'h'); // board is not empty
 
-    const plays = generateLegalPlays(board, rackOf('A'), dictionary, 'NW');
-    const capture = plays.find(p => p.captures);
+    const stealState = mockState(board, { P1: 'SE', P2: 'NW' });
+    const plays = generateLegalPlays(stealState, rackOf('A'), dictionary, 'P1');
+    const capture = plays.find(p => p.capturesOpponentFlag);
     expect(capture).toBeDefined();
     expect(capture!.tiles[0].position).toEqual(FLAG_POSTS.NW);
 
-    // The same play is not a capture when a different post is live.
-    const elsewhere = generateLegalPlays(board, rackOf('A'), dictionary, 'SE');
-    expect(elsewhere.some(p => p.captures)).toBe(false);
+    // The same play is not a steal when P2's flag sits elsewhere.
+    const safeState = mockState(board, { P1: 'NW', P2: 'SE' });
+    const elsewhere = generateLegalPlays(safeState, rackOf('A'), dictionary, 'P1');
+    expect(elsewhere.some(p => p.capturesOpponentFlag)).toBe(false);
   });
 });
 
@@ -179,12 +221,14 @@ describe('completeness', () => {
  * when the generator finds nothing.
  */
 function bruteForceLegalPlays(
-  board: Board,
+  state: GameState,
   rack: Tile[],
   dict: Dictionary,
-  livePost: string,
+  playerId: 'P1' | 'P2',
   maxTiles: number
 ): Set<string> {
+  const board = state.board;
+  const ctx = flagContext(state, playerId);
   const cells: Position[] = [];
   for (let row = 1; row <= BOARD_SIZE; row++) {
     for (let col = 1; col <= BOARD_SIZE; col++) {
@@ -201,7 +245,7 @@ function bruteForceLegalPlays(
       .join('|');
 
   const tryPlacement = (placements: { tile: Tile; position: Position }[]) => {
-    if (validatePlay(board, placements, dict, livePost).valid) found.add(key(placements));
+    if (validatePlay(board, placements, dict, ctx).valid) found.add(key(placements));
   };
 
   // Every arrangement of `size` rack tiles over `size` distinct empty cells.
@@ -247,10 +291,11 @@ describe('matches a brute-force reference', () => {
 
   it('finds exactly the legal plays on an opening board', () => {
     const board = emptyBoard();
+    const state = mockState(board);
     const rack = rackOf('CAT');
 
-    const generated = canonical(generateLegalPlays(board, rack, dictionary, 'NW'));
-    const reference = bruteForceLegalPlays(board, rack, dictionary, 'NW', 3);
+    const generated = canonical(generateLegalPlays(state, rack, dictionary, 'P1'));
+    const reference = bruteForceLegalPlays(state, rack, dictionary, 'P1', 3);
 
     expect(generated.size).toBeGreaterThan(0);
     expect([...reference].filter(p => !generated.has(p))).toEqual([]); // none missed
@@ -261,10 +306,11 @@ describe('matches a brute-force reference', () => {
     const board = emptyBoard();
     put(board, 'STAR', { row: 6, col: 5 }, 'h');
     put(board, 'DO', { row: 7, col: 5 }, 'v'); // D under S, O below it
+    const state = mockState(board);
 
     const rack = rackOf('AT');
-    const generated = canonical(generateLegalPlays(board, rack, dictionary, 'NW'));
-    const reference = bruteForceLegalPlays(board, rack, dictionary, 'NW', 2);
+    const generated = canonical(generateLegalPlays(state, rack, dictionary, 'P1'));
+    const reference = bruteForceLegalPlays(state, rack, dictionary, 'P1', 2);
 
     expect(reference.size).toBeGreaterThan(0);
     expect([...reference].filter(p => !generated.has(p))).toEqual([]);
@@ -274,29 +320,32 @@ describe('matches a brute-force reference', () => {
   it('agrees that nothing is legal when nothing is legal', () => {
     const board = emptyBoard();
     put(board, 'STAR', { row: 6, col: 5 }, 'h');
+    const state = mockState(board);
 
     const rack = rackOf('BF');
-    expect(generateLegalPlays(board, rack, dictionary, 'NW')).toHaveLength(0);
-    expect(bruteForceLegalPlays(board, rack, dictionary, 'NW', 2).size).toBe(0);
+    expect(generateLegalPlays(state, rack, dictionary, 'P1')).toHaveLength(0);
+    expect(bruteForceLegalPlays(state, rack, dictionary, 'P1', 2).size).toBe(0);
   });
 });
 
 describe('early exit', () => {
   it('stops at the requested limit', () => {
-    const plays = generateLegalPlays(emptyBoard(), rackOf('CATSO'), dictionary, 'NW', { limit: 3 });
+    const state = mockState(emptyBoard());
+    const plays = generateLegalPlays(state, rackOf('CATSO'), dictionary, 'P1', { limit: 3 });
     expect(plays).toHaveLength(3);
   });
 
   it('hasLegalPlay agrees with the full generator', () => {
     const board = emptyBoard();
     put(board, 'STAR', { row: 6, col: 5 }, 'h');
+    const state = mockState(board);
 
-    expect(hasLegalPlay(board, rackOf('S'), dictionary, 'NW')).toBe(true);
-    expect(hasLegalPlay(board, [], dictionary, 'NW')).toBe(false);
+    expect(hasLegalPlay(state, rackOf('S'), dictionary, 'P1')).toBe(true);
+    expect(hasLegalPlay(state, [], dictionary, 'P1')).toBe(false);
 
     // Only high-value consonants that form nothing in this small dictionary.
-    const stuck = generateLegalPlays(board, rackOf('BFJK'), dictionary, 'NW');
+    const stuck = generateLegalPlays(state, rackOf('BFJK'), dictionary, 'P1');
     expect(stuck).toHaveLength(0);
-    expect(hasLegalPlay(board, rackOf('BFJK'), dictionary, 'NW')).toBe(false);
+    expect(hasLegalPlay(state, rackOf('BFJK'), dictionary, 'P1')).toBe(false);
   });
 });
