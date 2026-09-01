@@ -38,8 +38,10 @@
   background-color: color-mix(in srgb, var(--color-sand) 80%, white);
 }
 
+/* The last play can belong to either seat, so this is neutral rather than a
+   player colour — the tiles sitting on it already carry their owner's tint. */
 .board-cell.is-highlighted {
-  background-color: color-mix(in srgb, var(--color-p1) 18%, var(--color-cream));
+  background-color: color-mix(in srgb, var(--color-chrome) 16%, var(--color-cream));
 }
 
 .board-cell:active {

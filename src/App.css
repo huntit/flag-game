@@ -193,6 +193,75 @@ button:disabled {
   pointer-events: none;
 }
 
+/* ---- The button family --------------------------------------------------
+   Every action button in the game is built from these, so nothing looks like
+   it wandered in from another app. Solid carries the action; ghost is the
+   same shape and hue at a quieter weight. Screens that need a different size
+   override --ctl-h. */
+
+/* --ctl-h is a fallback, not a set value: a consumer that declares its own
+   --ctl-h wins regardless of stylesheet order. */
+.control {
+  height: var(--ctl-h, 46px);
+  min-width: var(--ctl-h, 46px);
+  border-radius: var(--control-radius);
+  font-size: clamp(0.74rem, calc(var(--ctl-h, 46px) * 0.34), 1rem);
+  font-weight: 700;
+  letter-spacing: 0.015em;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 clamp(12px, calc(var(--ctl-h, 46px) * 0.5), 26px);
+  text-align: center;
+  line-height: 1.15;
+  flex: 0 0 auto;
+  transition:
+    transform var(--dur-quick) var(--ease-settle),
+    box-shadow var(--dur-quick) ease,
+    opacity var(--dur-quick) ease,
+    background-color var(--dur-quick) ease;
+}
+
+.control-solid {
+  background-color: var(--control-bg);
+  color: var(--control-fg);
+  box-shadow: var(--control-shadow);
+}
+
+/* Same pill and hue at a quieter weight, for actions that only rearrange
+   things rather than commit to them. */
+.control-outline {
+  background-color: transparent;
+  color: var(--color-chrome);
+  box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--color-chrome) 45%, transparent);
+}
+
+/* Icon-only: the pill closes up into a circle of the same height. */
+.control-round {
+  padding: 0;
+  width: var(--ctl-h, 46px);
+}
+
+.control:active:not(:disabled) {
+  transform: scale(0.96);
+}
+
+.control:disabled {
+  opacity: 0.38;
+}
+
+.control:focus-visible {
+  outline: 2px solid var(--color-ink);
+  outline-offset: 2px;
+}
+
+.control-icon {
+  width: 52%;
+  height: 52%;
+  display: block;
+}
+
 /* A score, wherever it appears: one colour, one weight, lining figures so a
    two-digit total does not jitter against a one-digit one. */
 .score-value {

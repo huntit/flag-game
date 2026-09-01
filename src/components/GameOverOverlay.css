@@ -36,9 +36,17 @@
 }
 
 .game-over-winner {
-  font-size: 1.7rem;
+  font-size: 1.8rem;
   font-weight: 800;
-  color: var(--color-success);
+  color: var(--color-ink);
+}
+
+.game-over-winner.is-p1 {
+  color: color-mix(in srgb, var(--color-p1) 82%, var(--color-ink));
+}
+
+.game-over-winner.is-p2 {
+  color: color-mix(in srgb, var(--color-p2) 82%, var(--color-ink));
 }
 
 .game-over-scores {
@@ -50,8 +58,7 @@
 .game-over-score {
   flex: 1;
   padding: 10px 6px;
-  border-radius: 10px
-  ;
+  border-radius: 10px;
   background-color: var(--color-bg);
   display: flex;
   flex-direction: column;
@@ -67,24 +74,13 @@
 }
 
 .game-over-score strong {
-  font-size: 1.5rem;
-  font-variant-numeric: tabular-nums;
+  font-size: 1.6rem;
 }
 
+/* Same pill family as the in-game controls; only the width differs. */
 .game-over-button {
-  height: 46px;
-  border-radius: 10px;
-  background-color: var(--color-primary);
-  color: #06121f;
-  font-size: 0.95rem;
+  --ctl-h: 48px;
+  width: 100%;
+  font-size: 0.98rem;
   font-weight: 800;
-}
-
-.game-over-button.is-secondary {
-  background-color: var(--color-bg-lift);
-  color: var(--color-text);
-}
-
-.game-over-button:active {
-  transform: scale(0.98);
 }

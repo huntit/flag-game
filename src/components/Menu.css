@@ -13,7 +13,7 @@
 }
 
 .menu-subtitle {
-  font-size: 0.82rem;
+  font-size: 0.9rem;
   color: var(--color-text-dim);
 }
 
@@ -34,7 +34,7 @@
   border-radius: 12px;
   background-color: var(--color-bg-lift);
   color: var(--color-text);
-  font-size: 1.02rem;
+  font-size: 1.1rem;
   font-weight: 700;
   display: flex;
   flex-direction: column;
@@ -43,7 +43,7 @@
 }
 
 .menu-button small {
-  font-size: 0.66rem;
+  font-size: 0.74rem;
   font-weight: 600;
   color: var(--color-text-dim);
 }
@@ -60,7 +60,7 @@
 
 .menu-button.is-small {
   padding: clamp(9px, 1.7vh, 13px) 14px;
-  font-size: 0.88rem;
+  font-size: 0.96rem;
   background-color: var(--color-bg-light);
 }
 
@@ -69,7 +69,7 @@
 }
 
 .menu-note {
-  font-size: 0.76rem;
+  font-size: 0.84rem;
   line-height: 1.5;
   color: var(--color-text-dim);
 }

@@ -70,6 +70,20 @@ describe('no-scroll phone shell', () => {
     }
   });
 
+  it('ranks the one visible toast by urgency, so a live score beats the banner', () => {
+    // Only statusToasts[0] renders. What the player is doing right now has to
+    // outrank ambient copy, or placing a word on the opening move shows "You
+    // play first" instead of what that word scores.
+    const game = read('./Game.tsx');
+    const body = game.slice(game.indexOf('const statusToasts'), game.indexOf('return items;'));
+    const at = needle => body.indexOf(needle);
+    expect(at('toast-error')).toBeGreaterThan(-1);
+    expect(at("kind: 'toast-score'")).toBeGreaterThan(at('text: error'));
+    expect(at('firstPlayerBannerText')).toBeGreaterThan(at("kind: 'toast-score'"));
+    expect(at('EXCHANGE_WARNING')).toBeGreaterThan(at('requiredDiscards > 0'));
+    expect(at('is thinking')).toBeGreaterThan(at('EXCHANGE_WARNING'));
+  });
+
   it('keeps toasts in a dedicated bottom status row so they cannot cover the rack', () => {
     expect(gameCss).toMatch(/\.status-row/);
     expect(gameCss).toMatch(/grid-template-areas:[\s\S]*'rack'[\s\S]*'status'/);
@@ -401,6 +415,15 @@ describe('input model', () => {
     expect(game).toMatch(/reorderRack/);
     expect(read('./Rack.tsx')).toMatch(/data-rack-zone/);
     expect(read('./Rack.tsx')).toMatch(/data-rack-index/);
+
+    // The drop index is read from the DOM but applied to a rack the dragged
+    // tile has already left, so the DOM scan has to skip that tile. Counting
+    // it lands every leftward drop one slot too far right.
+    expect(read('./Rack.tsx')).toMatch(/data-lifted=/);
+    expect(read('./useTileDrag.ts')).toMatch(/dataset\.lifted !== 'true'/);
+    // …and it collapses out of the layout, so the only gap on the rack is the
+    // one the tile would drop into.
+    expect(rackCss).toMatch(/\.tray-tile\.is-lifted\s*\{[^}]*width:\s*0/s);
     // Touch drags must not scroll the page out from under the tile.
     expect(rackCss).toMatch(/touch-action:\s*none/);
   });

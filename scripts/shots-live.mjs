@@ -16,6 +16,7 @@ const page = await context.newPage();
 
 const cell = (r, c) => page.locator(`.board-cell[data-row="${r}"][data-col="${c}"]`);
 const rack = () => page.locator('.rack-row .tray-tile');
+// Shuffle / Clear share one icon button in the actions row.
 const third = () => page.locator('.action-shuffle');
 
 const read = () =>

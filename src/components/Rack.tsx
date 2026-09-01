@@ -64,6 +64,7 @@ export function Rack({
               className={classes}
               data-tile-id={tile.id}
               data-rack-index={index}
+              data-lifted={liftedTileId === tile.id ? 'true' : undefined}
               disabled={disabled}
               onClick={() => onTileClick(tile)}
               onPointerDown={

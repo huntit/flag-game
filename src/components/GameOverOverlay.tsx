@@ -40,27 +40,38 @@ function GameOverOverlay({
         ? `${youLabel} win`
         : `${otherLabel} wins`;
 
+  // The result is announced in the winner's own colour, the same way names
+  // are coloured on the score cards.
+  const winnerSeat =
+    gameState.winner === 'P1' || gameState.winner === 'P2' ? gameState.winner : null;
+
   return (
     <div className="game-over">
       <div className="game-over-panel">
         <p className="game-over-reason">{END_REASONS[gameState.endReason ?? ''] ?? 'Game over'}</p>
-        <h2 className="game-over-winner">{winnerText}</h2>
+        <h2 className={`game-over-winner ${winnerSeat ? `is-${winnerSeat.toLowerCase()}` : 'is-draw'}`}>
+          {winnerText}
+        </h2>
 
         <div className="game-over-scores">
           <div className={`game-over-score is-${viewer.id.toLowerCase()}`}>
             <span>{youLabel}</span>
-            <strong>{viewer.score}</strong>
+            <strong className="score-value">{viewer.score}</strong>
           </div>
           <div className={`game-over-score is-${other.id.toLowerCase()}`}>
             <span>{otherLabel}</span>
-            <strong>{other.score}</strong>
+            <strong className="score-value">{other.score}</strong>
           </div>
         </div>
 
-        <button type="button" className="game-over-button" onClick={onNewGame}>
+        <button type="button" className="control control-solid game-over-button" onClick={onNewGame}>
           New game
         </button>
-        <button type="button" className="game-over-button is-secondary" onClick={onBackToMenu}>
+        <button
+          type="button"
+          className="control control-outline game-over-button is-secondary"
+          onClick={onBackToMenu}
+        >
           Menu
         </button>
       </div>

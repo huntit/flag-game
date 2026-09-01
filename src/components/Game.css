@@ -24,7 +24,7 @@
   --market-h: clamp(50px, calc(var(--app-h) * 0.095), 98px);
   --rack-h: clamp(52px, calc(var(--app-h) * 0.10), 104px);
   --actions-h: clamp(42px, calc(var(--app-h) * 0.064), 64px);
-  --status-h: clamp(22px, calc(var(--app-h) * 0.036), 32px);
+  --status-h: clamp(24px, calc(var(--app-h) * 0.04), 36px);
   --shell-gap: clamp(3px, calc(var(--app-h) * 0.007), 8px);
   --shell-pad-x: 4px;
   --shell-pad-y: 4px;
@@ -67,8 +67,6 @@
        visibly shrinks when it lands. */
     calc(var(--cell) * 1.4)
   );
-
-  --ctl-h: calc(var(--actions-h) * 0.86);
 
   position: relative;
   height: var(--app-h);
@@ -200,64 +198,12 @@
 }
 
 /* ---- Controls ----------------------------------------------------------
-   One family: same height, same pill radius, same chrome hue. Solid for the
-   moves that end a turn, ghost for the ones that only rearrange your hand. */
+   The family itself lives in App.css so every screen shares it; the play
+   shell only sizes it against the actions row. Solid for the moves that end
+   a turn, ghost for the ones that only rearrange your hand. */
 
-.control {
-  height: var(--ctl-h);
-  min-width: var(--ctl-h);
-  border-radius: var(--control-radius);
-  font-size: clamp(0.74rem, calc(var(--ctl-h) * 0.34), 1rem);
-  font-weight: 700;
-  letter-spacing: 0.015em;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  padding: 0 clamp(12px, calc(var(--ctl-h) * 0.5), 26px);
-  text-align: center;
-  line-height: 1.15;
-  flex: 0 0 auto;
-  transition:
-    transform var(--dur-quick) var(--ease-settle),
-    box-shadow var(--dur-quick) ease,
-    opacity var(--dur-quick) ease,
-    background-color var(--dur-quick) ease;
-}
-
-.control-solid {
-  background-color: var(--control-bg);
-  color: var(--control-fg);
-  box-shadow: var(--control-shadow);
-}
-
-/* Same shape and hue, quieter weight — clearly the same family, clearly
-   subordinate to Draw and Play. */
-.control-ghost {
-  background-color: transparent;
-  color: var(--color-chrome);
-  box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--color-chrome) 45%, transparent);
-  padding: 0;
-  width: var(--ctl-h);
-}
-
-.control:active:not(:disabled) {
-  transform: scale(0.96);
-}
-
-.control:disabled {
-  opacity: 0.38;
-}
-
-.control:focus-visible {
-  outline: 2px solid var(--color-ink);
-  outline-offset: 2px;
-}
-
-.control-icon {
-  width: 52%;
-  height: 52%;
-  display: block;
+.actions-row .control {
+  --ctl-h: calc(var(--actions-h) * 0.86);
 }
 
 .action-draw.is-swap-warning:not(:disabled) {
@@ -314,7 +260,7 @@
   max-width: 100%;
   padding: 4px 14px;
   border-radius: 999px;
-  font-size: clamp(0.72rem, calc(var(--status-h) * 0.42), 0.92rem);
+  font-size: clamp(0.78rem, calc(var(--status-h) * 0.46), 1.02rem);
   font-weight: 600;
   text-align: center;
   overflow: hidden;
@@ -448,7 +394,7 @@
     --market-h: clamp(56px, calc(var(--app-h) * 0.082), 84px);
     --rack-h: clamp(58px, calc(var(--app-h) * 0.085), 88px);
     --actions-h: 48px;
-    --status-h: 30px;
+    --status-h: 34px;
     --shell-gap: 10px;
     --shell-pad-x: 20px;
     --shell-pad-y: 12px;
@@ -603,7 +549,7 @@
     box-shadow: var(--control-shadow-hover);
   }
 
-  .control-ghost:hover:not(:disabled) {
+  .control-outline:hover:not(:disabled) {
     background-color: color-mix(in srgb, var(--color-chrome) 10%, transparent);
     box-shadow: inset 0 0 0 1.5px var(--color-chrome);
   }

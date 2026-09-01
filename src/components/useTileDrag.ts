@@ -69,8 +69,13 @@ function boardCellAt(x: number, y: number): Position | null {
 }
 
 /**
- * Which slot a drop at x would land in. Slots are measured from the live DOM
- * rather than assumed, so it stays correct at every tile size.
+ * Which slot a drop at x would land in, counted among the tiles that are NOT
+ * being dragged. That is the same index space the caller reorders in — the
+ * dragged tile is out of the rack while it is in the air, so counting it here
+ * would land every leftward drop one slot too far right.
+ *
+ * Slots are measured from the live DOM rather than assumed, so this stays
+ * correct at every tile size.
  */
 function rackIndexAt(x: number, y: number): number | null {
   const zone = document.querySelector<HTMLElement>('[data-rack-zone]');
@@ -83,7 +88,9 @@ function rackIndexAt(x: number, y: number): number | null {
   if (y < bounds.top - slack || y > bounds.bottom + slack) return null;
   if (x < bounds.left - 24 || x > bounds.right + 24) return null;
 
-  const tiles = [...zone.querySelectorAll<HTMLElement>('[data-rack-index]')];
+  const tiles = [...zone.querySelectorAll<HTMLElement>('[data-rack-index]')].filter(
+    el => el.dataset.lifted !== 'true'
+  );
   if (tiles.length === 0) return 0;
 
   for (let i = 0; i < tiles.length; i++) {

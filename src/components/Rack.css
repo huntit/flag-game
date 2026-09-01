@@ -163,16 +163,24 @@
   opacity: 0.7;
 }
 
-/* The tile is under the cursor instead; leave its slot open. */
+/* The tile is under the cursor now, so it leaves the rack entirely rather
+   than holding an empty slot open. Collapsing it means the only gap on the
+   rack is the one the tile would drop into. */
 .tray-tile.is-lifted {
   opacity: 0;
   pointer-events: none;
+  width: 0;
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
 }
 
-/* Open a gap where a dragged tile would land. */
+/* Open a gap where the dragged tile would land — exactly one tile wide, so
+   the slot is obviously the right size for it, and so the rack's total width
+   is unchanged (the lifted tile collapsed to nothing on its way out). */
 .tray-tile.has-gap-before,
 .tray-slot-empty.has-gap-before {
-  margin-left: calc(var(--tile-size) * 0.55);
+  margin-left: var(--tile-size);
 }
 
 /* Facedown score-card backs share GameInfo.css; keep a square hook for tests. */

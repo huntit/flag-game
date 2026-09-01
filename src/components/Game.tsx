@@ -554,14 +554,20 @@ function Game({ tileData, dictionary, mode, aiOpponent, onBackToMenu }: GameProp
   const dragRackIndex = drag.state?.target?.kind === 'rack' ? drag.state.target.index : null;
   const liftedTileId = drag.state?.tileId ?? null;
 
+  /**
+   * One line shows at a time, so the order here is a priority order, most
+   * urgent first. What the player is doing RIGHT NOW outranks anything the
+   * game wants to tell them: a live score preview beats the opening banner,
+   * which they have already read.
+   */
   const statusToasts = useMemo(() => {
     const items: StatusToast[] = [];
+
+    // 1. Something went wrong, or the last tap did not do what was intended.
     if (error) items.push({ kind: 'toast-error', text: error });
-    if (firstPlayerBannerText) items.push({ kind: 'toast-info', text: firstPlayerBannerText });
-    if (exchangeWarning && interactive) {
-      items.push({ kind: 'toast-hint', text: EXCHANGE_WARNING });
-    }
-    if (isAIThinking) items.push({ kind: 'toast-info', text: `${otherLabel} is thinking…` });
+    if (hint) items.push({ kind: 'toast-hint', text: hint });
+
+    // 2. The move being built right now: is it legal, and what is it worth?
     if (pending.length > 0 && playEvaluation && !playEvaluation.valid) {
       items.push({ kind: 'toast-error', text: playEvaluation.reason ?? 'Not a legal play' });
     } else if (playEvaluation?.valid) {
@@ -574,12 +580,8 @@ function Game({ tileData, dictionary, mode, aiOpponent, onBackToMenu }: GameProp
         score,
       });
     }
-    if (selectedMarketIds.length > 0 && selectedMarketIds.length < DRAW_COUNT) {
-      items.push({
-        kind: 'toast-hint',
-        text: `Select ${DRAW_COUNT - selectedMarketIds.length} more market tile${DRAW_COUNT - selectedMarketIds.length === 1 ? '' : 's'}`,
-      });
-    }
+
+    // 3. What the game is still waiting on to finish a Draw.
     if (requiredDiscards > 0) {
       const left = requiredDiscards - discardIds.length;
       items.push({
@@ -590,7 +592,22 @@ function Game({ tileData, dictionary, mode, aiOpponent, onBackToMenu }: GameProp
             : 'Ready — tap Draw 2',
       });
     }
-    if (hint) items.push({ kind: 'toast-hint', text: hint });
+    if (selectedMarketIds.length > 0 && selectedMarketIds.length < DRAW_COUNT) {
+      const left = DRAW_COUNT - selectedMarketIds.length;
+      items.push({
+        kind: 'toast-hint',
+        text: `Select ${left} more market tile${left === 1 ? '' : 's'}`,
+      });
+    }
+
+    // 4. A consequence worth knowing before committing to a Draw.
+    if (exchangeWarning && interactive) {
+      items.push({ kind: 'toast-hint', text: EXCHANGE_WARNING });
+    }
+
+    // 5. Ambient state: whose turn, how the game opened, what just happened.
+    if (isAIThinking) items.push({ kind: 'toast-info', text: `${otherLabel} is thinking…` });
+    if (firstPlayerBannerText) items.push({ kind: 'toast-info', text: firstPlayerBannerText });
     if (!firstPlayerBannerText && gameState.lastPlay) {
       const words = joinWords(gameState.lastPlay.words);
       const who =
@@ -607,6 +624,7 @@ function Game({ tileData, dictionary, mode, aiOpponent, onBackToMenu }: GameProp
         score: gameState.lastPlay.totalScore,
       });
     }
+
     return items;
   }, [
     error,
@@ -717,7 +735,7 @@ function Game({ tileData, dictionary, mode, aiOpponent, onBackToMenu }: GameProp
           <div className="actions-row">
             <button
               type="button"
-              className="control control-ghost action-shuffle"
+              className="control control-outline control-round action-shuffle"
               onClick={canClearNow ? handleClear : handleShuffle}
               disabled={!canClearNow && !canShuffleNow}
               aria-label={canClearNow ? 'Clear' : 'Shuffle your tiles'}
