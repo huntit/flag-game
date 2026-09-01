@@ -7,6 +7,7 @@ import './Rack.css';
 interface RackProps {
   tiles: Tile[];
   label: string;
+  playerColor: 'P1' | 'P2';
   selectedTileId: string | null;
   discardTileIds: string[];
   placedTileIds: string[];
@@ -17,6 +18,7 @@ interface RackProps {
 export function Rack({
   tiles,
   label,
+  playerColor,
   selectedTileId,
   discardTileIds,
   placedTileIds,
@@ -27,7 +29,7 @@ export function Rack({
   const emptySlots = Math.max(0, RACK_MAX - available.length);
 
   return (
-    <div className="rack-row-inner">
+    <div className={`rack-row-inner is-${playerColor.toLowerCase()}`}>
       <span className="tray-label">{label}</span>
       <div className="tray" aria-label={label}>
         {available.map(tile => {
@@ -64,21 +66,19 @@ export function Rack({
 
 interface OpponentRackProps {
   name: string;
+  playerColor: 'P1' | 'P2';
   count: number;
   score: number;
   isTheirTurn: boolean;
 }
 
-/**
- * The opponent's rack: facedown backs and empty slots so the shape of their hand
- * reads at a glance, plus the count as a number because that is the figure you
- * actually plan around. Letters are never rendered or passed in — only a count.
- */
-export function OpponentRack({ name, count, score, isTheirTurn }: OpponentRackProps) {
+export function OpponentRack({ name, playerColor, count, score, isTheirTurn }: OpponentRackProps) {
   const emptySlots = Math.max(0, RACK_MAX - count);
 
   return (
-    <div className={`opponent-inner ${isTheirTurn ? 'is-their-turn' : ''}`}>
+    <div
+      className={`opponent-inner is-${playerColor.toLowerCase()} ${isTheirTurn ? 'is-their-turn' : ''}`}
+    >
       <span className="opponent-name">{name}</span>
       <span className="opponent-score">{score}</span>
       <div className="opponent-tiles" aria-hidden="true">

@@ -1,15 +1,11 @@
 // Legal play generation.
 //
 // Used both to pick AI moves and to answer "is any Play legal?" (which decides
-// whether Pass is available). The search walks every line of the board, enumerates
-// the candidate word spans on it, and fills the empty squares of each span with
-// rack letters, pruning against the dictionary's prefix ranges. That pruning is
-// what makes 11x11 tractable — a naive permutation of a 7-tile rack over every
-// anchor is hundreds of thousands of full-board validations per turn.
+// whether Pass is available).
 
-import type { Board, Tile, Position, WordPlacement, Letter } from './types';
-import { getBoardTile, isFirstWord, isValidPosition } from './game';
-import { validatePlay, effectiveLetter, type Placement } from './validator';
+import type { Board, Tile, Position, WordPlacement, Letter, GameState } from './types';
+import { getBoardTile, isFirstWord, isValidPosition, emptySpareCorners } from './game';
+import { validatePlay, effectiveLetter, type Placement, type FlagContext } from './validator';
 import type { Dictionary, PrefixRange } from './dictionary';
 import { CENTRE_STAR, BOARD_SIZE, MIN_WORD_LENGTH, RACK_MAX } from './types';
 
@@ -21,9 +17,7 @@ export interface GenerateOptions {
 }
 
 interface RackPool {
-  /** Remaining real tiles for each letter. */
   byLetter: Map<string, Tile[]>;
-  /** Remaining blanks, usable as any letter for 0 points. */
   blanks: Tile[];
   size: number;
 }
@@ -53,11 +47,6 @@ function cellOf(line: number, index: number, horizontal: boolean): Position {
   return horizontal ? { row: line, col: index } : { row: index, col: line };
 }
 
-/**
- * Which letters may be placed on an empty square without creating an invalid
- * word on the perpendicular axis. Squares with no perpendicular neighbours
- * accept anything.
- */
 function crossChecks(
   board: Board,
   pos: Position,
@@ -89,7 +78,6 @@ function crossChecks(
     cursor = { row: cursor.row + delta.row, col: cursor.col + delta.col };
   }
 
-  // No perpendicular word would be formed, so every letter is fine.
   if (before.length === 0 && after.length === 0) {
     cache.set(key, null);
     return null;
@@ -105,17 +93,28 @@ function crossChecks(
   return allowed;
 }
 
+function buildFlagContext(state: GameState, playerId: 'P1' | 'P2'): FlagContext {
+  return {
+    flags: state.flags,
+    playerId,
+    flagsLost: { P1: state.players[0].flagsLost, P2: state.players[1].flagsLost },
+    emptySpareCount: emptySpareCorners(state).length,
+  };
+}
+
 export function generateLegalPlays(
-  board: Board,
+  state: GameState,
   rack: Tile[],
   dictionary: Dictionary,
-  livePost: string,
+  playerId: 'P1' | 'P2',
   options: GenerateOptions = {}
 ): WordPlacement[] {
+  const { board } = state;
   const limit = options.limit ?? Infinity;
   const plays: WordPlacement[] = [];
   if (rack.length === 0 || limit <= 0) return plays;
 
+  const flagContext = buildFlagContext(state, playerId);
   const first = isFirstWord(board);
   const pool = buildPool(rack);
   const maxTiles = Math.min(pool.size, RACK_MAX);
@@ -130,13 +129,16 @@ export function generateLegalPlays(
     if (seen.has(key)) return false;
     seen.add(key);
 
-    const result = validatePlay(board, placements, dictionary, livePost);
+    const result = validatePlay(board, placements, dictionary, flagContext);
     if (!result.valid || !result.words) return false;
 
     plays.push({
       tiles: placements.map(p => ({ ...p })),
       words: result.words,
       totalScore: result.totalScore ?? 0,
+      capturesOwnFlag: result.capturesOwnFlag ?? false,
+      capturesOpponentFlag: result.capturesOpponentFlag ?? false,
+      endsGame: result.endsGame ?? false,
       captures: result.captures ?? false,
     });
     return true;
@@ -181,10 +183,6 @@ export function generateLegalPlays(
   return plays;
 }
 
-/**
- * Cheap pre-filter: the first word must cover the centre star, and every later
- * play must touch something already on the board.
- */
 function spanIsPlayable(
   board: Board,
   span: Position[],
@@ -195,7 +193,7 @@ function spanIsPlayable(
     return span.some(pos => pos.row === CENTRE_STAR.row && pos.col === CENTRE_STAR.col);
   }
 
-  if (span.length !== empties.length) return true; // span reads through a board tile
+  if (span.length !== empties.length) return true;
 
   return empties.some(pos => {
     const neighbours = [
@@ -250,8 +248,6 @@ function fillSpan(ctx: FillContext): void {
       const next = dictionary.narrow(range, letter, index);
       if (!dictionary.hasWords(next)) continue;
 
-      // Prefer a real tile; fall back to a blank only when no real tile of that
-      // letter is left, so we never emit a strictly lower-scoring duplicate.
       const real = pool.byLetter.get(letter);
       if (real && real.length > 0) {
         const tile = real.pop()!;
@@ -275,10 +271,10 @@ function fillSpan(ctx: FillContext): void {
 }
 
 export function hasLegalPlay(
-  board: Board,
+  state: GameState,
   rack: Tile[],
   dictionary: Dictionary,
-  livePost: string
+  playerId: 'P1' | 'P2'
 ): boolean {
-  return generateLegalPlays(board, rack, dictionary, livePost, { limit: 1 }).length > 0;
+  return generateLegalPlays(state, rack, dictionary, playerId, { limit: 1 }).length > 0;
 }

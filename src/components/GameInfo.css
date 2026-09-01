@@ -1,4 +1,19 @@
-/* HUD chips. One fixed-height line; contents shrink rather than wrap. */
+/* HUD: logo home link + player score chip. */
+
+.hud-logo {
+  flex: 0 0 auto;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+}
+
+.hud-logo-img {
+  height: 100%;
+  width: auto;
+  max-width: 132px;
+  object-fit: contain;
+}
 
 .hud-chip {
   flex: 1 1 auto;
@@ -12,10 +27,29 @@
   border-radius: 8px;
   background-color: var(--color-bg-light);
   overflow: hidden;
+  border: 1px solid transparent;
+}
+
+.hud-chip.is-p1 {
+  border-color: color-mix(in srgb, var(--color-p1) 35%, transparent);
+  background-color: color-mix(in srgb, var(--color-p1) 12%, white);
+}
+
+.hud-chip.is-p2 {
+  border-color: color-mix(in srgb, var(--color-p2) 35%, transparent);
+  background-color: color-mix(in srgb, var(--color-p2) 12%, white);
 }
 
 .hud-chip.is-active {
-  box-shadow: inset 0 0 0 1.5px var(--color-primary);
+  box-shadow: inset 0 0 0 2px currentColor;
+}
+
+.hud-chip.is-p1.is-active {
+  color: var(--color-p1);
+}
+
+.hud-chip.is-p2.is-active {
+  color: var(--color-p2);
 }
 
 .hud-key {
@@ -32,8 +66,5 @@
   font-weight: 800;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
-}
-
-.hud-value.hud-flag {
-  color: var(--color-live-post);
+  color: var(--color-ink);
 }

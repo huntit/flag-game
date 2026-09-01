@@ -9,7 +9,7 @@ import { initializeGame, mulberry32, setRandomSource, resetRandomSource } from '
 import { executeAction } from './actions';
 import { planAIAction, selectAIAction } from './ai';
 import type { AIPersonality, Letter, MarketSlot, TileData, Tile } from './types';
-import { DRAW_COUNT, FLAG_POSTS, MARKET_FACE_DOWN, MARKET_FACE_UP, RACK_MAX } from './types';
+import { DRAW_COUNT, FLAG_POSTS, MARKET_FACE_UP, RACK_MAX } from './types';
 
 const tileData: TileData = {
   source: { values: 'test', counts: 'test' },

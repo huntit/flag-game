@@ -2,8 +2,8 @@
 //
 // Every new straight-line word of two or more letters formed by a play must be
 // in the dictionary, and each such word scores the sum of the letter values of
-// every tile in it (blanks score 0). No premium squares, no bingo, no capture
-// bonus — see docs/prototype-spec.md sections 7.2 and 2 ("Out of scope").
+// every tile in it (blanks score 0). Flag multipliers apply to the capturing
+// word only — TWS for own flag, DWS for opponent flag.
 
 import type { Board, Position, PlacedTile, Tile, Letter } from './types';
 import { getBoardTile, setBoardTile, isValidPosition, positionEquals, isFirstWord } from './game';
@@ -14,6 +14,8 @@ export interface WordInfo {
   word: string;
   positions: Position[];
   score: number;
+  baseScore?: number;
+  flagMultiplier?: 1 | 2 | 3;
 }
 
 export interface Placement {
@@ -28,6 +30,9 @@ export interface PlayEvaluation {
   words?: WordInfo[];
   totalScore?: number;
   captures?: boolean;
+  capturesOwnFlag?: boolean;
+  capturesOpponentFlag?: boolean;
+  endsGame?: boolean;
 }
 
 /** The letter a tile shows on the board; a blank shows its assigned letter. */
@@ -79,19 +84,22 @@ export function readWord(board: Board, pos: Position, horizontal: boolean): Word
   }
 
   if (positions.length < MIN_WORD_LENGTH) return null;
-  return { word, positions, score };
+  return { word, positions, score, baseScore: score, flagMultiplier: 1 };
 }
 
-function wordKey(word: WordInfo): string {
+export function wordKey(word: WordInfo): string {
   const first = word.positions[0];
   const last = word.positions[word.positions.length - 1];
   return `${first.row},${first.col}-${last.row},${last.col}`;
 }
 
+function wordContainingPosition(words: WordInfo[], pos: Position): WordInfo | null {
+  return words.find(w => w.positions.some(p => positionEquals(p, pos))) ?? null;
+}
+
 /**
  * Collect every new word a play forms: the main word along the play axis plus
- * one crossword per placed tile on the perpendicular axis. A single tile has no
- * axis of its own, so both of its runs count.
+ * one crossword per placed tile on the perpendicular axis.
  */
 export function findWordsFormed(
   board: Board,
@@ -112,8 +120,6 @@ export function findWordsFormed(
     setBoardTile(tempBoard, placement.position, placedTile);
   }
 
-  // Placed tiles must read as one unbroken run on the play axis, allowing for
-  // board tiles that sit between them.
   if (layout.horizontal !== null) {
     const horizontal = layout.horizontal;
     const positions = placements.map(p => p.position);
@@ -143,7 +149,6 @@ export function findWordsFormed(
   };
 
   if (layout.horizontal === null) {
-    // Single tile: whichever runs exist are new words.
     push(readWord(tempBoard, placements[0].position, true));
     push(readWord(tempBoard, placements[0].position, false));
   } else {
@@ -165,10 +170,6 @@ export function findWordsFormed(
   return { words: found, valid: true };
 }
 
-/**
- * Work out the play axis. `horizontal` is null for a single tile, which has no
- * axis of its own.
- */
 function describeLayout(
   placements: Placement[]
 ): { valid: true; horizontal: boolean | null } | { valid: false; reason: string } {
@@ -201,7 +202,6 @@ function describeLayout(
   return { valid: false, reason: 'Tiles must be in one straight line' };
 }
 
-/** Does the play touch anything already on the board? */
 function attachesToBoard(board: Board, placements: Placement[]): boolean {
   return placements.some(placement => {
     const { row, col } = placement.position;
@@ -215,11 +215,93 @@ function attachesToBoard(board: Board, placements: Placement[]): boolean {
   });
 }
 
+export interface FlagContext {
+  flags: { P1: import('./types').FlagPost | null; P2: import('./types').FlagPost | null };
+  playerId: 'P1' | 'P2';
+  flagsLost: { P1: number; P2: number };
+  emptySpareCount: number;
+}
+
+function applyFlagMultipliers(
+  words: WordInfo[],
+  placements: Placement[],
+  flags: FlagContext
+): {
+  words: WordInfo[];
+  totalScore: number;
+  capturesOwnFlag: boolean;
+  capturesOpponentFlag: boolean;
+  endsGame: boolean;
+} {
+  const opponentId = flags.playerId === 'P1' ? 'P2' : 'P1';
+  const ownCorner = flags.flags[flags.playerId];
+  const oppCorner = flags.flags[opponentId];
+
+  let capturesOwnFlag = false;
+  let capturesOpponentFlag = false;
+  let capturingWord: WordInfo | null = null;
+  let multiplier: 1 | 2 | 3 = 1;
+
+  for (const placement of placements) {
+    if (ownCorner && positionEquals(placement.position, FLAG_POSTS[ownCorner])) {
+      capturesOwnFlag = true;
+      capturingWord = wordContainingPosition(words, placement.position);
+      multiplier = 3;
+      break;
+    }
+  }
+
+  if (!capturesOwnFlag) {
+    for (const placement of placements) {
+      if (oppCorner && positionEquals(placement.position, FLAG_POSTS[oppCorner])) {
+        capturesOpponentFlag = true;
+        capturingWord = wordContainingPosition(words, placement.position);
+        multiplier = 2;
+        break;
+      }
+    }
+  }
+
+  const scoredWords = words.map(word => {
+    const baseScore = word.score;
+    const isCapturingWord = capturingWord && wordKey(word) === wordKey(capturingWord);
+    const flagMultiplier = isCapturingWord ? multiplier : 1;
+    return {
+      ...word,
+      baseScore,
+      flagMultiplier,
+      score: baseScore * flagMultiplier,
+    };
+  });
+
+  const totalScore = scoredWords.reduce((sum, w) => sum + w.score, 0);
+
+  let endsGame = false;
+  if (capturesOwnFlag) {
+    endsGame = true;
+  } else if (capturesOpponentFlag) {
+    const victimLosses = flags.flagsLost[opponentId] + 1;
+    if (victimLosses >= 2) {
+      endsGame = true;
+    } else if (flags.emptySpareCount === 0) {
+      endsGame = true;
+    }
+  }
+
+  return {
+    words: scoredWords,
+    totalScore,
+    capturesOwnFlag,
+    capturesOpponentFlag,
+    endsGame,
+  };
+}
+
 export function validatePlay(
   board: Board,
   placements: Placement[],
   dictionary: Dictionary,
-  livePost: string
+  flagContext: FlagContext
 ): PlayEvaluation {
   if (placements.length === 0) {
     return { valid: false, reason: 'No tiles placed' };
@@ -254,15 +336,16 @@ export function validatePlay(
     return { valid: false, reason: result.reason };
   }
 
-  const livePostPos = FLAG_POSTS[livePost as keyof typeof FLAG_POSTS];
-  const captures = livePostPos
-    ? placements.some(p => positionEquals(p.position, livePostPos))
-    : false;
+  const flagResult = applyFlagMultipliers(result.words, placements, flagContext);
+  const captures = flagResult.capturesOwnFlag || flagResult.capturesOpponentFlag;
 
   return {
     valid: true,
-    words: result.words,
-    totalScore: result.words.reduce((sum, w) => sum + w.score, 0),
+    words: flagResult.words,
+    totalScore: flagResult.totalScore,
     captures,
+    capturesOwnFlag: flagResult.capturesOwnFlag,
+    capturesOpponentFlag: flagResult.capturesOpponentFlag,
+    endsGame: flagResult.endsGame,
   };
 }

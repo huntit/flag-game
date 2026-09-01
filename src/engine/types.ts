@@ -1,6 +1,6 @@
 // Core game types for Flag
 
-export type Letter = 'A' | 'B' | 'C' | 'D' | 'E' | 'F' | 'G' | 'H' | 'I' | 'J' | 'K' | 'L' | 'M' | 
+export type Letter = 'A' | 'B' | 'C' | 'D' | 'E' | 'F' | 'G' | 'H' | 'I' | 'J' | 'K' | 'L' | 'M' |
                      'N' | 'O' | 'P' | 'Q' | 'R' | 'S' | 'T' | 'U' | 'V' | 'W' | 'X' | 'Y' | 'Z';
 
 export type TileId = string; // Unique identifier for each tile instance
@@ -14,6 +14,7 @@ export interface Tile {
 
 export interface PlacedTile extends Tile {
   assignedLetter?: Letter; // For blank tiles, the letter they represent
+  playerId?: 'P1' | 'P2';
 }
 
 export type Position = {
@@ -25,20 +26,34 @@ export type FlagPost = 'NW' | 'NE' | 'SE' | 'SW';
 
 export const BOARD_SIZE = 11;
 export const RACK_MAX = 7;
-export const MARKET_SIZE = 4;
-export const MAX_MARKET_TAKE = 2;
+export const MARKET_FACE_UP = 4;
+export const MARKET_FACE_DOWN = 2;
+export const MARKET_SLOTS = MARKET_FACE_UP + MARKET_FACE_DOWN;
+export const DRAW_COUNT = 2;
 export const STARTING_RACK_TILES = 2; // drawn from bag, not market
 export const MIN_WORD_LENGTH = 2;
 export const MAX_WORD_LENGTH = 11;
 
+/** True corners (1-indexed). No inland posts. */
 export const FLAG_POSTS: Record<FlagPost, Position> = {
-  NW: { row: 2, col: 2 },
-  NE: { row: 2, col: 10 },
-  SE: { row: 10, col: 10 },
-  SW: { row: 10, col: 2 },
+  NW: { row: 1, col: 1 },
+  NE: { row: 1, col: 11 },
+  SE: { row: 11, col: 11 },
+  SW: { row: 11, col: 1 },
 };
 
 export const CENTRE_STAR: Position = { row: 6, col: 6 };
+
+export const PLAYER_COLORS = {
+  P1: '#56867C',
+  P2: '#CB6B49',
+} as const;
+
+export const THEME_COLORS = {
+  cream: '#F7F1E8',
+  ink: '#2C3A3D',
+  sand: '#E8DFD0',
+} as const;
 
 export type BoardCell = PlacedTile | null;
 
@@ -48,26 +63,38 @@ export interface Player {
   id: 'P1' | 'P2';
   rack: Tile[];
   score: number;
+  flagsLost: number;
+}
+
+export interface MarketSlot {
+  tile: Tile | null;
+  faceUp: boolean;
 }
 
 export interface ScoredWord {
   word: string;
   positions: Position[];
   score: number;
+  /** Base letter sum before flag multipliers. */
+  baseScore?: number;
+  flagMultiplier?: 1 | 2 | 3;
 }
 
 export interface WordPlacement {
   tiles: { tile: Tile; position: Position; assignedLetter?: Letter }[];
   words: ScoredWord[];
   totalScore: number;
+  capturesOwnFlag: boolean;
+  capturesOpponentFlag: boolean;
+  endsGame: boolean;
+  /** Any flag cell covered (own or opponent). */
   captures: boolean;
 }
 
 export interface DrawAction {
   type: 'draw';
   marketTiles: TileId[];
-  discardTiles?: TileId[]; // For refresh mode
-  takeBagTile: boolean;
+  discardTiles?: TileId[];
 }
 
 export interface PlayAction {
@@ -81,28 +108,30 @@ export interface PassAction {
 
 export type GameAction = DrawAction | PlayAction | PassAction;
 
-export type EndReason = 'capture' | 'bag' | 'posts_full' | 'double_pass';
+export type EndReason = 'self_capture' | 'second_steal' | 'no_spare' | 'double_pass' | 'stuck_out';
 
 export interface GameState {
   board: Board;
   players: [Player, Player];
   currentPlayer: 0 | 1;
-  market: Tile[];
+  market: MarketSlot[];
   bag: Tile[];
-  livePost: FlagPost;
-  bagDepleted: boolean;
+  /** Corner where each player's flag token sits; null after capture until replacement. */
+  flags: { P1: FlagPost | null; P2: FlagPost | null };
   consecutivePasses: number;
   gameOver: boolean;
   endReason?: EndReason;
   winner?: 'P1' | 'P2' | 'draw';
   turnCount: number;
   moveHistory: { player: 'P1' | 'P2'; action: GameAction }[];
-  /** Result of the most recent Play, for the "STAR +4" turn readout. */
+  /** Result of the most recent Play, for the turn readout. */
   lastPlay?: {
     player: 'P1' | 'P2';
     words: ScoredWord[];
     totalScore: number;
     captures: boolean;
+    capturesOwnFlag: boolean;
+    capturesOpponentFlag: boolean;
   };
 }
 

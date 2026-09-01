@@ -1,35 +1,50 @@
-// Market: four face-up tiles, plus the optional facedown bag tile toggle.
+// Market: 4 face-up + 2 face-down tiles, bag count nearby. No +1 bag button.
 
-import type { Tile } from '../engine/types';
-import { MARKET_SIZE } from '../engine/types';
+import type { MarketSlot, Tile } from '../engine/types';
+import { MARKET_SLOTS } from '../engine/types';
 import './Market.css';
 
 interface MarketProps {
-  market: Tile[];
+  market: MarketSlot[];
   selectedTileIds: string[];
+  bagCount: number;
   disabled: boolean;
-  bagTileAvailable: boolean;
-  bagTileSelected: boolean;
   onTileClick: (tile: Tile) => void;
-  onToggleBagTile: () => void;
 }
 
-function Market({
-  market,
-  selectedTileIds,
-  disabled,
-  bagTileAvailable,
-  bagTileSelected,
-  onTileClick,
-  onToggleBagTile,
-}: MarketProps) {
-  const emptySlots = Math.max(0, MARKET_SIZE - market.length);
+function Market({ market, selectedTileIds, bagCount, disabled, onTileClick }: MarketProps) {
+  const emptySlots = Math.max(0, MARKET_SLOTS - market.length);
 
   return (
     <div className="market-row-inner" data-market-count={market.length}>
       <span className="tray-label">Market</span>
       <div className="tray market-tray" aria-label="Market">
-        {market.map(tile => {
+        {market.map((slot, index) => {
+          const tile = slot.tile;
+          if (!tile) {
+            return (
+              <span
+                key={`market-empty-${index}`}
+                className={`tray-slot-empty ${slot.faceUp ? 'is-face-up' : 'is-face-down'}`}
+                aria-hidden="true"
+              />
+            );
+          }
+
+          if (!slot.faceUp) {
+            const selected = selectedTileIds.includes(tile.id);
+            return (
+              <button
+                type="button"
+                key={tile.id}
+                className={`tray-tile market-tile is-facedown ${selected ? 'is-selected' : ''}`}
+                disabled={disabled}
+                onClick={() => onTileClick(tile)}
+                aria-label="Face-down market tile"
+              />
+            );
+          }
+
           const classes = [
             'tray-tile',
             'market-tile',
@@ -54,20 +69,14 @@ function Market({
           );
         })}
         {Array.from({ length: emptySlots }, (_, i) => (
-          <span key={`market-empty-${i}`} className="tray-slot-empty" aria-hidden="true" />
+          <span key={`market-pad-${i}`} className="tray-slot-empty" aria-hidden="true" />
         ))}
       </div>
 
-      <button
-        type="button"
-        className={`bag-toggle ${bagTileSelected ? 'is-on' : ''}`}
-        disabled={disabled || !bagTileAvailable}
-        onClick={onToggleBagTile}
-        aria-pressed={bagTileSelected}
-      >
-        +1
-        <small>bag</small>
-      </button>
+      <div className="bag-count" aria-label={`${bagCount} tiles in bag`}>
+        <span className="bag-count-label">Bag</span>
+        <span className="bag-count-value">{bagCount}</span>
+      </div>
     </div>
   );
 }

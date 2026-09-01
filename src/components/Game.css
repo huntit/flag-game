@@ -138,12 +138,14 @@
       var(--hud-h)
       var(--board-size)
       var(--market-h)
-      var(--dock-h);
+      var(--dock-h)
+      minmax(80px, 120px);
     grid-template-areas:
       'hud opponent'
       'stage stage'
       'market market'
-      'rack actions';
+      'rack actions'
+      'log log';
     align-content: center;
     column-gap: 12px;
   }
@@ -168,6 +170,13 @@
     height: var(--dock-h);
     max-height: var(--dock-h);
     align-self: center;
+  }
+
+  .log-row {
+    display: block;
+    grid-area: log;
+    min-height: 0;
+    max-height: 120px;
   }
 
   /* Stable toolbar: four buttons in a compact group next to the rack,
@@ -262,16 +271,22 @@
 }
 
 .action-draw:not(:disabled) {
-  background-color: var(--color-primary);
+  background-color: var(--color-p1);
+  color: white;
 }
 
 .action-play:not(:disabled) {
-  background-color: var(--color-success);
+  background-color: var(--color-p2);
+  color: white;
 }
 
 .action-pass:not(:disabled) {
-  background-color: var(--color-warning);
-  color: #23201a;
+  background-color: var(--color-sand);
+  color: var(--color-ink);
+}
+
+.log-row {
+  display: none;
 }
 
 .icon-button {
@@ -314,8 +329,8 @@
 }
 
 .toast-error {
-  background-color: var(--color-secondary);
-  color: #2a0d0d;
+  background-color: var(--color-p2);
+  color: white;
 }
 
 .toast-info {
@@ -324,6 +339,6 @@
 }
 
 .toast-hint {
-  background-color: var(--color-primary);
-  color: #06121f;
+  background-color: var(--color-p1);
+  color: white;
 }

@@ -1,7 +1,23 @@
 // Game initialization, board helpers and tile bag management
 
-import type { Tile, TileId, TileData, FlagPost, GameState, Board, Player } from './types';
-import { FLAG_POSTS, BOARD_SIZE, MARKET_SIZE, STARTING_RACK_TILES } from './types';
+import type {
+  Tile,
+  TileId,
+  TileData,
+  FlagPost,
+  GameState,
+  Board,
+  Player,
+  MarketSlot,
+  Position,
+} from './types';
+import {
+  FLAG_POSTS,
+  BOARD_SIZE,
+  MARKET_FACE_UP,
+  MARKET_FACE_DOWN,
+  STARTING_RACK_TILES,
+} from './types';
 
 let tileIdCounter = 0;
 
@@ -74,10 +90,6 @@ export function shuffleBag(bag: Tile[]): void {
 /**
  * Reorder a player's own rack. Shuffling is a display convenience, not a turn:
  * it never changes which tiles you hold, only the order they sit in.
- *
- * A plain shuffle of two tiles leaves them alone half the time, which reads as a
- * dead button, so keep shuffling until the order actually changes (when a
- * different order is possible at all).
  */
 export function shuffleRack(rack: Tile[]): Tile[] {
   if (rack.length < 2) return [...rack];
@@ -95,7 +107,6 @@ export function shuffleRack(rack: Tile[]): Tile[] {
     next = [...rack];
   }
 
-  // Fall back to a rotation, which always differs for two or more tiles.
   return [...rack.slice(1), rack[0]];
 }
 
@@ -111,22 +122,58 @@ function createEmptyBoard(): Board {
   return Array(BOARD_SIZE).fill(null).map(() => Array(BOARD_SIZE).fill(null));
 }
 
-function randomFlagPost(): FlagPost {
-  const posts: FlagPost[] = ['NW', 'NE', 'SE', 'SW'];
-  return posts[Math.floor(random() * posts.length)];
+const ALL_CORNERS: FlagPost[] = ['NW', 'NE', 'SE', 'SW'];
+
+export function diagonalCorner(corner: FlagPost): FlagPost {
+  const pairs: Record<FlagPost, FlagPost> = {
+    NW: 'SE',
+    SE: 'NW',
+    NE: 'SW',
+    SW: 'NE',
+  };
+  return pairs[corner];
+}
+
+export function spareCorners(p1Corner: FlagPost, p2Corner: FlagPost): FlagPost[] {
+  return ALL_CORNERS.filter(c => c !== p1Corner && c !== p2Corner);
+}
+
+function randomCorner(): FlagPost {
+  return ALL_CORNERS[Math.floor(random() * ALL_CORNERS.length)];
+}
+
+function dealMarket(bag: Tile[]): MarketSlot[] {
+  const slots: MarketSlot[] = [];
+  for (let i = 0; i < MARKET_FACE_UP; i++) {
+    slots.push({ tile: bag.shift() ?? null, faceUp: true });
+  }
+  for (let i = 0; i < MARKET_FACE_DOWN; i++) {
+    slots.push({ tile: bag.shift() ?? null, faceUp: false });
+  }
+  return slots;
+}
+
+export function marketShowingCount(market: MarketSlot[]): number {
+  return market.filter(slot => slot.tile !== null).length;
+}
+
+export function getMarketTiles(market: MarketSlot[]): Tile[] {
+  return market.flatMap(slot => (slot.tile ? [slot.tile] : []));
 }
 
 export function initializeGame(tileData: TileData): GameState {
   const bag = createTileBag(tileData);
   shuffleBag(bag);
 
-  // Market is dealt first, then two tiles per player straight from the bag.
-  const market = drawFromBag(bag, MARKET_SIZE);
+  const market = dealMarket(bag);
 
   const players: [Player, Player] = [
-    { id: 'P1', rack: drawFromBag(bag, STARTING_RACK_TILES), score: 0 },
-    { id: 'P2', rack: drawFromBag(bag, STARTING_RACK_TILES), score: 0 },
+    { id: 'P1', rack: drawFromBag(bag, STARTING_RACK_TILES), score: 0, flagsLost: 0 },
+    { id: 'P2', rack: drawFromBag(bag, STARTING_RACK_TILES), score: 0, flagsLost: 0 },
   ];
+
+  const p1Corner = randomCorner();
+  const p2Corner = diagonalCorner(p1Corner);
 
   return {
     board: createEmptyBoard(),
@@ -134,8 +181,7 @@ export function initializeGame(tileData: TileData): GameState {
     currentPlayer: 0,
     market,
     bag,
-    livePost: randomFlagPost(),
-    bagDepleted: false,
+    flags: { P1: p1Corner, P2: p2Corner },
     consecutivePasses: 0,
     gameOver: false,
     turnCount: 0,
@@ -161,19 +207,37 @@ export function setBoardTile(board: Board, pos: { row: number; col: number }, ti
   board[pos.row - 1][pos.col - 1] = tile;
 }
 
-export function getNextFlagPost(current: FlagPost, board: Board): FlagPost | null {
-  const order: FlagPost[] = ['NW', 'NE', 'SE', 'SW'];
-  const currentIndex = order.indexOf(current);
-
-  for (let i = 1; i <= 4; i++) {
-    const nextPost = order[(currentIndex + i) % 4];
-    const pos = FLAG_POSTS[nextPost];
-    if (!getBoardTile(board, pos)) {
-      return nextPost;
+export function cornerAtPosition(pos: Position, flags: GameState['flags']): FlagPost | null {
+  for (const corner of ALL_CORNERS) {
+    if (positionEquals(pos, FLAG_POSTS[corner])) {
+      if (flags.P1 === corner || flags.P2 === corner) return corner;
     }
   }
+  return null;
+}
 
-  return null; // All posts are occupied
+export function flagOwnerAtCorner(corner: FlagPost, flags: GameState['flags']): 'P1' | 'P2' | null {
+  if (flags.P1 === corner) return 'P1';
+  if (flags.P2 === corner) return 'P2';
+  return null;
+}
+
+/** Spare true corners with no tile and no flag token. */
+export function emptySpareCorners(state: GameState): FlagPost[] {
+  const occupied = new Set<FlagPost>();
+  if (state.flags.P1) occupied.add(state.flags.P1);
+  if (state.flags.P2) occupied.add(state.flags.P2);
+
+  return ALL_CORNERS.filter(corner => {
+    if (occupied.has(corner)) return false;
+    return !getBoardTile(state.board, FLAG_POSTS[corner]);
+  });
+}
+
+export function randomEmptySpareCorner(state: GameState): FlagPost | null {
+  const spares = emptySpareCorners(state);
+  if (spares.length === 0) return null;
+  return spares[Math.floor(random() * spares.length)];
 }
 
 export function isFirstWord(board: Board): boolean {
@@ -195,4 +259,15 @@ export function facedownRack(count: number): Tile[] {
     value: 0,
     isBlank: true,
   }));
+}
+
+export function refillMarketSlot(bag: Tile[], slot: MarketSlot): void {
+  if (slot.tile !== null || bag.length === 0) return;
+  slot.tile = bag.shift() ?? null;
+}
+
+export function refillMarket(bag: Tile[], market: MarketSlot[]): void {
+  for (const slot of market) {
+    refillMarketSlot(bag, slot);
+  }
 }

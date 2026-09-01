@@ -83,21 +83,32 @@
   opacity: 0.45;
 }
 
+.rack-row-inner.is-p1 .tray-label,
+.rack-row-inner.is-p1 .tray {
+  border-color: color-mix(in srgb, var(--color-p1) 25%, transparent);
+}
+
+.rack-row-inner.is-p2 .tray-label,
+.rack-row-inner.is-p2 .tray {
+  border-color: color-mix(in srgb, var(--color-p2) 25%, transparent);
+}
+
+.rack-row-inner.is-p1 .tray {
+  background-color: color-mix(in srgb, var(--color-p1) 8%, var(--color-bg-light));
+}
+
+.rack-row-inner.is-p2 .tray {
+  background-color: color-mix(in srgb, var(--color-p2) 8%, var(--color-bg-light));
+}
+
 .tray-tile .tile-letter {
   font-size: calc(var(--rack-h) * 0.4);
   font-weight: 800;
   line-height: 1;
-  transform: translate(-5%, -5%);
 }
 
 .tray-tile .tile-value {
-  position: absolute;
-  right: 8%;
-  bottom: 3%;
   font-size: calc(var(--rack-h) * 0.19);
-  font-weight: 700;
-  line-height: 1;
-  opacity: 0.7;
 }
 
 /* Opponent bar: facedown backs plus a readable count. */
@@ -112,8 +123,22 @@
   min-width: 0;
 }
 
-.opponent-inner.is-their-turn {
-  box-shadow: inset 0 0 0 1.5px var(--color-primary);
+.opponent-inner.is-p1 {
+  border: 1px solid color-mix(in srgb, var(--color-p1) 30%, transparent);
+  background-color: color-mix(in srgb, var(--color-p1) 10%, var(--color-bg-light));
+}
+
+.opponent-inner.is-p2 {
+  border: 1px solid color-mix(in srgb, var(--color-p2) 30%, transparent);
+  background-color: color-mix(in srgb, var(--color-p2) 10%, var(--color-bg-light));
+}
+
+.opponent-inner.is-their-turn.is-p1 {
+  box-shadow: inset 0 0 0 2px var(--color-p1);
+}
+
+.opponent-inner.is-their-turn.is-p2 {
+  box-shadow: inset 0 0 0 2px var(--color-p2);
 }
 
 .opponent-name {
@@ -154,8 +179,12 @@
 }
 
 .opponent-back {
-  background: linear-gradient(150deg, #4a6fa5 0%, #2c4a73 100%);
+  background: linear-gradient(150deg, var(--color-p1) 0%, #456860 100%);
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.16);
+}
+
+.opponent-inner.is-p2 .opponent-back {
+  background: linear-gradient(150deg, var(--color-p2) 0%, #a85638 100%);
 }
 
 .opponent-gap {
