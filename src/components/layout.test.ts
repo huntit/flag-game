@@ -78,6 +78,7 @@ describe('no-scroll phone shell', () => {
     expect(gameCss).toMatch(/\.toast-layer\s*\{[^}]*position:\s*absolute/s);
     expect(gameCss).toMatch(/\.toast-layer\s*\{[^}]*pointer-events:\s*none/s);
     expect(read('./Game.tsx')).toMatch(/status-row/);
+    expect(read('./Game.tsx')).toMatch(/statusToasts\[0\]/);
   });
 
   it('has a landscape layout for iPad that keeps the controls on screen', () => {
@@ -111,8 +112,8 @@ describe('desktop layout (wide fine-pointer windows only)', () => {
     expect(desktop).toMatch(/var\(--board-max\)/);
     expect(desktop).toMatch(/--shell-max-w:\s*\d+px/);
     expect(desktop).toMatch(/--tile:\s*\d+px/);
-    expect(desktopRack).toMatch(/width:\s*var\(--tile/);
-    expect(desktopMarket).toMatch(/width:\s*var\(--tile/);
+    expect(desktopRack).toMatch(/var\(--tile/);
+    expect(desktopMarket).toMatch(/var\(--tile/);
   });
 
   it('forces rack tiles square so they cannot stretch with a 1fr sidebar', () => {
@@ -120,20 +121,21 @@ describe('desktop layout (wide fine-pointer windows only)', () => {
     expect(desktopRack).toMatch(/\.tray-tile,\s*\n\s*\.tray-slot-empty\s*\{[^}]*height:\s*var\(--tile/s);
     expect(desktopRack).toMatch(/\.tray-tile,\s*\n\s*\.tray-slot-empty\s*\{[^}]*max-height:\s*48px/s);
     expect(desktop).toMatch(/--dock-h:\s*\d+px/);
-    expect(desktop).toMatch(/grid-template-rows:[\s\S]*var\(--dock-h\)/);
+    expect(desktop).toMatch(/grid-template-rows:[\s\S]*var\(--board-size\)/);
     expect(desktop).not.toMatch(/grid-template-rows:[^;]*minmax\(0,\s*1fr\)/);
   });
 
-  it('centers a compact play column with Draw 2 by the market and Shuffle by the rack', () => {
-    expect(desktop).toMatch(/grid-template-columns:\s*1fr auto 1fr/);
-    expect(desktop).toMatch(/\.play-main/);
-    expect(desktop).toMatch(/grid-template-areas:[\s\S]*'status'/);
-    expect(desktop).toMatch(/grid-template-areas:[\s\S]*'rack'/);
+  it('uses leftover viewport for a larger board, with Draw 2 by the market and Shuffle by the rack', () => {
+    expect(desktop).toMatch(/grid-template-columns:\s*var\(--board-size\)\s+var\(--dock-min\)\s+var\(--log-w\)/);
+    expect(desktop).toMatch(/--dock-min:/);
+    expect(desktop).toMatch(/grid-template-areas:[\s\S]*dock/);
+    expect(desktop).toMatch(/grid-template-areas:[\s\S]*sidebar/);
+    expect(read('./Game.tsx')).toMatch(/className="dock"/);
     expect(read('./Game.tsx')).toMatch(/className="market-row"/);
     expect(read('./Game.tsx')).toMatch(/action-draw/);
     expect(read('./Game.tsx')).toMatch(/icon-button action-shuffle/);
-    expect(desktop).toMatch(/\.market-row[\s\S]*max-width:\s*var\(--board-size\)/);
-    expect(desktop).toMatch(/\.play-shell \.stage[\s\S]*grid-row:\s*auto/);
+    expect(desktop).toMatch(/\.dock[\s\S]*grid-area:\s*dock/);
+    expect(desktop).toMatch(/\.stage[\s\S]*grid-area:\s*stage/);
   });
 
   it('keeps the phone shell as the un-queried default', () => {
@@ -187,21 +189,22 @@ describe('branding', () => {
     expect(existsSync(resolve(__dirname, '../../public/flag-mark.svg'))).toBe(true);
   });
 
-  it('uses Skye corner token SVGs on the board', () => {
+  it('uses Skye flag tokens only on squares that currently have a flag', () => {
     const board = read('./Board.tsx');
     expect(board).toMatch(/token-p1\.svg/);
     expect(board).toMatch(/token-p2\.svg/);
-    expect(board).toMatch(/token-corner-empty\.svg/);
-    expect(board).toMatch(/<img/);
+    expect(board).not.toMatch(/token-corner-empty\.svg/);
+    expect(board).toMatch(/flagOwner &&/);
     expect(board).toMatch(/className="corner-token"/);
+    expect(existsSync(resolve(__dirname, '../../public/token-p1.svg'))).toBe(true);
+    expect(existsSync(resolve(__dirname, '../../public/token-p2.svg'))).toBe(true);
   });
 });
 
 describe('opponent rack tiles', () => {
   it('uses square aspect-ratio for facedown opponent backs on all viewports', () => {
     expect(rackCss).toMatch(/\.opponent-back[\s\S]*aspect-ratio:\s*1/);
-    const desktopRack = desktopBlock(rackCss);
-    expect(desktopRack).toMatch(/\.opponent-back/);
+    expect(read('./GameInfo.css')).toMatch(/\.score-back[\s\S]*aspect-ratio:\s*1/);
   });
 });
 
@@ -213,7 +216,7 @@ describe('desktop move log', () => {
   it('renders a collapsible RHS panel at pointer:fine + min-width 900', () => {
     expect(read('./Game.tsx')).toMatch(/SidePanel/);
     expect(desktop).toMatch(/sidebar/);
-    expect(sidePanelCss).toMatch(/grid-column:\s*3/);
+    expect(sidePanelCss).toMatch(/grid-area:\s*sidebar/);
     expect(sidePanelCss).toMatch(/@media \(min-width:\s*900px\) and \(pointer:\s*fine\)/);
     expect(moveLogCss).toMatch(/\.move-log-list[\s\S]*overflow-y:\s*auto/);
   });
@@ -323,8 +326,18 @@ describe('score cards', () => {
   it('shows rack-count tile backs on both the You and opponent cards', () => {
     expect(read('./GameInfo.tsx')).toMatch(/rackCount/);
     expect(read('./GameInfo.tsx')).toMatch(/score-back/);
-    expect(read('./Rack.tsx')).toMatch(/score-back opponent-back/);
+    expect(read('./GameInfo.tsx')).toMatch(/score-card-name/);
+    expect(read('./GameInfo.tsx')).toMatch(/score-card-score/);
+    expect(read('./Rack.tsx')).toMatch(/ScoreCard/);
     expect(read('./Game.tsx')).toMatch(/rackCount=\{viewer\.rack\.length\}/);
+  });
+
+  it('keeps name and score in reserved space so tile-backs cannot cover them', () => {
+    const css = read('./GameInfo.css');
+    expect(css).toMatch(/grid-template-columns:\s*minmax\(6\.25rem/);
+    expect(css).toMatch(/\.score-card[\s\S]*width:\s*0/);
+    expect(css).toMatch(/\.score-backs[\s\S]*overflow:\s*hidden/s);
+    expect(css).toMatch(/repeat\(7,/);
   });
 });
 
@@ -335,8 +348,8 @@ describe('chrome colour', () => {
     expect(gameCss).not.toMatch(/\.action-draw:not\(:disabled\)[^{]*\{[^}]*--color-p1/s);
     expect(gameCss).not.toMatch(/\.action-play:not\(:disabled\)[^{]*\{[^}]*--color-p2/s);
     expect(read('./SidePanel.css')).toMatch(/--color-chrome/);
-    expect(read('../../public/tile-back.svg')).toMatch(/#5B7A92/i);
     expect(read('../../public/tile-back.svg')).not.toMatch(/#56867C/i);
     expect(read('../../public/tile-back.svg')).not.toMatch(/#CB6B49/i);
+    expect(read('../../public/tile-back.svg')).not.toMatch(/M50 20 L80 50/);
   });
 });

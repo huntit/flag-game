@@ -37,10 +37,8 @@ function cornerFlagOwner(
   return null;
 }
 
-function cornerTokenSrc(flagOwner: 'P1' | 'P2' | null): string {
-  if (flagOwner === 'P1') return `${base}token-p1.svg`;
-  if (flagOwner === 'P2') return `${base}token-p2.svg`;
-  return `${base}token-corner-empty.svg`;
+function cornerTokenSrc(flagOwner: 'P1' | 'P2'): string {
+  return flagOwner === 'P1' ? `${base}token-p1.svg` : `${base}token-p2.svg`;
 }
 
 function Board({ board, flags, pendingPlacements, highlight, onCellClick }: BoardProps) {
@@ -98,7 +96,7 @@ function Board({ board, flags, pendingPlacements, highlight, onCellClick }: Boar
         ) : (
           <>
             {showCentreStar && isCentre && <span className="cell-mark">★</span>}
-            {isCorner && (
+            {flagOwner && (
               <img
                 className="corner-token"
                 src={cornerTokenSrc(flagOwner)}

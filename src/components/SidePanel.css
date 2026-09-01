@@ -8,15 +8,15 @@
   .side-panel {
     display: flex;
     flex-direction: column;
-    grid-column: 3;
-    grid-row: 1 / -1;
+    grid-area: sidebar;
     min-height: 0;
     min-width: 0;
-    width: min(220px, 100%);
-    margin-left: 12px;
+    width: 100%;
+    max-width: var(--log-w, 200px);
+    margin-left: 0;
     gap: 8px;
     align-self: stretch;
-    justify-self: start;
+    justify-self: stretch;
   }
 
   .side-panel.is-collapsed {
@@ -24,7 +24,8 @@
   }
 
   .side-panel.is-expanded {
-    width: min(220px, 100%);
+    width: 100%;
+    max-width: var(--log-w, 200px);
   }
 
   .side-panel-toggle {

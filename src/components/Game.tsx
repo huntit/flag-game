@@ -10,9 +10,9 @@ import { validatePlay, type FlagContext } from '../engine/validator';
 import { selectAIAction } from '../engine/ai';
 import type { GameMode, AIOpponent } from '../App';
 import Board, { type PendingPlacement } from './Board';
-import { Rack, OpponentRack } from './Rack';
+import { Rack } from './Rack';
 import Market from './Market';
-import GameInfo from './GameInfo';
+import { ScoreCard } from './GameInfo';
 import HomeLink from './HomeLink';
 import SidePanel from './SidePanel';
 import GameOverOverlay from './GameOverOverlay';
@@ -490,19 +490,21 @@ function Game({ tileData, dictionary, mode, aiOpponent, onBackToMenu }: GameProp
         </header>
 
         <div className="scores-row">
-          <GameInfo
-            youLabel={youLabel}
-            yourScore={viewer.score}
+          <ScoreCard
+            name={youLabel}
+            score={viewer.score}
             rackCount={viewer.rack.length}
-            isYourTurn={activeIndex === viewerIndex}
+            isActive={activeIndex === viewerIndex}
             playerColor={viewerColor}
+            variant="you"
           />
-          <OpponentRack
+          <ScoreCard
             name={otherLabel}
-            playerColor={otherColor}
-            count={other.rack.length}
             score={other.score}
-            isTheirTurn={activeIndex !== viewerIndex}
+            rackCount={other.rack.length}
+            isActive={activeIndex !== viewerIndex}
+            playerColor={otherColor}
+            variant="opponent"
           />
         </div>
 
@@ -516,57 +518,57 @@ function Game({ tileData, dictionary, mode, aiOpponent, onBackToMenu }: GameProp
           />
         </div>
 
-        <div className="market-row">
-          <Market
-            market={gameState.market}
-            selectedTileIds={selectedMarketIds}
-            bagCount={gameState.bag.length}
-            disabled={!interactive}
-            onTileClick={handleMarketTileClick}
-          />
-          <button
-            type="button"
-            className={`action-button action-draw ${swapDrawWarning ? 'is-swap-warning' : ''}`}
-            onClick={handleDraw}
-            disabled={!canDrawNow}
-            aria-label={swapDrawWarning ? `${drawButtonLabel}. ${SWAP_DRAW_WARNING}` : drawButtonLabel}
-          >
-            {drawButtonLabel}
-          </button>
-        </div>
+        <div className="dock">
+          <div className="market-row">
+            <Market
+              market={gameState.market}
+              selectedTileIds={selectedMarketIds}
+              bagCount={gameState.bag.length}
+              disabled={!interactive}
+              onTileClick={handleMarketTileClick}
+            />
+            <button
+              type="button"
+              className={`action-button action-draw ${swapDrawWarning ? 'is-swap-warning' : ''}`}
+              onClick={handleDraw}
+              disabled={!canDrawNow}
+              aria-label={swapDrawWarning ? `${drawButtonLabel}. ${SWAP_DRAW_WARNING}` : drawButtonLabel}
+            >
+              {drawButtonLabel}
+            </button>
+          </div>
 
-        <div className="status-row" aria-live="polite">
-          {statusToasts.map((toast, i) => (
-            <div key={i} className={`toast ${toast.kind}`}>
-              {toast.text}
-            </div>
-          ))}
-        </div>
+          <div className="status-row" aria-live="polite">
+            {statusToasts[0] && (
+              <div className={`toast ${statusToasts[0].kind}`}>{statusToasts[0].text}</div>
+            )}
+          </div>
 
-        <div className="rack-row">
-          <Rack
-            tiles={viewer.rack}
-            label={youLabel}
-            playerColor={viewerColor}
-            selectedTileId={selectedRackTileId}
-            discardTileIds={discardIds}
-            placedTileIds={placedTileIds}
-            disabled={!interactive}
-            onTileClick={handleRackTileClick}
-          />
-          <button
-            type="button"
-            className="icon-button action-shuffle"
-            onClick={canClearNow ? handleClear : handleShuffle}
-            disabled={!canClearNow && !canShuffleNow}
-            aria-label={canClearNow ? 'Clear' : 'Shuffle'}
-          >
-            {canClearNow ? <ClearIcon /> : <ShuffleIcon />}
-            <span className="sr-only">{canClearNow ? 'Clear' : 'Shuffle'}</span>
-          </button>
-          <button type="button" className="action-button action-play" onClick={handlePlay} disabled={!canPlayNow}>
-            Play
-          </button>
+          <div className="rack-row">
+            <Rack
+              tiles={viewer.rack}
+              label={youLabel}
+              playerColor={viewerColor}
+              selectedTileId={selectedRackTileId}
+              discardTileIds={discardIds}
+              placedTileIds={placedTileIds}
+              disabled={!interactive}
+              onTileClick={handleRackTileClick}
+            />
+            <button
+              type="button"
+              className="icon-button action-shuffle"
+              onClick={canClearNow ? handleClear : handleShuffle}
+              disabled={!canClearNow && !canShuffleNow}
+              aria-label={canClearNow ? 'Clear' : 'Shuffle'}
+            >
+              {canClearNow ? <ClearIcon /> : <ShuffleIcon />}
+              <span className="sr-only">{canClearNow ? 'Clear' : 'Shuffle'}</span>
+            </button>
+            <button type="button" className="action-button action-play" onClick={handlePlay} disabled={!canPlayNow}>
+              Play
+            </button>
+          </div>
         </div>
       </div>
 

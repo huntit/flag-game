@@ -3,6 +3,7 @@
 import type { Tile } from '../engine/types';
 import { RACK_MAX } from '../engine/types';
 import { TileFace } from './TileFace';
+import { ScoreCard } from './GameInfo';
 import './Rack.css';
 
 interface RackProps {
@@ -74,16 +75,13 @@ interface OpponentRackProps {
 
 export function OpponentRack({ name, playerColor, count, score, isTheirTurn }: OpponentRackProps) {
   return (
-    <div
-      className={`opponent-inner is-${playerColor.toLowerCase()} ${isTheirTurn ? 'is-their-turn' : ''}`}
-    >
-      <span className="opponent-name">{name}</span>
-      <span className="opponent-score">{score}</span>
-      <div className="score-backs opponent-tiles" aria-label={`${name} holds ${count} tiles`}>
-        {Array.from({ length: count }, (_, i) => (
-          <span key={`back-${i}`} className="score-back opponent-back" />
-        ))}
-      </div>
-    </div>
+    <ScoreCard
+      name={name}
+      score={score}
+      rackCount={count}
+      isActive={isTheirTurn}
+      playerColor={playerColor}
+      variant="opponent"
+    />
   );
 }

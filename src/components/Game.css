@@ -67,6 +67,10 @@
   display: contents;
 }
 
+.dock {
+  display: contents;
+}
+
 @media (orientation: landscape) and (min-width: 640px) {
   .play-shell {
     --shell-max-w: 1100px;
@@ -110,124 +114,6 @@
     width: auto;
     max-width: none;
     justify-self: stretch;
-  }
-}
-
-@media (min-width: 900px) and (pointer: fine) {
-  .play-shell {
-    --header-h: 68px;
-    --scores-h: 48px;
-    --market-h: 52px;
-    --status-h: 28px;
-    --rack-h: 52px;
-    --dock-h: 52px;
-    --shell-gap: 8px;
-    --shell-pad-x: 16px;
-    --shell-pad-y: 10px;
-    --tile: 42px;
-    --log-w: 220px; /* sidebar sits in column 3, start-aligned to the board */
-
-    --chrome-h: calc(
-      var(--header-h) + var(--scores-h) + var(--market-h) + var(--status-h) + var(--dock-h) +
-        (4 * var(--shell-gap)) + (2 * var(--shell-pad-y)) + var(--safe-top) +
-        var(--safe-bottom) + 2px
-    );
-
-    --shell-max-w: 1100px;
-    --board-max: 462px;
-    --board-size: min(
-      var(--board-max),
-      calc(var(--app-h) - var(--chrome-h))
-    );
-
-    max-width: none;
-    width: 100%;
-    margin: 0;
-    display: grid;
-    grid-template-columns: 1fr auto 1fr;
-    grid-template-rows: auto;
-    grid-template-areas: none;
-    align-content: start;
-    justify-content: stretch;
-    column-gap: 0;
-  }
-
-  .play-main {
-    display: grid;
-    grid-column: 2;
-    width: var(--board-size);
-    grid-template-columns: var(--board-size);
-    grid-template-rows:
-      var(--header-h)
-      var(--scores-h)
-      var(--board-size)
-      var(--market-h)
-      var(--status-h)
-      var(--dock-h);
-    grid-template-areas:
-      'header'
-      'scores'
-      'stage'
-      'market'
-      'status'
-      'rack';
-    gap: var(--shell-gap);
-    align-content: start;
-  }
-
-  .play-shell .stage,
-  .play-shell .play-header,
-  .play-header,
-  .scores-row,
-  .stage,
-  .market-row,
-  .status-row,
-  .rack-row {
-    grid-column: auto;
-    grid-row: auto;
-    width: 100%;
-    max-width: none;
-    justify-self: stretch;
-  }
-
-  .play-header {
-    overflow: visible;
-  }
-
-  .scores-row {
-    justify-self: stretch;
-  }
-
-  .market-row {
-    width: var(--board-size);
-    max-width: var(--board-size);
-    justify-self: stretch;
-  }
-
-  .market-row-inner {
-    width: 100%;
-    max-width: var(--board-size);
-  }
-
-  .rack-row {
-    min-width: 0;
-    height: var(--dock-h);
-    max-height: var(--dock-h);
-    align-self: stretch;
-  }
-
-  .action-play {
-    width: 88px;
-    flex: 0 0 auto;
-  }
-
-  .action-draw {
-    width: 92px;
-    flex: 0 0 auto;
-  }
-
-  .action-button:hover:not(:disabled) {
-    filter: brightness(1.08);
   }
 }
 
@@ -301,10 +187,10 @@
   width: var(--board-size);
   justify-self: center;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
   justify-content: center;
-  gap: 3px;
+  gap: 0;
   min-height: 0;
   overflow: hidden;
   pointer-events: none;
@@ -431,4 +317,140 @@
 .toast-hint {
   background-color: var(--color-chrome);
   color: #fff;
+}
+
+@media (min-width: 900px) and (pointer: fine) {
+  .play-shell {
+    --header-h: 52px;
+    --scores-h: 56px;
+    --market-h: 52px;
+    --status-h: 32px;
+    --rack-h: 52px;
+    --dock-h: 52px;
+    --dock-min: 480px;
+    --shell-gap: 10px;
+    --shell-pad-x: 16px;
+    --shell-pad-y: 10px;
+    --tile: 38px;
+    --log-w: 200px;
+
+    --chrome-h: calc(
+      var(--header-h) + var(--scores-h) + (2 * var(--shell-gap)) + (2 * var(--shell-pad-y)) +
+        var(--safe-top) + var(--safe-bottom) + 2px
+    );
+
+    --shell-max-w: 1600px;
+    --board-max: 770px;
+    --board-size: min(
+      var(--board-max),
+      calc(var(--app-h) - var(--chrome-h)),
+      calc(
+        100vw - var(--log-w) - var(--dock-min) - (2 * var(--shell-pad-x)) -
+          (2 * var(--shell-gap)) - var(--safe-left) - var(--safe-right) - 8px
+      )
+    );
+
+    max-width: none;
+    width: 100%;
+    margin: 0;
+    display: grid;
+    grid-template-columns: var(--board-size) var(--dock-min) var(--log-w);
+    grid-template-rows: var(--header-h) var(--scores-h) var(--board-size);
+    grid-template-areas:
+      'header header sidebar'
+      'scores scores sidebar'
+      'stage dock sidebar';
+    align-content: center;
+    justify-content: center;
+    column-gap: var(--shell-gap);
+    row-gap: var(--shell-gap);
+  }
+
+  .play-main {
+    display: contents;
+  }
+
+  .dock {
+    display: flex;
+    flex-direction: column;
+    grid-area: dock;
+    gap: var(--shell-gap);
+    min-width: 0;
+    min-height: 0;
+    justify-content: center;
+    width: 100%;
+  }
+
+  .play-header {
+    grid-area: header;
+    width: auto;
+    max-width: none;
+    overflow: visible;
+    justify-self: stretch;
+  }
+
+  .scores-row {
+    grid-area: scores;
+    width: auto;
+    max-width: none;
+    justify-self: stretch;
+  }
+
+  .stage {
+    grid-area: stage;
+    width: var(--board-size);
+    max-width: var(--board-size);
+    justify-self: stretch;
+    align-self: start;
+  }
+
+  .market-row,
+  .status-row,
+  .rack-row {
+    grid-column: auto;
+    grid-row: auto;
+    width: 100%;
+    max-width: none;
+    justify-self: stretch;
+  }
+
+  .market-row {
+    height: var(--market-h);
+    flex: 0 0 var(--market-h);
+  }
+
+  .status-row {
+    height: var(--status-h);
+    flex: 0 0 var(--status-h);
+  }
+
+  .rack-row {
+    height: var(--dock-h);
+    max-height: var(--dock-h);
+    flex: 0 0 var(--dock-h);
+    min-width: 0;
+  }
+
+  .action-play {
+    width: 76px;
+    min-width: 76px;
+    flex: 0 0 76px;
+  }
+
+  .action-draw {
+    width: 88px;
+    min-width: 88px;
+    flex: 0 0 88px;
+  }
+
+  .icon-button {
+    width: 40px;
+    min-width: 40px;
+    max-width: 40px;
+    flex: 0 0 40px;
+  }
+
+  .action-button:hover:not(:disabled) {
+    filter: brightness(1.08);
+  }
 }
