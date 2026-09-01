@@ -10,9 +10,11 @@ Flag is a **two-player** word game. Each player has a coloured flag on a true co
 
 **Three ways to play:**
 
-1. **Solo vs Hunter** — Play against the AI locally in your browser. No room server. This is the iPhone Safari feel-test. You see how many tiles the AI has (facedown backs), not which letters.
-2. **Hotseat** — Two humans on one device. Pass-the-phone. No room. After the pass-the-phone interstitial, you see how many tiles the opponent has (facedown backs and empty slots), not the letters.
-3. **Remote 2-player** — Play with a friend via persistent game links. Live and correspondence are the same mode. Host creates a game and gets a secret invite link to send. Each seat is a secret token so players can return for days on another device without accounts. The game persists even when both players are offline. No logins, no matchmaking, no friend lists. Rack **count** is public state; rack **letters** are not.
+1. **Solo vs Hunter** — Play against Greedy, Hunter, or Sleeper locally in your browser. No room server. This is the iPhone Safari feel-test. Each new game **randomly** assigns who is Player 1 (first to act). You are sometimes P1, sometimes P2. You see how many tiles the AI has (facedown backs), not which letters.
+2. **Hotseat** — Two humans on one device. Pass-the-phone. No room. Each new game **randomly** assigns who is Player 1. After the pass-the-phone interstitial, you see how many tiles the opponent has (facedown backs and empty slots), not the letters.
+3. **Remote 2-player** — Play with a friend via persistent game links. Live and correspondence are the same mode. Host creates a game and gets a secret invite link to send. Each seat is a secret token so players can return for days on another device without accounts. Who is Player 1 is **randomised when the second seat sits** — not “first joiner is P1”. The game persists even when both players are offline. No logins, no matchmaking, no friend lists. Rack **count** is public state; rack **letters** are not.
+
+There is **no first-player menu** in v0. Before the first action, a one-line banner states who plays first (see Setup). That banner stays visible on the turn indicator via coloured name cards.
 
 ## What You Need
 
@@ -76,11 +78,19 @@ If one play covers more than one flag:
 
 1. Shuffle the tile bag
 2. Deal 4 tiles face-up and 2 tiles face-down to the market (6 showing)
-3. Deal **2 tiles from the bag** to each player (not from the market; not a full 7)
-4. Randomly choose P1's flag corner; place P2's flag on the diagonally opposite corner
-5. Choose first player
+3. Deal opening tiles from the bag (not from the market; not a full 7):
+   - **Player 1 (P1):** 2 tiles
+   - **Player 2 (P2):** 3 tiles — second-player compensation (no extra points, no one-time draw privilege)
+4. **Randomly assign who is P1** (first to act). P1's flag goes on a random true corner; P2's flag on the diagonally opposite corner
+5. P1 takes the first turn
 
 The first action of the game may be **Draw or Play**. You do not have to Draw first.
+
+### Who is Player 1
+
+- **Solo vs AI:** Each new game randomly assigns P1. Before the first action, show a clear one-line banner (not only a log line): **“You play first”** or **“{AI name} plays first”** (e.g. “Hunter plays first”). The banner stays visible on the turn indicator (You / Hunter) via coloured name cards.
+- **Hotseat:** Random P1 at game start. Banner: **“{Name/colour} plays first”** (e.g. “Blue plays first”).
+- **Remote 2-player:** Random P1 when the **second seat sits**, not when the host creates the room. Same banner format for both seats.
 
 ## Your Turn
 
@@ -172,17 +182,19 @@ There are only four true corners. Two-player uses a diagonal pair so two spares 
 
 ## Example Start
 
-Both players start with 2 tiles from the bag (not the market). The market shows 4 face-up and 2 face-down tiles. P1's flag is on (1,1); P2's on (11,11). Spares are (1,11) and (11,1). You can see how many tiles the opponent has (facedown backs), not which letters. The first action may be Draw or Play.
+Solo vs Hunter. The game randomly made **you P1**. Banner: **“You play first.”** P1 (you) has **2 tiles** from the bag; P2 (Hunter) has **3 tiles**. The market shows 4 face-up and 2 face-down (6 total). P1's flag is on (1,1); P2's on (11,11) — a diagonal pair of true corners. Spares are (1,11) and (11,1). You can see how many tiles Hunter has (facedown backs), not which letters. P1 to move; first action may be Draw or Play.
 
-**Turn 1 (You):** You already have 2 tiles, so you could play a short word through (6,6) if those tiles allow it. Instead you Draw 2 tiles from the market (one face-up, one face-down). The market refills in the same orientations.
+**Turn 1 (You, P1):** You already have 2 tiles, so you could play a short word through (6,6) if those tiles allow it. Instead you Draw 2 tiles from the market (one face-up, one face-down). The market refills in the same orientations.
 
-**Turn 2 (Opponent):** Draw 2 from the market. If their rack exceeds 7, they discard back to 7.
+**Turn 2 (Hunter, P2):** Hunter Draws 2 from the market (started with 3 tiles). If their rack exceeds 7, they discard back to 7.
 
 **Turn 3 (You):** Play STAR through the centre star (6,6), scoring normally. Your rack does not refill.
 
-**Turn 4 (Opponent):** Play a word that covers your flag at (1,1). That word scores double-word. Your flag is removed; you get a replacement on a random empty spare corner.
+**Turn 4 (Hunter):** Play a word that covers your flag at (1,1). That word scores double-word. Your flag is removed; you get a replacement on a random empty spare corner.
 
-**Later:** If they steal your replacement too, the game ends on that double-word. Or you might capture your own flag for triple-word and an immediate end — win only if you're ahead after the bonus.
+**Later:** If Hunter steals your replacement too, the game ends on that double-word. Or you might capture your own flag for triple-word and an immediate end — win only if you're ahead after the bonus.
+
+In a rematch the game might assign Hunter as P1 instead; the banner would read **“Hunter plays first”** and Hunter would start with 2 tiles while you start with 3.
 
 ---
 

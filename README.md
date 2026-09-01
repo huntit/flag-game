@@ -2,7 +2,7 @@
 
 **Working title** — Private prototype repository
 
-A two-player word game combining crossword mechanics with a six-tile market (four face-up, two face-down) and per-player corner flags. Both players start with two tiles from the bag. Players build a rack by drawing exactly two tiles from the market, then spend those tiles to form words on an 11×11 crossword grid (odd size so there is a centre cell). Each player has a coloured flag on a true corner; covering flags applies triple-word or double-word multipliers and can end the game. Highest score wins.
+A two-player word game combining crossword mechanics with a six-tile market (four face-up, two face-down) and per-player corner flags. Player 1 starts with two tiles from the bag; Player 2 starts with three (second-player compensation). Each new game randomly assigns who is P1. Players build a rack by drawing exactly two tiles from the market, then spend those tiles to form words on an 11×11 crossword grid (odd size so there is a centre cell). Each player has a coloured flag on a true corner; covering flags applies triple-word or double-word multipliers and can end the game. Highest score wins.
 
 ## Status
 
@@ -37,12 +37,12 @@ Flag is a distinct game, not a variant of commercial crossword products:
 
 - **Custom dictionary and tile set** — Flag uses Peter's custom ENABLE-based word list and the WWF English bag (104 tiles) paired with Word Eagle's WWF letter values, not third-party crossword publisher data
 - **11×11 board with no premium squares** — Odd size so there is a centre cell (6,6). Not 10×10. Simple grid, no double/triple letter or word scores on the board
-- **Two opening tiles from the bag** — Each player starts with 2 tiles dealt from the bag (not from the market, not a full 7). First action may be Draw or Play
+- **Opening tiles from the bag** — P1 starts with 2 tiles; P2 starts with 3 (second-player compensation). First action may be Draw or Play. Who is P1 is randomised each new game (remote: when the second seat sits)
 - **Draw XOR Play** — Draw exactly 2 tiles from a 6-tile market (4 face-up + 2 face-down) OR play tiles to score; playing does not refill your rack
 - **Per-player corner flags** — Each player has a flag on a true corner; own-flag capture is triple-word and ends the game; opponent steals apply double-word and can end on a second steal
 - **Public rack count, hidden letters** — Opponent (and AI) rack letters stay hidden; tile count is public as 0–7 facedown backs with empty slots plus a readable count number
 
-The crossword-on-a-grid mechanic is shared with games like Scrabble and Words With Friends, but Flag's six-tile market, two-tile bag opening, per-player flag scoring, and custom tile set make it a different game.
+The crossword-on-a-grid mechanic is shared with games like Scrabble and Words With Friends, but Flag's six-tile market, asymmetric opening deal (P1=2, P2=3), random first player, per-player flag scoring, and custom tile set make it a different game.
 
 ## Playtesting
 

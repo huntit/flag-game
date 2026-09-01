@@ -13,9 +13,9 @@ A two-player digital prototype combining crossword mechanics, a Splendor-style g
 
 **Three play modes, one engine:**
 
-1. **Solo vs Hunter** — Play against Greedy, Hunter, or Sleeper personality (opponent rack **letters** hidden; rack **count** public as 0–7 facedown tile backs with empty slots **plus a readable number**). Local TypeScript engine in the browser. No room server. This is the iPhone Safari feel-test.
-2. **Hotseat** — Two humans on one device, local engine. Pass-the-phone. No room.
-3. **Remote 2-player** — Live and correspondence are ONE mode (persistent game links). Secret unguessable game/seat links. No 4-letter room codes. Host creates a game and gets a P2 invite link to send. Each seat is a secret token so players can return for days on another device without accounts. No logins, no matchmaking, no friend lists, no accounts for v0. Transport: PartyKit (one Cloudflare Durable Object per game). UI can stay on Vercel; rooms on PartyKit. Authority: the same TypeScript rules engine is room-authoritative. Clients send actions (Draw, Play, Pass). The room validates, applies, and broadcasts public state. Opponent rack **letters** must not leak in the URL or in the other client's payload. Opponent rack **count** is public state. Bag, market, board, scores, flags, whose-turn, and rack counts live on the room. Persistence: store the engine snapshot in room storage. Do NOT destroy the room when tabs close or both players go offline. A game may sit for days. If both players are online it feels live; if not, it waits. Pass is an explicit button. Never treat silence, a closed tab, or elapsed time as a pass. Consecutive double-pass still ends the game only after two explicit Passes in a row (a Draw or Play between Passes breaks the streak). See section 7.3. Notifications are out of scope for v0. Testers ping each other (iMessage etc.) for "your turn" until later.
+1. **Solo vs Hunter** — Play against Greedy, Hunter, or Sleeper personality (opponent rack **letters** hidden; rack **count** public as 0–7 facedown tile backs with empty slots **plus a readable number**). Local TypeScript engine in the browser. No room server. **Random P1 each new game** (human sometimes P1 with 2 opening tiles, sometimes P2 with 3). This is the iPhone Safari feel-test.
+2. **Hotseat** — Two humans on one device, local engine. Pass-the-phone. No room. **Random P1 each new game.**
+3. **Remote 2-player** — Live and correspondence are ONE mode (persistent game links). Secret unguessable game/seat links. No 4-letter room codes. Host creates a game and gets a P2 invite link to send. Each seat is a secret token so players can return for days on another device without accounts. No logins, no matchmaking, no friend lists, no accounts for v0. **Random P1 when the second seat sits** (not first joiner). Transport: PartyKit (one Cloudflare Durable Object per game). UI can stay on Vercel; rooms on PartyKit. Authority: the same TypeScript rules engine is room-authoritative. Clients send actions (Draw, Play, Pass). The room validates, applies, and broadcasts public state. Opponent rack **letters** must not leak in the URL or in the other client's payload. Opponent rack **count** is public state. Bag, market, board, scores, flags, whose-turn, and rack counts live on the room. Persistence: store the engine snapshot in room storage. Do NOT destroy the room when tabs close or both players go offline. A game may sit for days. If both players are online it feels live; if not, it waits. Pass is an explicit button. Never treat silence, a closed tab, or elapsed time as a pass. Consecutive double-pass still ends the game only after two explicit Passes in a row (a Draw or Play between Passes breaks the streak). See section 8.3. Notifications are out of scope for v0. Testers ping each other (iMessage etc.) for "your turn" until later.
 4. **AI vs AI lab** — Headless simulation for game balance analysis
 
 **Constraints:**
@@ -64,7 +64,8 @@ A two-player digital prototype combining crossword mechanics, a Splendor-style g
   - Pass legal only when no legal Play AND Draw illegal
   - Remote game persistence across disconnects/days
   - Opponent rack letters not leaked in URL or client payload; rack count is public
-  - Opening deal: 2 tiles from the bag to each rack; market 6 tiles; first action may be Draw or Play
+  - Opening deal: P1 gets 2 tiles from the bag, P2 gets 3; market 6 tiles; P1 acts first; first action may be Draw or Play
+  - Random P1 assignment: solo vs AI, hotseat, and remote (remote randomises when second seat sits)
   - Dictionary load accepts length 2–11 without shrinking `data/words.txt`
 - **Out of scope:** Board premium squares, bingo, 3–4 player, secret goals, turn clocks/timeouts, spectators, accounts, push/email notifications
 
@@ -176,11 +177,29 @@ A play is legal if and only if every new straight-line word (the main play word 
 
 1. Shuffle the tile bag
 2. Deal 4 tiles **face-up** and 2 tiles **face-down** to the market (6 showing)
-3. Deal **2 tiles from the bag** to each player (not from the market; do NOT deal 7; do NOT deal from the market into opening racks)
-4. Assign P1 flag corner (random true corner); P2 flag on diagonally opposite corner
-5. Player 1 goes first
+3. Deal opening tiles from the bag (not from the market; do NOT deal 7; do NOT deal from the market into opening racks):
+   - **P1:** 2 tiles
+   - **P2:** 3 tiles (second-player compensation — locked; no points bonus, no one-time draw privilege)
+4. **Randomly assign who is P1** (first to act). P1 flag corner = random true corner; P2 flag on diagonally opposite corner
+5. P1 takes the first turn
 
 **The first action of the game may be Draw or Play.** It is no longer “must Draw”.
+
+### 7.1 Who is Player 1 (locked)
+
+**No first-player menu in v0.** Randomise P1 every new game in all modes:
+
+| Mode | When to randomise | Banner (before first action) |
+|------|-------------------|------------------------------|
+| Solo vs AI | New game start | **“You play first”** or **“{AI personality name} plays first”** (e.g. “Hunter plays first”) |
+| Hotseat | New game start | **“{Name/colour} plays first”** (e.g. “Blue plays first”) |
+| Remote 2-player | When **second seat sits** — NOT “first joiner is P1” | Same as hotseat for both clients |
+
+**UI:** Show the banner as a clear one-line message before the first action — not only a move-log line. After the game starts, keep “who plays first” context visible on the turn indicator via **coloured player name cards** (You / Hunter, or seat names/colours).
+
+**Solo vs AI:** Human is sometimes P1, sometimes P2. P1 seat gets 2 opening tiles and acts first; P2 seat gets 3 opening tiles. AI personality name in banner when AI is P1.
+
+**Remote:** Host may create the room before P2 joins; defer P1 randomisation and full setup (flags, opening deal, whose-turn) until the second seat token is claimed, then broadcast the banner to both clients.
 
 ## 8. Turn Structure
 
@@ -302,6 +321,7 @@ Desktop browsers (wide window, `pointer: fine` — Safari on Mac) use a separate
 **Player chrome:**
 
 - **Player name cards in that player's colour**
+- **First-player banner:** Before the first action, show one line: “You play first”, “{AI name} plays first”, or “{Name/colour} plays first”. Keep visible on the turn indicator via the coloured name cards after play begins
 - **Desktop/iPad:** scrolling move log (human + AI moves) coloured by player
 - **Nicer desktop layout/alignment** than phone shell (still compact centered column per above)
 - **Title + logo is the home link; no back button**
@@ -392,6 +412,8 @@ Art is Skye's domain later. For v0:
 
 **No logins, no matchmaking, no friend lists, no accounts for v0.**
 
+**P1 assignment:** Randomise who is P1 when the **second seat sits**, not when the host creates the room. Run full setup (opening deal P1=2 / P2=3, flags, whose-turn) at that moment. Broadcast the first-player banner to both clients. See section 7.1.
+
 ### Pass Behavior
 
 Pass is an explicit button. Never treat silence, a closed tab, or elapsed time as a pass. Consecutive double-pass still ends the game only after two explicit Passes in a row (one from each player). A Draw or Play between Passes breaks the streak. See section 8.3 for Pass legality.
@@ -434,7 +456,7 @@ Use the same generator for:
 
 ## 13. AI Personalities
 
-**No search-based AI.** Three simple personalities. They play the same v0 setup: 11×11 board, 2 opening tiles from the bag, market of 6 (4 up + 2 down), first action may be Draw or Play. Opponent rack letters stay hidden from the human; rack count is public.
+**No search-based AI.** Three simple personalities. They play the same v0 setup: 11×11 board, **P1=2 / P2=3 opening tiles from the bag**, market of 6 (4 up + 2 down), **random P1 assignment each new solo game** (human sometimes P1, sometimes P2), first action may be Draw or Play. Opponent rack letters stay hidden from the human; rack count is public.
 
 **Shared constant:** `DRAW_THRESHOLD = 8` (CLI-configurable)
 
@@ -552,14 +574,16 @@ Other matchups via CLI.
 
 - `DRAW_THRESHOLD = 8` (CLI-configurable: `--threshold`)
 - Board size: 11×11 (NOT a runtime flag; NOT 10×10 — need a centre cell)
+- **Second-player compensation (locked):** P1 opens with 2 tiles from the bag; P2 opens with 3. No points compensation, no one-time draw privilege
+- **Random P1 (locked):** Solo, hotseat, and remote (remote: when second seat sits). No first-player menu in v0
 
 **Hooks for later tuning (commented out, not implemented):**
 
-- **Second-player extra starting tile:** P2 begins with 1 tile
+- *(none for opening deal — P2+1 tile is locked)*
 
 **After lab results:**
 
-- If P1 win rate > 60%, consider giving P2 an extra starting tile
+- If P1 win rate > 60%, revisit compensation (currently P2+1 opening tile only — do not add points or draw privileges without Finch)
 - If self-capturer win rate is skewed, revisit AI thresholds
 - If 2-letter play rate is absurdly high, consider a length bonus
 
@@ -600,7 +624,9 @@ These are intentional design choices:
 - **Draw XOR Play, no refill after play** — Playing empties your rack; drawing builds it
 - **Per-player corner flags with capture multipliers** — Own flag = triple-word + end; opponent steals escalate to game end on second steal
 - **Two spare corners from diagonal setup** — Replacement flags need empty true corners
-- **Two opening tiles from the bag** — Deal 2 from the bag to each rack (not empty opening racks, not 7, not from the market). First action may be Draw or Play
+- **Second-player compensation** — P1 opens with 2 tiles from the bag; P2 opens with 3 (no points bonus, no one-time draw privilege). P1 acts first
+- **Random P1 every game** — Solo, hotseat, and remote (remote: when second seat sits). Banner before first action; no first-player menu in v0
+- **Two opening tiles from the bag (P1 only)** — P2 gets three. First action may be Draw or Play
 - **11×11, not 10×10** — Odd size so there is a centre cell at (6,6)
 - **Public rack count, hidden letters** — Show facedown backs and empty slots plus a readable count number; never expose opponent letters
 - **Market 6 = 4 up + 2 down; Draw always takes 2** — Exchange via draw-then-discard when rack full
@@ -624,7 +650,7 @@ Peter's original idea (2 July 2018):
 - 11×11 board (not 15×15, not 10×10 — odd size needed for a centre cell)
 - Per-player flags on true corners with TWS/DWS capture scoring (not a rotating shared post)
 - Market 6 (4 up + 2 down); Draw takes exactly 2; no +1 bag
-- Two opening tiles dealt from the bag; first action may be Draw or Play
+- P1=2 / P2=3 opening tiles from the bag; random P1 each game; first action may be Draw or Play
 - Second-steal and self-capture end conditions; double-pass and stuck-out backups
 
 ---
