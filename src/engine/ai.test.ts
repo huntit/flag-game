@@ -8,8 +8,8 @@ import { Dictionary } from './dictionary';
 import { initializeGame, mulberry32, setRandomSource, resetRandomSource } from './game';
 import { executeAction } from './actions';
 import { planAIAction, selectAIAction } from './ai';
-import type { AIPersonality, Letter, TileData, Tile } from './types';
-import { FLAG_POSTS, RACK_MAX } from './types';
+import type { AIPersonality, Letter, MarketSlot, TileData, Tile } from './types';
+import { DRAW_COUNT, FLAG_POSTS, MARKET_FACE_DOWN, MARKET_FACE_UP, RACK_MAX } from './types';
 
 const tileData: TileData = {
   source: { values: 'test', counts: 'test' },
@@ -36,10 +36,10 @@ const tileData: TileData = {
 };
 
 const dictionary = new Dictionary([
-  'AD', 'AE', 'AN', 'AR', 'AS', 'AT', 'DA', 'DE', 'DO', 'ED', 'EN', 'ER', 'ES',
+  'AD', 'AE', 'AN', 'AR', 'AS', 'AT', 'ART', 'DA', 'DE', 'DO', 'ED', 'EN', 'ER', 'ES',
   'ET', 'NA', 'NE', 'NO', 'OD', 'OE', 'ON', 'OR', 'OS', 'RE', 'SO', 'TA', 'TO',
   'AND', 'ANT', 'ARE', 'ATE', 'EAR', 'EAT', 'END', 'ERA', 'NOD', 'NOR', 'NOT',
-  'OAR', 'ODE', 'ONE', 'RAN', 'RAT', 'RED', 'ROD', 'ROT', 'SAD', 'SAT', 'SEA',
+  'OAR', 'ODE', 'ONE', 'RAN', 'RAT', 'RED', 'ROD', 'ROT', 'RT', 'SAD', 'SAT', 'SEA',
   'SET', 'SON', 'STAR', 'RATE', 'TEARS', 'STONE', 'SNORED', 'SANDER',
 ]);
 
@@ -51,29 +51,35 @@ function blank(): Tile {
   return { id: `aib${seq++}`, letter: null, value: 0, isBlank: true };
 }
 
+function marketSlots(tiles: (Tile | null)[], faceUpCount = MARKET_FACE_UP): MarketSlot[] {
+  return tiles.map((t, i) => ({ tile: t, faceUp: i < faceUpCount }));
+}
+
 afterEach(() => {
   resetRandomSource();
 });
 
 describe('draw policy', () => {
-  it('does not refresh a full rack when there is no blank to chase', () => {
+  it('plays when the best move meets the score threshold instead of drawing', () => {
     setRandomSource(mulberry32(2));
     const state = initializeGame(tileData);
     const player = state.players[0];
 
-    // Full rack that can make a word, and no blank on offer.
+    // Full rack that can make SANDER (8 points) on an opening board.
     player.rack = [
-      tile('S'), tile('T'), tile('A'), tile('R'), tile('E'), tile('O'), tile('D', 2),
+      tile('S'), tile('A'), tile('N', 2), tile('D', 2), tile('E'), tile('R'), tile('O'),
     ];
     expect(player.rack).toHaveLength(RACK_MAX);
-    state.market = [tile('A'), tile('E'), tile('T'), tile('S')];
+    state.market = marketSlots([
+      tile('A'), tile('E'), tile('T'), tile('S'),
+      tile('N'), tile('O'),
+    ]);
 
-    // A tile-neutral refresh would let the game run forever, so play instead.
     const action = selectAIAction(state, 'greedy', dictionary, 8);
     expect(action.type).toBe('play');
   });
 
-  it('still refreshes a full rack to take a blank', () => {
+  it('draws exactly 2 tiles from a full rack when the best play is below threshold', () => {
     setRandomSource(mulberry32(3));
     const state = initializeGame(tileData);
     const player = state.players[0];
@@ -82,23 +88,29 @@ describe('draw policy', () => {
     ];
 
     const theBlank = blank();
-    state.market = [theBlank, tile('A'), tile('E'), tile('T')];
+    state.market = marketSlots([
+      theBlank, tile('A'), tile('E'), tile('T'),
+      tile('N'), tile('O'),
+    ]);
 
     const action = selectAIAction(state, 'greedy', dictionary, 8);
     expect(action.type).toBe('draw');
     if (action.type === 'draw') {
-      expect(action.marketTiles).toEqual([theBlank.id]);
-      expect(action.discardTiles).toHaveLength(1);
+      expect(action.marketTiles).toHaveLength(DRAW_COUNT);
+      expect(action.discardTiles).toHaveLength(DRAW_COUNT);
     }
   });
 
-  it('draws freely while the rack has room', () => {
+  it('draws exactly 2 tiles while the rack has room', () => {
     setRandomSource(mulberry32(4));
     const state = initializeGame(tileData);
     state.players[0].rack = [tile('Q' as Letter, 10)];
 
     const action = selectAIAction(state, 'greedy', dictionary, 8);
     expect(action.type).toBe('draw');
+    if (action.type === 'draw') {
+      expect(action.marketTiles).toHaveLength(DRAW_COUNT);
+    }
   });
 });
 
@@ -106,13 +118,15 @@ describe('personalities', () => {
   it('hunter takes an available capture', () => {
     setRandomSource(mulberry32(6));
     const state = initializeGame(tileData);
-    state.livePost = 'NW';
-    state.board[2][1] = tile('T'); // T at (3,2), under the NW post
+    state.flags = { P1: 'SE', P2: 'NW' };
+    // RT beside the NW corner — playing A onto (1,1) makes ART and steals P2's flag.
+    state.board[0][1] = tile('R');
+    state.board[0][2] = tile('T');
     state.board[5][5] = tile('A'); // board is no longer empty
     state.players[0].rack = [tile('A'), tile('S'), tile('E')];
 
     const { action, legalPlays } = planAIAction(state, 'hunter', dictionary, 8);
-    expect(legalPlays.some(p => p.captures)).toBe(true);
+    expect(legalPlays.some(p => p.capturesOpponentFlag)).toBe(true);
     expect(action.type).toBe('play');
     if (action.type === 'play') {
       expect(action.placements.some(p => p.position.row === FLAG_POSTS.NW.row && p.position.col === FLAG_POSTS.NW.col)).toBe(true);
@@ -122,8 +136,9 @@ describe('personalities', () => {
   it('sleeper refuses a capture that would not win', () => {
     setRandomSource(mulberry32(6));
     const state = initializeGame(tileData);
-    state.livePost = 'NW';
-    state.board[2][1] = tile('T');
+    state.flags = { P1: 'SE', P2: 'NW' };
+    state.board[0][1] = tile('R');
+    state.board[0][2] = tile('T');
     state.board[5][5] = tile('A');
     state.players[0].rack = [tile('A'), tile('S'), tile('E')];
     state.players[0].score = 0;
@@ -158,7 +173,7 @@ describe('games terminate on the shipping data', () => {
   ];
 
   it.each(matchups)('%s vs %s reaches a game-end condition', (p1, p2) => {
-    const validEndings = ['capture', 'bag', 'posts_full', 'double_pass'];
+    const validEndings = ['self_capture', 'second_steal', 'no_spare', 'double_pass', 'stuck_out'];
 
     for (let seed = 1; seed <= 3; seed++) {
       setRandomSource(mulberry32(seed * 977));
