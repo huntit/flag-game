@@ -165,6 +165,9 @@
 
   .rack-row {
     min-width: 0;
+    height: var(--dock-h);
+    max-height: var(--dock-h);
+    align-self: center;
   }
 
   /* Stable toolbar: four buttons in a compact group next to the rack,

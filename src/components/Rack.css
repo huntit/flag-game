@@ -189,8 +189,11 @@
 
   .tray-tile,
   .tray-slot-empty {
+    /* Belt-and-suspenders: never inherit height: 82% from a 1fr sidebar. */
+    aspect-ratio: 1;
     width: var(--tile, 42px);
     height: var(--tile, 42px);
+    max-height: 48px;
     flex: 0 0 auto;
     border-radius: 6px;
   }

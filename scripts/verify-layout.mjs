@@ -117,14 +117,26 @@ for (const t of targets) {
       problems.push(`desktop board not centered: mid=${(m.board.left + m.board.w / 2).toFixed(1)}`);
     }
     if (m.actions.w > 320) problems.push(`desktop toolbar stretched: ${m.actions.w.toFixed(1)}`);
-    if (m.rackTile && m.rackTile.w > 50) problems.push(`desktop rack tile huge: ${m.rackTile.w.toFixed(1)}`);
-    if (m.marketTile && m.marketTile.w > 50) problems.push(`desktop market tile huge: ${m.marketTile.w.toFixed(1)}`);
+    if (m.rackTile) {
+      if (m.rackTile.w > 50) problems.push(`desktop rack tile huge: ${m.rackTile.w.toFixed(1)}`);
+      if (m.rackTile.h > 50) problems.push(`desktop rack tile tall: ${m.rackTile.h.toFixed(1)}`);
+      if (Math.abs(m.rackTile.w - m.rackTile.h) >= 3) {
+        problems.push(`desktop rack tile not square: ${m.rackTile.w.toFixed(1)}x${m.rackTile.h.toFixed(1)}`);
+      }
+    }
+    if (m.marketTile) {
+      if (m.marketTile.w > 50) problems.push(`desktop market tile huge: ${m.marketTile.w.toFixed(1)}`);
+      if (m.marketTile.h > 50) problems.push(`desktop market tile tall: ${m.marketTile.h.toFixed(1)}`);
+      if (Math.abs(m.marketTile.w - m.marketTile.h) >= 3) {
+        problems.push(`desktop market tile not square: ${m.marketTile.w.toFixed(1)}x${m.marketTile.h.toFixed(1)}`);
+      }
+    }
   }
 
   console.log(`\n${t.name}  ${t.width}x${t.height} @${t.dpr}x`);
   console.log(`  viewport ${m.innerW}x${m.innerH}  doc scrollH ${m.docScrollH} clientH ${m.docClientH}`);
   console.log(`  board ${m.board.w.toFixed(1)}x${m.board.h.toFixed(1)}  cell ${m.cell.w.toFixed(1)}px  bottom ${m.board.bottom.toFixed(1)}`);
-  console.log(`  shell ${m.shell.w.toFixed(1)}  actions ${m.actions.w.toFixed(1)}  rackTile ${m.rackTile ? m.rackTile.w.toFixed(1) : 'n/a'}  marketTile ${m.marketTile ? m.marketTile.w.toFixed(1) : 'n/a'}`);
+  console.log(`  shell ${m.shell.w.toFixed(1)}  actions ${m.actions.w.toFixed(1)}  rackTile ${m.rackTile ? `${m.rackTile.w.toFixed(1)}x${m.rackTile.h.toFixed(1)}` : 'n/a'}  marketTile ${m.marketTile ? `${m.marketTile.w.toFixed(1)}x${m.marketTile.h.toFixed(1)}` : 'n/a'}`);
   console.log(`  buttons bottom ${bottomMost.toFixed(1)} of ${m.innerH}  (${(m.innerH - bottomMost).toFixed(1)}px clear)`);
   console.log(`  ${m.buttons.map(b => `${b.label}${b.disabled ? '(off)' : '(ON)'} h=${b.h.toFixed(0)}`).join('  ')}`);
   console.log(`  opponent: "${m.opponentCount}", ${m.opponentBacks} backs, ${m.opponentLettersRendered} letters shown`);

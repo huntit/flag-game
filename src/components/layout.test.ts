@@ -109,6 +109,15 @@ describe('desktop layout (wide fine-pointer windows only)', () => {
     expect(desktopMarket).toMatch(/width:\s*var\(--tile/);
   });
 
+  it('forces rack tiles square so they cannot stretch with a 1fr sidebar', () => {
+    expect(desktopRack).toMatch(/\.tray-tile,\s*\n\s*\.tray-slot-empty\s*\{[^}]*aspect-ratio:\s*1/s);
+    expect(desktopRack).toMatch(/\.tray-tile,\s*\n\s*\.tray-slot-empty\s*\{[^}]*height:\s*var\(--tile/s);
+    expect(desktopRack).toMatch(/\.tray-tile,\s*\n\s*\.tray-slot-empty\s*\{[^}]*max-height:\s*48px/s);
+    expect(desktop).toMatch(/--dock-h:\s*\d+px/);
+    expect(desktop).toMatch(/grid-template-rows:[\s\S]*var\(--dock-h\)/);
+    expect(desktop).not.toMatch(/grid-template-rows:[^;]*minmax\(0,\s*1fr\)/);
+  });
+
   it('centers a compact play column with a stable action toolbar', () => {
     expect(desktop).toMatch(/grid-template-areas:[\s\S]*'stage stage'/);
     expect(desktop).toMatch(/grid-template-areas:[\s\S]*'rack actions'/);
