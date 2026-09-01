@@ -11,6 +11,8 @@ const read = (file: string) => readFileSync(resolve(__dirname, file), 'utf-8');
 const appCss = read('../App.css');
 const gameCss = read('./Game.css');
 const boardCss = read('./Board.css');
+const rackCss = read('./Rack.css');
+const marketCss = read('./Market.css');
 const indexHtml = read('../../index.html');
 
 describe('no-scroll phone shell', () => {
@@ -133,6 +135,36 @@ describe('desktop layout (wide fine-pointer windows only)', () => {
     expect(phone).toMatch(/grid-template-areas:[\s\S]*'actions'/);
     expect(phone).not.toMatch(/pointer:\s*fine/);
     expect(phone).not.toMatch(/--board-max:/);
+  });
+});
+
+describe('tile score placement', () => {
+  it('puts letter values top-right (WWF / Crossplay), never bottom-right (Scrabble)', () => {
+    const valueBlock = appCss.match(/\.tile-value\s*\{[\s\S]*?\}/)?.[0] ?? '';
+    expect(valueBlock).toMatch(/\btop:/);
+    expect(valueBlock).toMatch(/\bright:/);
+    expect(valueBlock).toMatch(/bottom:\s*auto/);
+    expect(valueBlock).not.toMatch(/\bbottom:\s*[0-9]/);
+
+    for (const css of [rackCss, boardCss, marketCss]) {
+      expect(css).not.toMatch(/\.tile-value[\s\S]*?\bbottom:\s*[0-9]/);
+    }
+  });
+
+  it('renders tile faces through the shared TileFace component', () => {
+    for (const file of ['Board.tsx', 'Rack.tsx', 'Market.tsx']) {
+      expect(read(`./${file}`)).toMatch(/TileFace/);
+    }
+    expect(read('./TileFace.tsx')).toMatch(/tile-value/);
+  });
+});
+
+describe('branding', () => {
+  it('uses a text FLAG home link until the 2-band wordmark ships', () => {
+    for (const file of ['GameInfo.tsx', 'Menu.tsx', 'OnlineMode.tsx']) {
+      expect(read(`./${file}`)).toMatch(/HomeLink/);
+      expect(read(`./${file}`)).not.toMatch(/logo-header\.png/);
+    }
   });
 });
 

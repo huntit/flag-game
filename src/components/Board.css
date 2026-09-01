@@ -46,6 +46,7 @@
 .board-tile {
   position: absolute;
   inset: 3%;
+  /* Absolute within the cell; still positions .tile-value top-right inside the face. */
   border-radius: calc(var(--cell) * 0.12);
   background-color: var(--color-tile);
   color: var(--color-tile-text);

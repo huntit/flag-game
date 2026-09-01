@@ -2,6 +2,7 @@
 
 import type { MarketSlot, Tile } from '../engine/types';
 import { MARKET_SLOTS } from '../engine/types';
+import { TileFace } from './TileFace';
 import './Market.css';
 
 interface MarketProps {
@@ -63,8 +64,7 @@ function Market({ market, selectedTileIds, bagCount, disabled, onTileClick }: Ma
               onClick={() => onTileClick(tile)}
               aria-label={tile.isBlank ? 'Blank tile' : `${tile.letter}, ${tile.value} points`}
             >
-              <span className="tile-letter">{tile.isBlank ? '★' : tile.letter}</span>
-              <span className="tile-value">{tile.value}</span>
+              <TileFace letter={tile.letter} value={tile.value} isBlank={tile.isBlank} />
             </button>
           );
         })}

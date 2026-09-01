@@ -2,6 +2,7 @@
 // persistent; it needs a PartyKit deployment before this screen can hand out
 // links, which is Peter's hosting step rather than a code change.
 
+import HomeLink from './HomeLink';
 import './OnlineMode.css';
 
 interface OnlineModeProps {
@@ -13,9 +14,7 @@ function OnlineMode({ onHome }: OnlineModeProps) {
     <div className="screen">
       <div className="screen-panel online-panel">
         <div className="online-head">
-          <a className="online-logo" href="/flag-game/" onClick={e => { e.preventDefault(); onHome(); }} aria-label="Flag home">
-            <img src={`${import.meta.env.BASE_URL}logo-header.png`} alt="Flag" className="online-logo-img" />
-          </a>
+          <HomeLink variant="online" onNavigate={onHome} />
           <h1>Remote 2-player</h1>
         </div>
 
