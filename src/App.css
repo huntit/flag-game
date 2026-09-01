@@ -136,6 +136,7 @@ button:disabled {
   height: 100%;
   overflow: visible;
   pointer-events: none;
+  text-rendering: geometricPrecision;
 }
 
 .tile-face .tile-letter {

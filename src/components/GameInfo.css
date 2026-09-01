@@ -7,10 +7,10 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 0 8px;
+  padding: 0 10px;
   border-radius: 999px;
   background-color: var(--color-bg-light);
-  overflow: hidden;
+  overflow: visible;
   border: 1.5px solid transparent;
 }
 
@@ -64,9 +64,9 @@
 
 .score-back {
   aspect-ratio: 1;
-  width: clamp(16px, calc(var(--scores-h) * 0.56), 26px);
+  width: clamp(18px, calc(var(--scores-h) * 0.52), 28px);
   height: auto;
-  max-height: calc(var(--scores-h) * 0.7);
+  max-height: calc(var(--scores-h) * 0.72);
   border-radius: 4px;
   flex: 0 0 auto;
   background-color: var(--color-cream);

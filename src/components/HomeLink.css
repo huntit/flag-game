@@ -38,10 +38,12 @@
 }
 
 .home-link.is-play .home-link-img {
-  width: min(100%, var(--board-size));
-  height: auto;
-  max-height: var(--header-h);
+  height: calc(var(--header-h) - 8px);
+  width: auto;
+  max-width: 100%;
+  max-height: calc(var(--header-h) - 8px);
   object-fit: contain;
+  object-position: center;
 }
 
 .home-link.is-hud {

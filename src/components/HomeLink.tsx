@@ -28,8 +28,8 @@ function HomeLink({ variant, onNavigate }: HomeLinkProps) {
           src={`${base}logo-header.png`}
           alt="Flag"
           className="home-link-img"
-          width={1145}
-          height={236}
+          width={1179}
+          height={292}
         />
       </picture>
     </a>

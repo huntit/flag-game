@@ -6,9 +6,9 @@
 
 .market-tile,
 .market-tray .tray-slot-empty {
-  max-width: calc((100% - 5 * 5px) / 6);
-  height: 82%;
-  width: auto;
+  width: min(calc((100% - 5 * 5px) / 6), calc(var(--market-h) * 0.82));
+  height: auto;
+  max-height: 82%;
   aspect-ratio: 1;
 }
 

@@ -9,7 +9,7 @@
  */
 
 .play-shell {
-  --header-h: clamp(44px, calc(var(--app-h) * 0.072), 64px);
+  --header-h: clamp(52px, calc(var(--app-h) * 0.078), 72px);
   --scores-h: clamp(40px, calc(var(--app-h) * 0.06), 52px);
   --market-h: clamp(48px, calc(var(--app-h) * 0.086), 68px);
   --status-h: clamp(22px, calc(var(--app-h) * 0.038), 32px);
@@ -82,13 +82,15 @@
       var(--scores-h)
       var(--market-h)
       var(--status-h)
+      var(--rack-h)
       minmax(0, 1fr);
     grid-template-areas:
       'stage header'
       'stage scores'
       'stage market'
       'stage status'
-      'stage rack';
+      'stage rack'
+      'stage .';
     align-content: start;
   }
 
@@ -113,8 +115,8 @@
 
 @media (min-width: 900px) and (pointer: fine) {
   .play-shell {
-    --header-h: 56px;
-    --scores-h: 44px;
+    --header-h: 68px;
+    --scores-h: 48px;
     --market-h: 52px;
     --status-h: 28px;
     --rack-h: 52px;
@@ -239,6 +241,7 @@
   overflow: visible;
   width: var(--board-size);
   justify-self: center;
+  padding: 4px 0;
 }
 
 .scores-row {
@@ -257,7 +260,7 @@
   min-width: 0;
   overflow: hidden;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
   width: var(--board-size);
   justify-self: center;
@@ -334,9 +337,9 @@
 }
 
 .action-button:disabled {
-  opacity: 0.38;
-  background-color: color-mix(in srgb, var(--color-chrome) 18%, var(--color-cream));
-  color: var(--color-chrome);
+  opacity: 0.42;
+  background-color: var(--color-chrome);
+  color: #fff;
 }
 
 .action-draw {
@@ -366,9 +369,9 @@
 }
 
 .icon-button:disabled {
-  opacity: 0.38;
-  background-color: color-mix(in srgb, var(--color-chrome) 18%, var(--color-cream));
-  color: var(--color-chrome);
+  opacity: 0.42;
+  background-color: var(--color-chrome);
+  color: #fff;
 }
 
 .icon-button:active:not(:disabled) {
