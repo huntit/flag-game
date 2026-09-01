@@ -4,12 +4,14 @@ import type { Tile } from '../engine/types';
 import { RACK_MAX } from '../engine/types';
 import { TileFace } from './TileFace';
 import { ScoreCard } from './GameInfo';
+import { PlayerAvatar, type AvatarKind } from './PlayerAvatar';
 import './Rack.css';
 
 interface RackProps {
   tiles: Tile[];
   label: string;
   playerColor: 'P1' | 'P2';
+  kind: AvatarKind;
   selectedTileId: string | null;
   discardTileIds: string[];
   placedTileIds: string[];
@@ -21,6 +23,7 @@ export function Rack({
   tiles,
   label,
   playerColor,
+  kind,
   selectedTileId,
   discardTileIds,
   placedTileIds,
@@ -32,7 +35,10 @@ export function Rack({
 
   return (
     <div className={`rack-row-inner is-${playerColor.toLowerCase()}`}>
-      <span className="tray-label">{label}</span>
+      <span className="tray-label">
+        <PlayerAvatar kind={kind} playerColor={playerColor} name={label} />
+        <span className="tray-label-text">{label}</span>
+      </span>
       <div className="tray" aria-label={label}>
         {available.map(tile => {
           const classes = [
@@ -68,12 +74,13 @@ export function Rack({
 interface OpponentRackProps {
   name: string;
   playerColor: 'P1' | 'P2';
+  kind: AvatarKind;
   count: number;
   score: number;
   isTheirTurn: boolean;
 }
 
-export function OpponentRack({ name, playerColor, count, score, isTheirTurn }: OpponentRackProps) {
+export function OpponentRack({ name, playerColor, kind, count, score, isTheirTurn }: OpponentRackProps) {
   return (
     <ScoreCard
       name={name}
@@ -81,6 +88,7 @@ export function OpponentRack({ name, playerColor, count, score, isTheirTurn }: O
       rackCount={count}
       isActive={isTheirTurn}
       playerColor={playerColor}
+      kind={kind}
       variant="opponent"
     />
   );

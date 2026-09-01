@@ -8,15 +8,16 @@
   .side-panel {
     display: flex;
     flex-direction: column;
-    grid-area: sidebar;
+    grid-column: 3;
+    grid-row: 1 / -1;
     min-height: 0;
     min-width: 0;
-    width: 100%;
-    max-width: var(--log-w, 200px);
-    margin-left: 0;
+    width: min(220px, 100%);
+    max-width: var(--log-w, 220px);
+    margin-left: 12px;
     gap: 8px;
     align-self: stretch;
-    justify-self: stretch;
+    justify-self: start;
   }
 
   .side-panel.is-collapsed {
@@ -24,8 +25,8 @@
   }
 
   .side-panel.is-expanded {
-    width: 100%;
-    max-width: var(--log-w, 200px);
+    width: min(220px, 100%);
+    max-width: var(--log-w, 220px);
   }
 
   .side-panel-toggle {

@@ -1,6 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
-  <rect width="100" height="100" rx="12" fill="#E8E4DC"/>
-  <rect x="8" y="8" width="84" height="84" rx="8" fill="#F3EEE6"/>
-  <rect x="8" y="8" width="84" height="84" rx="8" fill="none" stroke="#C9C3B8" stroke-width="1.5"/>
+  <defs>
+    <pattern id="weave" width="14" height="14" patternUnits="userSpaceOnUse">
+      <rect width="14" height="14" fill="#4A5568"/>
+      <path d="M0 7 L7 0 L14 7 L7 14 Z" fill="#5B7A92" opacity="0.7"/>
+      <path d="M7 3 L11 7 L7 11 L3 7 Z" fill="#F7F1E8" opacity="0.18"/>
+      <circle cx="7" cy="7" r="1.15" fill="#F7F1E8" opacity="0.55"/>
+    </pattern>
+  </defs>
+  <rect width="100" height="100" rx="12" fill="url(#weave)"/>
+  <rect x="6" y="6" width="88" height="88" rx="8" fill="none" stroke="#F7F1E8" stroke-width="2.4" opacity="0.88"/>
+  <rect x="11" y="11" width="78" height="78" rx="6" fill="none" stroke="#2C3A3D" stroke-width="1.2" opacity="0.28"/>
 </svg>

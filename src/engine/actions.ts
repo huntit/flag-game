@@ -1,7 +1,7 @@
 // Action executor - validates then applies game actions
 
 import type { GameState, GameAction, DrawAction, PlayAction, Tile, Letter, Position } from './types';
-import { DRAW_COUNT, RACK_MAX, MAX_CONSECUTIVE_DRAWS } from './types';
+import { DRAW_COUNT, RACK_MAX, MAX_CONSECUTIVE_EXCHANGES } from './types';
 import {
   returnToBag,
   shuffleBag,
@@ -12,6 +12,7 @@ import {
   emptySpareCorners,
 } from './game';
 import { validatePlay, type FlagContext } from './validator';
+import { hasLegalPlay } from './moveGenerator';
 import type { Dictionary } from './dictionary';
 
 export interface ActionResult {
@@ -25,9 +26,25 @@ export function canDraw(state: GameState): boolean {
   return marketShowingCount(state.market) >= DRAW_COUNT;
 }
 
-/** The next Draw would be the 6th consecutive (swap-out end). */
-export function wouldTriggerSwapOutOnDraw(state: GameState): boolean {
-  return state.consecutiveDraws === MAX_CONSECUTIVE_DRAWS - 1;
+/**
+ * Pass is legal only when no legal Play AND Draw is illegal (market showing < 2).
+ */
+export function canPass(state: GameState, dictionary?: Dictionary): boolean {
+  if (state.gameOver) return false;
+  if (canDraw(state)) return false;
+  if (!dictionary) return true;
+  const player = state.players[state.currentPlayer];
+  return !hasLegalPlay(state, player.rack, dictionary, player.id);
+}
+
+/** A Draw is an Exchange when the acting player already holds a full rack (Draw 2 + Discard 2). */
+export function isExchangeDraw(state: GameState): boolean {
+  return state.players[state.currentPlayer].rack.length >= RACK_MAX;
+}
+
+/** The next Draw would be the 3rd consecutive Exchange and would end the game. */
+export function wouldTriggerExchangeThreeOnDraw(state: GameState): boolean {
+  return isExchangeDraw(state) && state.consecutiveExchanges === MAX_CONSECUTIVE_EXCHANGES - 1;
 }
 
 function buildFlagContext(state: GameState, playerId: 'P1' | 'P2'): FlagContext {
@@ -58,7 +75,9 @@ export function executeAction(
     return { success: false, error: 'Game is over' };
   }
 
-  if (state.bag.length === 0) {
+  // Bag-empty ends Draw/Play immediately; Pass remains the stuck-only escape
+  // when the market cannot refill (market showing < 2).
+  if (state.bag.length === 0 && action.type !== 'pass') {
     state.gameOver = true;
     state.endReason = 'bag_empty';
     determineWinner(state);
@@ -70,6 +89,8 @@ export function executeAction(
       return executeDraw(state, action);
     case 'play':
       return executePlay(state, action, dictionary);
+    case 'pass':
+      return executePass(state, dictionary);
     default:
       return { success: false, error: 'Invalid action type' };
   }
@@ -148,6 +169,8 @@ function executeDraw(state: GameState, action: DrawAction): ActionResult {
 
   const { take, discard } = check.plan;
   const player = state.players[state.currentPlayer];
+  const rackSizeBefore = player.rack.length;
+  const isExchange = rackSizeBefore >= RACK_MAX && discard.length === DRAW_COUNT;
 
   if (discard.length > 0) {
     const discardIds = new Set(discard.map(t => t.id));
@@ -168,13 +191,18 @@ function executeDraw(state: GameState, action: DrawAction): ActionResult {
     refillMarketSlot(state.bag, slot);
   }
 
-  state.consecutiveDraws++;
+  state.consecutivePasses = 0;
+  if (isExchange) {
+    state.consecutiveExchanges++;
+  } else {
+    state.consecutiveExchanges = 0;
+  }
   state.lastPlay = undefined;
   state.moveHistory.push({ player: player.id, action });
 
-  if (state.consecutiveDraws >= MAX_CONSECUTIVE_DRAWS) {
+  if (state.consecutiveExchanges >= MAX_CONSECUTIVE_EXCHANGES) {
     state.gameOver = true;
-    state.endReason = 'swap_out';
+    state.endReason = 'exchange_three';
     determineWinner(state);
     return { success: true };
   }
@@ -232,7 +260,8 @@ function executePlay(state: GameState, action: PlayAction, dictionary: Dictionar
 
   player.score += result.totalScore ?? 0;
 
-  state.consecutiveDraws = 0;
+  state.consecutiveExchanges = 0;
+  state.consecutivePasses = 0;
   state.lastPlay = {
     player: player.id,
     words: result.words ?? [],
@@ -277,6 +306,33 @@ function executePlay(state: GameState, action: PlayAction, dictionary: Dictionar
 
   if (result.endsGame) {
     state.gameOver = true;
+    determineWinner(state);
+    return { success: true };
+  }
+
+  advanceTurn(state);
+
+  return { success: true };
+}
+
+function executePass(state: GameState, dictionary: Dictionary): ActionResult {
+  if (canDraw(state)) {
+    return { success: false, error: 'Pass is only for when Draw and Play are both impossible' };
+  }
+  if (!canPass(state, dictionary)) {
+    return { success: false, error: 'You still have a legal play' };
+  }
+
+  const player = state.players[state.currentPlayer];
+
+  state.consecutiveExchanges = 0;
+  state.consecutivePasses++;
+  state.lastPlay = undefined;
+  state.moveHistory.push({ player: player.id, action: { type: 'pass' } });
+
+  if (state.consecutivePasses >= 2) {
+    state.gameOver = true;
+    state.endReason = state.bag.length === 0 ? 'stuck_out' : 'double_pass';
     determineWinner(state);
     return { success: true };
   }

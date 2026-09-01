@@ -1,6 +1,8 @@
-// Score cards: reserved name + score on one line; tile-backs cannot overlap that text.
+// Score cards: FIRST player left, SECOND player right (true P1/P2 seat order).
+// Mini-rack pips: filled backs + dotted empty slots. Avatar sits with the name.
 
 import { RACK_MAX } from '../engine/types';
+import { PlayerAvatar, type AvatarKind } from './PlayerAvatar';
 import './GameInfo.css';
 
 interface ScoreCardProps {
@@ -9,6 +11,7 @@ interface ScoreCardProps {
   rackCount: number;
   isActive: boolean;
   playerColor: 'P1' | 'P2';
+  kind: AvatarKind;
   variant?: 'you' | 'opponent';
 }
 
@@ -18,6 +21,7 @@ export function ScoreCard({
   rackCount,
   isActive,
   playerColor,
+  kind,
   variant = 'you',
 }: ScoreCardProps) {
   const shown = Math.max(0, Math.min(RACK_MAX, rackCount));
@@ -25,8 +29,10 @@ export function ScoreCard({
   return (
     <div
       className={`score-card ${variant === 'you' ? 'hud-you' : 'opponent-inner'} is-${playerColor.toLowerCase()} ${isActive ? 'is-active' : ''}`}
+      data-seat={playerColor}
     >
       <div className="score-card-id">
+        <PlayerAvatar kind={kind} playerColor={playerColor} name={name} />
         <span className={`score-card-name ${variant === 'you' ? 'hud-key' : 'opponent-name'}`}>
           {name}
         </span>
@@ -35,10 +41,14 @@ export function ScoreCard({
         </span>
       </div>
       <div className="score-backs" aria-label={`${name} holds ${rackCount} tiles`}>
-        {Array.from({ length: shown }, (_, i) => (
+        {Array.from({ length: RACK_MAX }, (_, i) => (
           <span
-            key={`back-${i}`}
-            className={`score-back ${variant === 'opponent' ? 'opponent-back' : ''}`}
+            key={`pip-${i}`}
+            className={`score-pip ${
+              i < shown
+                ? `score-back is-filled ${variant === 'opponent' ? 'opponent-back' : ''}`
+                : 'is-empty'
+            }`}
           />
         ))}
       </div>
@@ -52,9 +62,10 @@ interface GameInfoProps {
   rackCount: number;
   isYourTurn: boolean;
   playerColor: 'P1' | 'P2';
+  kind: AvatarKind;
 }
 
-function GameInfo({ youLabel, yourScore, rackCount, isYourTurn, playerColor }: GameInfoProps) {
+function GameInfo({ youLabel, yourScore, rackCount, isYourTurn, playerColor, kind }: GameInfoProps) {
   return (
     <ScoreCard
       name={youLabel}
@@ -62,6 +73,7 @@ function GameInfo({ youLabel, yourScore, rackCount, isYourTurn, playerColor }: G
       rackCount={rackCount}
       isActive={isYourTurn}
       playerColor={playerColor}
+      kind={kind}
       variant="you"
     />
   );

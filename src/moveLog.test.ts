@@ -71,23 +71,30 @@ describe('move log copy', () => {
     expect(entry?.text).toContain('own flag captured (TWS)');
   });
 
-  it('logs swap-out ending on the sixth draw', () => {
+  it('logs exchange-three ending on the third full-rack Exchange', () => {
     const state = initializeGame(mockTileData);
     for (let i = 0; i < 40; i++) {
       state.bag.push({ id: `x${i}`, letter: 'A', value: 1, isBlank: false });
     }
-    for (let i = 0; i < 6; i++) {
+    for (let i = 0; i < 3; i++) {
       const player = state.players[state.currentPlayer];
-      if (player.rack.length + DRAW_COUNT > RACK_MAX) {
-        player.rack = player.rack.slice(0, RACK_MAX - DRAW_COUNT);
-      }
+      player.rack = Array.from({ length: RACK_MAX }, (_, n) => ({
+        id: `rack-${i}-${n}`,
+        letter: 'T' as const,
+        value: 1,
+        isBlank: false,
+      }));
       executeAction(
         state,
-        { type: 'draw', marketTiles: state.market.filter(s => s.tile).slice(0, 2).map(s => s.tile!.id) },
+        {
+          type: 'draw',
+          marketTiles: state.market.filter(s => s.tile).slice(0, 2).map(s => s.tile!.id),
+          discardTiles: player.rack.slice(0, DRAW_COUNT).map(t => t.id),
+        },
         dictionary
       );
     }
     const entry = describeMove(state, soloCtx);
-    expect(entry?.text).toContain('six consecutive draws, game over');
+    expect(entry?.text).toContain('three consecutive Exchanges, game over');
   });
 });

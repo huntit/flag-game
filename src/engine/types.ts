@@ -30,8 +30,8 @@ export const MARKET_FACE_UP = 4;
 export const MARKET_FACE_DOWN = 2;
 export const MARKET_SLOTS = MARKET_FACE_UP + MARKET_FACE_DOWN;
 export const DRAW_COUNT = 2;
-/** Six consecutive Draw turns (three each) with no Play ends the game. */
-export const MAX_CONSECUTIVE_DRAWS = 6;
+/** Three consecutive Exchange turns (full-rack Draw 2 + Discard 2), counted across both players. */
+export const MAX_CONSECUTIVE_EXCHANGES = 3;
 /** Opening deal from bag — P1 acts first; P2 gets one extra tile (no points bonus). */
 export const P1_STARTING_RACK_TILES = 2;
 export const P2_STARTING_RACK_TILES = 3;
@@ -111,9 +111,20 @@ export interface PlayAction {
   placements: { tileId: TileId; position: Position; assignedLetter?: Letter }[];
 }
 
-export type GameAction = DrawAction | PlayAction;
+export interface PassAction {
+  type: 'pass';
+}
 
-export type EndReason = 'self_capture' | 'second_steal' | 'no_spare' | 'bag_empty' | 'swap_out';
+export type GameAction = DrawAction | PlayAction | PassAction;
+
+export type EndReason =
+  | 'self_capture'
+  | 'second_steal'
+  | 'no_spare'
+  | 'exchange_three'
+  | 'double_pass'
+  | 'stuck_out'
+  | 'bag_empty';
 
 export interface GameState {
   board: Board;
@@ -123,8 +134,10 @@ export interface GameState {
   bag: Tile[];
   /** Corner where each player's flag token sits; null after capture until replacement. */
   flags: { P1: FlagPost | null; P2: FlagPost | null };
-  /** Draw turns in a row without a Play; Play resets to 0. */
-  consecutiveDraws: number;
+  /** Full-rack Exchange turns in a row; Play, non-Exchange Draw, and Pass reset to 0. */
+  consecutiveExchanges: number;
+  /** Explicit Passes in a row; Draw or Play resets to 0. Two consecutive Passes end the game. */
+  consecutivePasses: number;
   gameOver: boolean;
   endReason?: EndReason;
   winner?: 'P1' | 'P2' | 'draw';

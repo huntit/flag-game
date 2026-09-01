@@ -5,7 +5,7 @@ import type { TileData, GameState, GameAction, Tile, Position, Letter } from '..
 import { DRAW_COUNT, RACK_MAX, SEAT_COLOR_NAMES } from '../engine/types';
 import type { Dictionary } from '../engine/dictionary';
 import { getBoardTile, initializeGame, shuffleRack, emptySpareCorners } from '../engine/game';
-import { executeAction, validateDraw, wouldTriggerSwapOutOnDraw } from '../engine/actions';
+import { executeAction, validateDraw, wouldTriggerExchangeThreeOnDraw, canPass } from '../engine/actions';
 import { validatePlay, type FlagContext } from '../engine/validator';
 import { selectAIAction } from '../engine/ai';
 import type { GameMode, AIOpponent } from '../App';
@@ -53,8 +53,8 @@ const AI_NAMES: Record<AIOpponent, string> = {
   sleeper: 'Sleeper',
 };
 
-const SWAP_DRAW_WARNING =
-  'Third swap each — Draw 2 now ends the game. Play to break the streak.';
+const EXCHANGE_WARNING =
+  'Third Exchange — Draw 2 now ends the game. Play to break the streak.';
 
 function ShuffleIcon() {
   return (
@@ -235,7 +235,8 @@ function Game({ tileData, dictionary, mode, aiOpponent, onBackToMenu }: GameProp
     [interactive, pending.length, gameState, drawAction]
   );
   const canDrawNow = Boolean(drawCheck?.valid);
-  const swapDrawWarning = interactive && wouldTriggerSwapOutOnDraw(gameState);
+  const exchangeWarning = interactive && wouldTriggerExchangeThreeOnDraw(gameState);
+  const canPassNow = interactive && pending.length === 0 && canPass(gameState, dictionary);
 
   const playEvaluation = useMemo(() => {
     if (!interactive || pending.length === 0) return null;
@@ -384,6 +385,11 @@ function Game({ tileData, dictionary, mode, aiOpponent, onBackToMenu }: GameProp
     setError(null);
   };
 
+  const handlePass = () => {
+    if (!canPassNow) return;
+    run({ type: 'pass' });
+  };
+
   const pendingForBoard: PendingPlacement[] = pending.map(p => {
     const tile = viewer.rack.find(t => t.id === p.tileId);
     return {
@@ -405,16 +411,23 @@ function Game({ tileData, dictionary, mode, aiOpponent, onBackToMenu }: GameProp
   const otherLabel = isVsAI
     ? (opponentName ?? 'Opponent')
     : SEAT_COLOR_NAMES[other.id];
-  const otherColor = other.id;
+  const viewerKind = 'human' as const;
+  const otherKind = isVsAI ? ('ai' as const) : ('human' as const);
 
-  const drawButtonLabel = swapDrawWarning ? 'Draw 2 — ends game' : 'Draw 2';
+  const p1 = gameState.players[0];
+  const p2 = gameState.players[1];
+  const seatLabel = (seat: 0 | 1) =>
+    isVsAI ? (seat === humanSeat ? youLabel : otherLabel) : SEAT_COLOR_NAMES[seat === 0 ? 'P1' : 'P2'];
+  const seatKind = (seat: 0 | 1) => (isVsAI && seat !== humanSeat ? otherKind : viewerKind);
+
+  const drawButtonLabel = exchangeWarning ? 'Draw 2 — ends game' : 'Draw 2';
 
   const statusToasts = useMemo(() => {
     const items: { kind: string; text: string }[] = [];
     if (error) items.push({ kind: 'toast-error', text: error });
     if (firstPlayerBannerText) items.push({ kind: 'toast-info', text: firstPlayerBannerText });
-    if (swapDrawWarning && interactive) {
-      items.push({ kind: 'toast-hint', text: SWAP_DRAW_WARNING });
+    if (exchangeWarning && interactive) {
+      items.push({ kind: 'toast-hint', text: EXCHANGE_WARNING });
     }
     if (isAIThinking) items.push({ kind: 'toast-info', text: `${otherLabel} is thinking…` });
     if (pending.length > 0 && playEvaluation && !playEvaluation.valid) {
@@ -454,7 +467,7 @@ function Game({ tileData, dictionary, mode, aiOpponent, onBackToMenu }: GameProp
   }, [
     error,
     firstPlayerBannerText,
-    swapDrawWarning,
+    exchangeWarning,
     interactive,
     isAIThinking,
     otherLabel,
@@ -491,20 +504,22 @@ function Game({ tileData, dictionary, mode, aiOpponent, onBackToMenu }: GameProp
 
         <div className="scores-row">
           <ScoreCard
-            name={youLabel}
-            score={viewer.score}
-            rackCount={viewer.rack.length}
-            isActive={activeIndex === viewerIndex}
-            playerColor={viewerColor}
-            variant="you"
+            name={seatLabel(0)}
+            score={p1.score}
+            rackCount={p1.rack.length}
+            isActive={activeIndex === 0}
+            playerColor="P1"
+            kind={seatKind(0)}
+            variant={viewerIndex === 0 ? 'you' : 'opponent'}
           />
           <ScoreCard
-            name={otherLabel}
-            score={other.score}
-            rackCount={other.rack.length}
-            isActive={activeIndex !== viewerIndex}
-            playerColor={otherColor}
-            variant="opponent"
+            name={seatLabel(1)}
+            score={p2.score}
+            rackCount={p2.rack.length}
+            isActive={activeIndex === 1}
+            playerColor="P2"
+            kind={seatKind(1)}
+            variant={viewerIndex === 1 ? 'you' : 'opponent'}
           />
         </div>
 
@@ -527,20 +542,25 @@ function Game({ tileData, dictionary, mode, aiOpponent, onBackToMenu }: GameProp
               disabled={!interactive}
               onTileClick={handleMarketTileClick}
             />
-            <button
-              type="button"
-              className={`action-button action-draw ${swapDrawWarning ? 'is-swap-warning' : ''}`}
-              onClick={handleDraw}
-              disabled={!canDrawNow}
-              aria-label={swapDrawWarning ? `${drawButtonLabel}. ${SWAP_DRAW_WARNING}` : drawButtonLabel}
-            >
-              {drawButtonLabel}
-            </button>
-          </div>
-
-          <div className="status-row" aria-live="polite">
-            {statusToasts[0] && (
-              <div className={`toast ${statusToasts[0].kind}`}>{statusToasts[0].text}</div>
+            {canPassNow ? (
+              <button
+                type="button"
+                className="action-button action-pass"
+                data-pass-stuck-only="true"
+                onClick={handlePass}
+              >
+                Pass
+              </button>
+            ) : (
+              <button
+                type="button"
+                className={`action-button action-draw ${exchangeWarning ? 'is-swap-warning' : ''}`}
+                onClick={handleDraw}
+                disabled={!canDrawNow}
+                aria-label={exchangeWarning ? `${drawButtonLabel}. ${EXCHANGE_WARNING}` : drawButtonLabel}
+              >
+                {drawButtonLabel}
+              </button>
             )}
           </div>
 
@@ -549,6 +569,7 @@ function Game({ tileData, dictionary, mode, aiOpponent, onBackToMenu }: GameProp
               tiles={viewer.rack}
               label={youLabel}
               playerColor={viewerColor}
+              kind={viewerKind}
               selectedTileId={selectedRackTileId}
               discardTileIds={discardIds}
               placedTileIds={placedTileIds}
@@ -569,6 +590,12 @@ function Game({ tileData, dictionary, mode, aiOpponent, onBackToMenu }: GameProp
               Play
             </button>
           </div>
+        </div>
+
+        <div className="status-row" aria-live="polite">
+          {statusToasts[0] && (
+            <div className={`toast ${statusToasts[0].kind}`}>{statusToasts[0].text}</div>
+          )}
         </div>
       </div>
 

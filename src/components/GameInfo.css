@@ -1,4 +1,4 @@
-/* Equal-size score cards. Name + score are reserved; backs never cover them. */
+/* Equal-size score cards. Avatar + name + score; mini-rack of 7 pips. */
 
 .score-card,
 .hud-chip,
@@ -8,11 +8,11 @@
   height: 100%;
   min-width: 0;
   display: grid;
-  grid-template-columns: minmax(6.25rem, max-content) minmax(0, 1fr);
-  grid-template-rows: minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
   align-items: center;
-  column-gap: 8px;
-  padding: 3px 10px;
+  row-gap: 2px;
+  padding: 3px 6px 4px;
   border-radius: 12px;
   background-color: var(--color-bg-light);
   overflow: hidden;
@@ -47,10 +47,21 @@
 
 .score-card-id {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 6px;
   min-width: 0;
   overflow: hidden;
+}
+
+.player-avatar {
+  flex: 0 0 auto;
+  width: calc(var(--scores-h) * 0.62);
+  height: calc(var(--scores-h) * 0.62);
+  max-width: 28px;
+  max-height: 28px;
+  border-radius: 50%;
+  display: block;
+  object-fit: contain;
 }
 
 .score-card-name,
@@ -82,7 +93,7 @@
 .score-backs {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
-  gap: 3px;
+  gap: 2px;
   min-width: 0;
   max-width: 100%;
   overflow: hidden;
@@ -90,18 +101,28 @@
   pointer-events: none;
 }
 
+.score-pip,
 .score-back {
   width: 100%;
-  max-width: 22px;
+  max-width: 18px;
   aspect-ratio: 1;
   height: auto;
-  max-height: calc(var(--scores-h) * 0.58);
-  border-radius: 4px;
-  justify-self: start;
+  max-height: calc(var(--scores-h) * 0.42);
+  border-radius: 3px;
+  justify-self: stretch;
+}
+
+.score-pip.is-filled,
+.score-back {
   background-color: #ebe6de;
   background-image: var(--tile-back-url);
   background-size: 100% 100%;
   background-position: center;
   background-repeat: no-repeat;
   border: 1px solid color-mix(in srgb, var(--color-ink) 12%, transparent);
+}
+
+.score-pip.is-empty {
+  background: transparent;
+  border: 1.5px dotted color-mix(in srgb, var(--color-chrome) 50%, var(--color-sand));
 }
