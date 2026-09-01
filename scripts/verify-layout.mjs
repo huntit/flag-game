@@ -113,6 +113,22 @@ for (const t of targets) {
       pipsPerCard: [...document.querySelectorAll('.score-card')].map(
         card => card.querySelectorAll('.score-pip').length
       ),
+      // A mini-rack tile is square and must sit wholly inside its card. A card
+      // with less leftover height than width used to clip the bottom off every
+      // tile, which reads as "the tiles are tiny" rather than "they are cut".
+      miniRack: (() => {
+        const row = document.querySelector('.score-backs');
+        const pip = document.querySelector('.score-pip');
+        const card = document.querySelector('.score-card');
+        if (!row || !pip || !card) return null;
+        const p = pip.getBoundingClientRect();
+        const r = row.getBoundingClientRect();
+        const c = card.getBoundingClientRect();
+        return {
+          w: p.width, h: p.height, rowH: r.height,
+          cardBottom: c.bottom, rowBottom: r.bottom,
+        };
+      })(),
       goalSquares: goalSquares.length,
       goalSeats: goalSquares.map(el => (el.classList.contains('is-p1') ? 'P1' : 'P2')),
       goalFills: goalSquares.map(el => getComputedStyle(el).backgroundColor),
@@ -230,6 +246,19 @@ for (const t of targets) {
   // than the fill: seven slots per card, always.
   for (const count of m.pipsPerCard) {
     if (count !== 7) problems.push(`score card shows ${count} rack slots, expected 7`);
+  }
+  if (m.miniRack) {
+    const { w, h, rowH, cardBottom, rowBottom } = m.miniRack;
+    if (Math.abs(w - h) > 1.5) {
+      problems.push(`mini-rack tile not square: ${w.toFixed(1)}x${h.toFixed(1)}`);
+    }
+    if (rowH + 1 < h) {
+      problems.push(`mini-rack tiles cropped: ${h.toFixed(1)}px tile in a ${rowH.toFixed(1)}px row`);
+    }
+    if (rowBottom > cardBottom + 1) {
+      problems.push(`mini-rack overflows its card by ${(rowBottom - cardBottom).toFixed(1)}px`);
+    }
+    if (w < 14) problems.push(`mini-rack tiles too small to read: ${w.toFixed(1)}px`);
   }
   if (m.goalSquares !== 2) problems.push(`expected 2 goal squares, got ${m.goalSquares}`);
   if (new Set(m.goalSeats).size !== 2) problems.push(`goal squares share a seat: ${m.goalSeats.join(',')}`);

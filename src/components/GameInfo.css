@@ -12,9 +12,12 @@
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: calc(var(--scores-h) * 0.09);
-  padding: calc(var(--scores-h) * 0.13) calc(var(--scores-h) * 0.2);
-  border-radius: calc(var(--scores-h) * 0.22);
+  /* Padding and gap are deliberately NOT proportional to the card height:
+     scaling them up with the card eats exactly the width the mini-rack needs,
+     so a taller card would have produced smaller tiles. */
+  gap: clamp(3px, calc(var(--scores-h) * 0.06), 7px);
+  padding: clamp(5px, calc(var(--scores-h) * 0.09), 9px) clamp(7px, calc(var(--scores-h) * 0.11), 12px);
+  border-radius: clamp(9px, calc(var(--scores-h) * 0.2), 18px);
   background-color: var(--color-bg-light);
   overflow: hidden;
   border: 1.5px solid transparent;
@@ -112,23 +115,29 @@
 }
 
 /* Mini-rack: a scale model of the player's real rack. Seven fixed slots so
-   both cards line up with each other and the count reads without counting. */
+   both cards line up with each other and the count reads without counting.
+   Sized to be read at a glance rather than squinted at — seven tiles is the
+   card's widest row, so they take whatever width is left after the padding. */
 .score-backs {
   display: flex;
   align-items: center;
-  gap: clamp(2px, calc(var(--scores-h) * 0.05), 5px);
+  gap: clamp(2px, calc(var(--scores-h) * 0.035), 4px);
   min-width: 0;
   max-width: 100%;
-  overflow: hidden;
   pointer-events: none;
 }
 
+/* Sized to fit BOTH ways round. Seven across a half-width card is the tighter
+   limit on a phone, so the row claims the width the flex layout gives it; the
+   height cap stops a tall card cropping the tiles, which is what used to make
+   them look far smaller than they were measured to be. */
 .score-pip,
 .score-back {
-  flex: 0 0 auto;
-  width: clamp(9px, calc(var(--scores-h) * 0.24), 20px);
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: calc(var(--scores-h) * 0.42);
   aspect-ratio: 1;
-  border-radius: max(2px, calc(var(--scores-h) * 0.04));
+  border-radius: max(2px, calc(var(--scores-h) * 0.045));
 }
 
 .score-pip.is-filled,

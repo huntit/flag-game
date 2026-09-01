@@ -571,20 +571,15 @@ describe('rack reorder', () => {
 });
 
 describe('market face-down slots', () => {
-  it('scatters the face-down slots rather than parking them on the end', () => {
-    // Across many deals the face-down slots must land in every position; a
-    // fixed layout would only ever produce one pattern.
+  it('keeps the two face-down slots on the end of the row, every deal', () => {
     const seen = new Set<string>();
-    for (let seed = 1; seed <= 60; seed++) {
+    for (let seed = 1; seed <= 40; seed++) {
       setRandomSource(mulberry32(seed));
       const state = initializeGame(mockTileData);
       expect(state.market.filter(s => !s.faceUp)).toHaveLength(MARKET_FACE_DOWN);
       seen.add(state.market.map(s => (s.faceUp ? 'u' : 'd')).join(''));
     }
-    expect(seen.size).toBeGreaterThan(1);
-    expect(seen.has('uuuudd')).toBe(true);
-    // At least one deal must put a face-down slot in the first half.
-    expect([...seen].some(pattern => pattern.slice(0, 3).includes('d'))).toBe(true);
+    expect([...seen]).toEqual(['uuuudd']);
   });
 
   it('refills a slot in place, keeping its face-up or face-down identity', () => {

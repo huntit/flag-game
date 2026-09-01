@@ -504,14 +504,27 @@ describe('score cards', () => {
   });
 
   it('keeps name and score in reserved space so tile-backs cannot cover them', () => {
+    // The card is a column: the head sits above the mini-rack, so the two can
+    // never overlap. It used to rely on clipping the rack instead, which hid
+    // the bottom of every tile rather than the name.
     const css = read('./GameInfo.css');
     expect(css).toMatch(/\.score-card-head/);
     expect(css).toMatch(/\.score-card[\s\S]*width:\s*0/);
-    expect(css).toMatch(/\.score-backs[\s\S]*overflow:\s*hidden/s);
+    expect(css).toMatch(/\.score-card[\s\S]*flex-direction:\s*column/s);
+    expect(css).not.toMatch(/\.score-backs\s*\{[^}]*overflow:\s*hidden/s);
     expect(css).toMatch(/score-pip\.is-empty/);
     // Seven slots always, so both cards line up and the count reads without
     // being counted.
     expect(read('./GameInfo.tsx')).toMatch(/length:\s*RACK_MAX/);
+  });
+
+  it('bounds a mini-rack tile both ways so a short card cannot crop it', () => {
+    // Width alone is not enough: the tile is square, so a card with less
+    // leftover height than width silently clips the bottom off every tile.
+    const rule =
+      read('./GameInfo.css').match(/\.score-pip,\s*\n\.score-back\s*\{[\s\S]*?\n\}/)?.[0] ?? '';
+    expect(rule).toMatch(/aspect-ratio:\s*1/);
+    expect(rule).toMatch(/max-width:\s*calc\(var\(--scores-h\)/);
   });
 
   it('paints the rack in the same fill as its owner\'s score card', () => {
@@ -556,11 +569,12 @@ describe('market bag', () => {
     expect(read('./Market.tsx')).toMatch(/market-bag[\s\S]*market-tray/);
   });
 
-  it('scatters the two face-down slots through the row and refills them in place', () => {
+  it('puts the two face-down slots on the end and refills them in place', () => {
     const game = read('../engine/game.ts');
     const deal = game.match(/function dealMarket[\s\S]*?\n\}/)?.[0] ?? '';
-    expect(deal).toMatch(/random\(\)/);
-    expect(deal).not.toMatch(/for \(let i = 0; i < MARKET_FACE_UP/);
+    expect(deal).toMatch(/for \(let i = 0; i < MARKET_FACE_UP/);
+    expect(deal).toMatch(/for \(let i = 0; i < MARKET_FACE_DOWN/);
+    expect(deal).not.toMatch(/random\(\)/);
     // A slot keeps its identity, so a replacement lands in the same position
     // with the same face-up or face-down state.
     const refill = game.match(/export function refillMarketSlot[\s\S]*?\n\}/)?.[0] ?? '';

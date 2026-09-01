@@ -19,15 +19,23 @@
  */
 
 .play-shell {
-  --header-h: clamp(44px, calc(var(--app-h) * 0.06), 62px);
-  --scores-h: clamp(48px, calc(var(--app-h) * 0.082), 84px);
-  --market-h: clamp(50px, calc(var(--app-h) * 0.095), 98px);
-  --rack-h: clamp(52px, calc(var(--app-h) * 0.10), 104px);
-  --actions-h: clamp(42px, calc(var(--app-h) * 0.064), 64px);
-  --status-h: clamp(24px, calc(var(--app-h) * 0.04), 36px);
-  --shell-gap: clamp(3px, calc(var(--app-h) * 0.007), 8px);
-  --shell-pad-x: 4px;
-  --shell-pad-y: 4px;
+  /* Chrome heights. The lower bounds matter as much as the upper ones: on a
+     short phone the board is limited by the height these leave behind, not by
+     the screen width, so every pixel trimmed here is a pixel the board gains
+     on an iPhone SE. The upper bounds let a tall phone spend its extra height
+     on bigger tiles and buttons instead. */
+  --header-h: clamp(38px, calc(var(--app-h) * 0.055), 58px);
+  --scores-h: clamp(46px, calc(var(--app-h) * 0.088), 96px);
+  --market-h: clamp(46px, calc(var(--app-h) * 0.09), 98px);
+  --rack-h: clamp(48px, calc(var(--app-h) * 0.095), 104px);
+  --actions-h: clamp(38px, calc(var(--app-h) * 0.058), 64px);
+  --status-h: clamp(20px, calc(var(--app-h) * 0.032), 36px);
+  --shell-gap: clamp(2px, calc(var(--app-h) * 0.006), 8px);
+  /* The board runs to the screen edges. Side padding buys nothing here — it is
+     width the board would otherwise have — so the controls inset themselves
+     instead (see .actions-row). */
+  --shell-pad-x: 0px;
+  --shell-pad-y: 3px;
 
   --chrome-h: calc(
     var(--header-h) + var(--scores-h) + var(--market-h) + var(--rack-h) + var(--actions-h) +
@@ -171,6 +179,8 @@
 
 /* Every button, on one baseline: secondary on the left, the two moves that
    end a turn on the right. */
+/* The one row that insets itself: the board and the tile rows want the full
+   width, but buttons flush against the bezel do not. */
 .actions-row {
   grid-area: actions;
   width: var(--board-size);
@@ -178,6 +188,7 @@
   display: flex;
   align-items: center;
   gap: var(--tile-gap);
+  padding: 0 clamp(6px, calc(var(--board-size) * 0.025), 16px);
   min-width: 0;
 }
 
