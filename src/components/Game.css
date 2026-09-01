@@ -136,7 +136,7 @@
     grid-template-columns: minmax(0, 1fr) minmax(200px, 240px);
     grid-template-rows:
       var(--hud-h)
-      minmax(0, 1fr)
+      var(--board-size)
       var(--market-h)
       var(--dock-h);
     grid-template-areas:
@@ -144,7 +144,7 @@
       'stage stage'
       'market market'
       'rack actions';
-    align-content: stretch;
+    align-content: center;
     column-gap: 12px;
   }
 
