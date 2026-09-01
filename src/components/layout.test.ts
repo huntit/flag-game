@@ -124,6 +124,7 @@ describe('desktop layout (wide fine-pointer windows only)', () => {
     expect(desktop).toMatch(/grid-template-areas:[\s\S]*'stage stage sidebar'/);
     expect(desktop).toMatch(/grid-template-areas:[\s\S]*'rack actions sidebar'/);
     expect(desktop).toMatch(/\.actions[\s\S]*max-width:\s*\d+px/);
+    expect(desktop).toMatch(/\.market-row[\s\S]*max-width:\s*var\(--board-size\)/);
     expect(desktop).toMatch(/\.market-row[\s\S]*justify-self:\s*center/);
     expect(desktop).toMatch(/\.play-shell \.stage[\s\S]*grid-row:\s*auto/);
   });

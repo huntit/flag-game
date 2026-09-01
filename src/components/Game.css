@@ -158,9 +158,14 @@
   }
 
   .market-row {
-    max-width: calc(var(--board-size) + 56px);
-    width: 100%;
+    max-width: var(--board-size);
+    width: fit-content;
     justify-self: center;
+  }
+
+  .market-row-inner {
+    width: fit-content;
+    max-width: var(--board-size);
   }
 
   .rack-row {

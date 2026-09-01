@@ -74,10 +74,31 @@
 }
 
 @media (min-width: 900px) and (pointer: fine) {
+  .market-row-inner {
+    gap: 5px;
+  }
+
+  .market-row-inner .tray-label {
+    writing-mode: horizontal-tb;
+    transform: none;
+    font-size: 0.58rem;
+    letter-spacing: 0.06em;
+    padding-right: 2px;
+  }
+
+  .market-tray {
+    flex: 0 0 auto;
+    width: calc(6 * var(--tile, 42px) + 5 * 6px);
+    gap: 6px;
+    padding: 0 4px;
+    justify-content: center;
+  }
+
   .market-tile,
   .market-tray .tray-slot-empty {
     width: var(--tile, 42px);
     height: var(--tile, 42px);
+    flex: 0 0 auto;
   }
 
   .market-tile .tile-letter {

@@ -25,7 +25,8 @@ async function shot(name, contextOptions, fn) {
     oppCount: document.querySelector('.opponent-count')?.textContent ?? null,
     toasts: [...document.querySelectorAll('.toast')].map(t => t.textContent),
     cornerTokens: document.querySelectorAll('.corner-token').length,
-    marketWidth: document.querySelector('.market-row-inner')?.getBoundingClientRect().width,
+    marketWidth: document.querySelector('.market-tray')?.getBoundingClientRect().width,
+    marketRowWidth: document.querySelector('.market-row-inner')?.getBoundingClientRect().width,
     boardWidth: document.querySelector('.board')?.getBoundingClientRect().width,
   }));
   console.log(name, JSON.stringify(notes));
