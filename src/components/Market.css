@@ -94,8 +94,10 @@
   .market-tile,
   .market-tray .tray-slot-empty {
     width: min(var(--tile, 38px), calc((100% - 5 * 5px) / 6));
-    height: var(--tile, 38px);
-    max-width: none;
+    height: auto;
+    max-width: 48px;
+    max-height: 48px;
+    aspect-ratio: 1;
     flex: 0 0 auto;
   }
 }

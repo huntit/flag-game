@@ -116,7 +116,7 @@ describe('desktop layout (wide fine-pointer windows only)', () => {
 
   it('forces rack tiles square so they cannot stretch with a 1fr sidebar', () => {
     expect(desktopRack).toMatch(/\.tray-tile,\s*\n\s*\.tray-slot-empty\s*\{[^}]*aspect-ratio:\s*1/s);
-    expect(desktopRack).toMatch(/\.tray-tile,\s*\n\s*\.tray-slot-empty\s*\{[^}]*height:\s*var\(--tile/s);
+    expect(desktopRack).toMatch(/\.tray-tile,\s*\n\s*\.tray-slot-empty\s*\{[^}]*width:\s*min\(\s*var\(--tile/s);
     expect(desktopRack).toMatch(/\.tray-tile,\s*\n\s*\.tray-slot-empty\s*\{[^}]*max-height:\s*48px/s);
     expect(desktop).toMatch(/--dock-h:\s*\d+px/);
     expect(desktop).toMatch(/grid-template-rows:[\s\S]*var\(--dock-h\)/);
