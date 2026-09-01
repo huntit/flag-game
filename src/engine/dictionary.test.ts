@@ -116,3 +116,103 @@ describe('data/words.txt', () => {
     expect(dictionary.isValid('ABBREVIATING')).toBe(false); // 12 letters
   });
 });
+
+describe('in-place indexing', () => {
+  const raw = readFileSync(WORDS_PATH, 'utf-8');
+
+  /**
+   * The shipped list is already sorted, unique and uppercase, so it must take
+   * the scan path that allocates no intermediate strings. If this ever fails
+   * the dictionary still works — it just quietly costs ~12MB more to build,
+   * which is exactly the spike the scan exists to avoid.
+   */
+  it('indexes the shipped word list in place rather than falling back', () => {
+    const scanned = Dictionary.fromText(raw);
+    // The fallback path rebuilds a blob of just the loadable words; the scan
+    // keeps the whole file. Comparing sizes is how we tell which path ran.
+    const rebuilt = new Dictionary(raw.split('\n'));
+    expect(scanned.size()).toBe(rebuilt.size());
+    expect(Dictionary.usedInPlaceIndex(scanned)).toBe(true);
+    expect(Dictionary.usedInPlaceIndex(rebuilt)).toBe(false);
+  });
+
+  it('gives identical answers on both paths', () => {
+    const scanned = Dictionary.fromText(raw);
+    const rebuilt = new Dictionary(raw.split('\n'));
+
+    // Every word, read back in order, must match between the two.
+    expect(scanned.size()).toBe(rebuilt.size());
+    for (let i = 0; i < scanned.size(); i += 997) {
+      expect(scanned.wordAt(i)).toBe(rebuilt.wordAt(i));
+    }
+    expect(scanned.wordAt(0)).toBe(rebuilt.wordAt(0));
+    expect(scanned.wordAt(scanned.size() - 1)).toBe(rebuilt.wordAt(rebuilt.size() - 1));
+
+    for (const word of ['AA', 'ZYZZYVAS', 'FLAG', 'QUIZ', 'ABHORS', 'NOTAWORD', 'XQZ']) {
+      expect(scanned.isValid(word), word).toBe(rebuilt.isValid(word));
+    }
+
+    // Prefix narrowing has to agree too — it is what prunes the AI's search.
+    for (const prefix of ['C', 'CR', 'CRO', 'ZZ', 'QU', 'A']) {
+      let a = scanned.fullRange();
+      let b = rebuilt.fullRange();
+      for (let depth = 0; depth < prefix.length; depth++) {
+        a = scanned.narrow(a, prefix[depth], depth);
+        b = rebuilt.narrow(b, prefix[depth], depth);
+      }
+      expect(a.hi - a.lo, prefix).toBe(b.hi - b.lo);
+      expect(scanned.isCompleteWord(a, prefix.length), prefix).toBe(
+        rebuilt.isCompleteWord(b, prefix.length)
+      );
+    }
+  });
+
+  it('stays sorted after the board-length filter drops longer words', () => {
+    const dictionary = Dictionary.fromText(raw);
+    for (let i = 1; i < dictionary.size(); i += 499) {
+      expect(dictionary.wordAt(i - 1) < dictionary.wordAt(i)).toBe(true);
+    }
+  });
+
+  it('falls back when the text is not already clean and sorted', () => {
+    // Lowercase needs normalising.
+    const lower = Dictionary.fromText('at\nate\ntea');
+    expect(Dictionary.usedInPlaceIndex(lower)).toBe(false);
+    expect(lower.isValid('ATE')).toBe(true);
+
+    // Out of order.
+    const unsorted = Dictionary.fromText('TEA\nATE\nAT');
+    expect(Dictionary.usedInPlaceIndex(unsorted)).toBe(false);
+    expect(unsorted.size()).toBe(3);
+    expect(unsorted.wordAt(0)).toBe('AT');
+
+    // Duplicated.
+    const duped = Dictionary.fromText('AT\nAT\nATE');
+    expect(Dictionary.usedInPlaceIndex(duped)).toBe(false);
+    expect(duped.size()).toBe(2);
+
+    // Windows line endings carry a stray CR.
+    const crlf = Dictionary.fromText('AT\r\nATE\r\nTEA');
+    expect(Dictionary.usedInPlaceIndex(crlf)).toBe(false);
+    expect(crlf.isValid('TEA')).toBe(true);
+
+    // Clean, sorted and unique: the scan handles it, with or without a
+    // trailing newline.
+    for (const text of ['AT\nATE\nTEA', 'AT\nATE\nTEA\n']) {
+      const clean = Dictionary.fromText(text);
+      expect(Dictionary.usedInPlaceIndex(clean)).toBe(true);
+      expect(clean.size()).toBe(3);
+      expect(clean.isValid('ATE')).toBe(true);
+      expect(clean.isValid('AT')).toBe(true);
+      expect(clean.isValid('TE')).toBe(false);
+    }
+  });
+
+  it('skips words too long for the board without falling back', () => {
+    // ABCDEFGHIJKL is 12 letters: filtered out, but no reason to normalise.
+    const dictionary = Dictionary.fromText('AT\nABCDEFGHIJKL\nATE');
+    expect(Dictionary.usedInPlaceIndex(dictionary)).toBe(true);
+    expect(dictionary.size()).toBe(2);
+    expect(dictionary.isValid('ABCDEFGHIJKL')).toBe(false);
+  });
+});

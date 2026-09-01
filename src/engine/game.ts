@@ -163,22 +163,20 @@ function randomCorner(): FlagPost {
 }
 
 /**
- * Face-down slots sit at random positions in the row, not always on the end.
- * A slot keeps its face-up/face-down identity for the whole game: refilling
- * writes the replacement into the same slot (see refillMarketSlot), so a
- * face-down position stays face-down and the row never reshuffles under the
- * player's eye.
+ * Face-up slots first, then the two face-down ones on the end. A slot keeps its
+ * face-up/face-down identity for the whole game: refilling writes the
+ * replacement into the same slot (see refillMarketSlot), so the two face-down
+ * positions stay put and the row never reshuffles under the player's eye.
  */
 function dealMarket(bag: Tile[]): MarketSlot[] {
-  const faces = [
-    ...Array<boolean>(MARKET_FACE_UP).fill(true),
-    ...Array<boolean>(MARKET_FACE_DOWN).fill(false),
-  ];
-  for (let i = faces.length - 1; i > 0; i--) {
-    const j = Math.floor(random() * (i + 1));
-    [faces[i], faces[j]] = [faces[j], faces[i]];
+  const slots: MarketSlot[] = [];
+  for (let i = 0; i < MARKET_FACE_UP; i++) {
+    slots.push({ tile: bag.shift() ?? null, faceUp: true });
   }
-  return faces.map(faceUp => ({ tile: bag.shift() ?? null, faceUp }));
+  for (let i = 0; i < MARKET_FACE_DOWN; i++) {
+    slots.push({ tile: bag.shift() ?? null, faceUp: false });
+  }
+  return slots;
 }
 
 export function marketShowingCount(market: MarketSlot[]): number {
