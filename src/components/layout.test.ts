@@ -79,6 +79,54 @@ describe('no-scroll phone shell', () => {
   });
 });
 
+const desktopBlock = (css: string) =>
+  css.match(/@media \(min-width:\s*900px\) and \(pointer:\s*fine\)[\s\S]*/)?.[0] ?? '';
+
+describe('desktop layout (wide fine-pointer windows only)', () => {
+  const desktop = desktopBlock(gameCss);
+  const desktopRack = desktopBlock(read('./Rack.css'));
+  const desktopMarket = desktopBlock(read('./Market.css'));
+
+  it('gates desktop rules on min-width and pointer:fine, never a user-agent', () => {
+    expect(desktop.length).toBeGreaterThan(80);
+    expect(gameCss).toMatch(/@media \(min-width:\s*900px\) and \(pointer:\s*fine\)/);
+    expect(read('./Rack.css')).toMatch(/@media \(min-width:\s*900px\) and \(pointer:\s*fine\)/);
+    expect(read('./Market.css')).toMatch(/@media \(min-width:\s*900px\) and \(pointer:\s*fine\)/);
+    expect(read('./Board.css')).toMatch(/@media \(min-width:\s*900px\) and \(pointer:\s*fine\)/);
+
+    for (const source of ['Game.tsx', 'Game.css', 'Rack.css', 'Market.css', 'Board.css', '../App.tsx']) {
+      expect(read(`./${source}`), source).not.toMatch(/navigator\.userAgent|user-agent/i);
+    }
+  });
+
+  it('caps board and tile size so they do not grow with the window', () => {
+    expect(desktop).toMatch(/--board-max:\s*\d+px/);
+    expect(desktop).toMatch(/--board-size:\s*min\(/);
+    expect(desktop).toMatch(/var\(--board-max\)/);
+    expect(desktop).toMatch(/--shell-max-w:\s*\d+px/);
+    expect(desktop).toMatch(/--tile:\s*\d+px/);
+    expect(desktopRack).toMatch(/width:\s*var\(--tile/);
+    expect(desktopMarket).toMatch(/width:\s*var\(--tile/);
+  });
+
+  it('centers a compact play column with a stable action toolbar', () => {
+    expect(desktop).toMatch(/grid-template-areas:[\s\S]*'stage stage'/);
+    expect(desktop).toMatch(/grid-template-areas:[\s\S]*'rack actions'/);
+    expect(desktop).toMatch(/\.actions[\s\S]*max-width:\s*\d+px/);
+    expect(desktop).toMatch(/\.market-row[\s\S]*justify-self:\s*center/);
+    expect(desktop).toMatch(/\.play-shell \.stage[\s\S]*grid-row:\s*auto/);
+  });
+
+  it('keeps the phone shell as the un-queried default', () => {
+    const phone = gameCss.slice(0, gameCss.indexOf('@media'));
+    expect(phone).toMatch(/\.play-shell\s*\{/);
+    expect(phone).toMatch(/--shell-max-w:\s*560px/);
+    expect(phone).toMatch(/grid-template-areas:[\s\S]*'actions'/);
+    expect(phone).not.toMatch(/pointer:\s*fine/);
+    expect(phone).not.toMatch(/--board-max:/);
+  });
+});
+
 describe('board rendering', () => {
   it('draws an 11x11 grid sized to the computed board size', () => {
     expect(boardCss).toMatch(/grid-template-columns:\s*repeat\(11, 1fr\)/);

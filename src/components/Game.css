@@ -94,6 +94,104 @@
   }
 }
 
+/* Desktop (Safari on Mac, and any wide fine-pointer window).
+ *
+ * The landscape rule above is for iPad: a side-by-side board that fills the
+ * short height. On a desktop monitor that same rule makes the board, rack and
+ * buttons enormous and docks the board to the left. These overrides only fire
+ * for min-width + pointer:fine — iPhone and iPad (coarse pointer) never match,
+ * so the phone shell and the iPad landscape shell stay exactly as they are.
+ */
+@media (min-width: 900px) and (pointer: fine) {
+  .play-shell {
+    --hud-h: 36px;
+    --opp-h: 36px;
+    --market-h: 52px;
+    --rack-h: 52px;
+    --actions-h: 40px;
+    --dock-h: 52px;
+    --shell-gap: 10px;
+    --shell-pad-x: 16px;
+    --shell-pad-y: 12px;
+    --tile: 42px;
+
+    /* Chrome no longer includes a separate opponent row: HUD and opponent
+       share the top line, rack and actions share the dock. */
+    --chrome-h: calc(
+      var(--hud-h) + var(--market-h) + var(--dock-h) +
+        (3 * var(--shell-gap)) + (2 * var(--shell-pad-y)) + var(--safe-top) +
+        var(--safe-bottom) + 2px
+    );
+
+    /* Cap the play column and the board so neither grows with the window. */
+    --shell-max-w: 740px;
+    --board-max: 462px;
+    --board-size: min(
+      var(--board-max),
+      calc(var(--shell-w) - (2 * var(--shell-pad-x))),
+      calc(var(--app-h) - var(--chrome-h))
+    );
+
+    max-width: var(--shell-max-w);
+    grid-template-columns: minmax(0, 1fr) minmax(200px, 240px);
+    grid-template-rows:
+      var(--hud-h)
+      minmax(0, 1fr)
+      var(--market-h)
+      var(--dock-h);
+    grid-template-areas:
+      'hud opponent'
+      'stage stage'
+      'market market'
+      'rack actions';
+    align-content: stretch;
+    column-gap: 12px;
+  }
+
+  .play-shell .stage {
+    grid-row: auto;
+  }
+
+  .opponent-bar {
+    justify-self: stretch;
+    min-width: 0;
+  }
+
+  .market-row {
+    max-width: calc(var(--board-size) + 56px);
+    width: 100%;
+    justify-self: center;
+  }
+
+  .rack-row {
+    min-width: 0;
+  }
+
+  /* Stable toolbar: four buttons in a compact group next to the rack,
+     not a strip stretched across the monitor. */
+  .actions {
+    width: 100%;
+    max-width: 280px;
+    justify-self: end;
+    align-self: center;
+    height: var(--actions-h);
+    gap: 6px;
+  }
+
+  .action-button {
+    font-size: 0.78rem;
+    border-radius: 8px;
+  }
+
+  .action-button:hover:not(:disabled) {
+    filter: brightness(1.1);
+  }
+
+  .toast-layer {
+    bottom: calc(var(--safe-bottom) + var(--dock-h) + var(--market-h) + (2 * var(--shell-gap)));
+  }
+}
+
 .hud {
   grid-area: hud;
   display: flex;

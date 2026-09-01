@@ -178,3 +178,60 @@
   text-transform: uppercase;
   color: var(--color-text-dim);
 }
+
+/* Desktop: readable mouse-sized tiles, compact facedown opponent count.
+   Same pointer:fine gate as Game.css — never applies on iPhone/iPad. */
+@media (min-width: 900px) and (pointer: fine) {
+  .tray {
+    gap: 6px;
+    padding: 0 8px;
+  }
+
+  .tray-tile,
+  .tray-slot-empty {
+    width: var(--tile, 42px);
+    height: var(--tile, 42px);
+    flex: 0 0 auto;
+    border-radius: 6px;
+  }
+
+  .tray-tile .tile-letter {
+    font-size: 1.15rem;
+  }
+
+  .tray-tile .tile-value {
+    font-size: 0.62rem;
+  }
+
+  .tray-tile:hover:not(:disabled):not(.is-selected) {
+    transform: translateY(-3px);
+  }
+
+  .tray-label {
+    writing-mode: horizontal-tb;
+    transform: none;
+    font-size: 0.62rem;
+    letter-spacing: 0.06em;
+    padding-right: 2px;
+  }
+
+  .opponent-inner {
+    gap: 8px;
+    padding: 0 10px;
+  }
+
+  .opponent-name {
+    max-width: 10ch;
+    font-size: 0.62rem;
+  }
+
+  .opponent-back,
+  .opponent-gap {
+    width: 8px;
+    height: 16px;
+  }
+
+  .opponent-count {
+    font-size: 0.78rem;
+  }
+}

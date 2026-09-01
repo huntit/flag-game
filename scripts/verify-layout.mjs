@@ -9,7 +9,7 @@ const URL = process.env.FLAG_URL ?? 'http://localhost:4173/flag-game/';
 const OUT = process.argv[2] ?? '/tmp/shots';
 mkdirSync(OUT, { recursive: true });
 
-const targets = [
+const phoneTargets = [
   { name: 'iphone_se', width: 375, height: 667, dpr: 2 },
   { name: 'iphone_15_pro', width: 393, height: 852, dpr: 3 },
   { name: 'iphone_15_pro_max', width: 430, height: 932, dpr: 3 },
@@ -17,16 +17,25 @@ const targets = [
   { name: 'ipad_landscape', width: 1180, height: 820, dpr: 2 },
 ];
 
+const desktopTargets = [
+  { name: 'desktop_wide', width: 1280, height: 800, dpr: 2, desktop: true },
+];
+
+const targets = [...phoneTargets, ...desktopTargets];
+
 const browser = await chromium.launch();
 let failures = 0;
 
 for (const t of targets) {
+  const desktop = Boolean(t.desktop);
   const context = await browser.newContext({
     viewport: { width: t.width, height: t.height },
     deviceScaleFactor: t.dpr,
-    isMobile: true,
-    hasTouch: true,
-    userAgent: devices['iPhone 13'].userAgent,
+    isMobile: !desktop,
+    hasTouch: !desktop,
+    userAgent: desktop
+      ? 'Mozilla/5.0 (Macintosh; Intel Mac OS X 14_6) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.6 Safari/605.1.15'
+      : devices['iPhone 13'].userAgent,
   });
   const page = await context.newPage();
   const errors = [];
@@ -48,6 +57,8 @@ for (const t of targets) {
       disabled: b.disabled,
       ...rect(b),
     }));
+    const rackTile = document.querySelector('.rack-row .tray-tile');
+    const marketTile = document.querySelector('.market-row .tray-tile');
     const board = document.querySelector('.board');
     const cell = document.querySelector('.board-cell');
     return {
@@ -59,6 +70,11 @@ for (const t of targets) {
       shell: rect(document.querySelector('.play-shell')),
       board: rect(board),
       cell: rect(cell),
+      actions: rect(document.querySelector('.actions')),
+      rackTile: rackTile ? rect(rackTile) : null,
+      marketTile: marketTile ? rect(marketTile) : null,
+      finePointer: window.matchMedia('(pointer: fine)').matches,
+      wide: window.matchMedia('(min-width: 900px)').matches,
       buttons,
       opponentCount: document.querySelector('.opponent-count')?.textContent.trim(),
       opponentBacks: document.querySelectorAll('.opponent-back').length,
@@ -93,9 +109,22 @@ for (const t of targets) {
   if (!/\d+\s*tiles/i.test(m.opponentCount ?? '')) problems.push(`opponent count unreadable: ${m.opponentCount}`);
   if (errors.length) problems.push(`console errors: ${errors.join(' | ')}`);
 
+  if (desktop) {
+    if (!m.finePointer || !m.wide) problems.push(`desktop media gate missed: fine=${m.finePointer} wide=${m.wide}`);
+    if (m.board.w > 480) problems.push(`desktop board too large: ${m.board.w.toFixed(1)}`);
+    if (m.shell.w > 780) problems.push(`desktop shell not capped: ${m.shell.w.toFixed(1)}`);
+    if (Math.abs(m.board.left + m.board.w / 2 - m.innerW / 2) > 40) {
+      problems.push(`desktop board not centered: mid=${(m.board.left + m.board.w / 2).toFixed(1)}`);
+    }
+    if (m.actions.w > 320) problems.push(`desktop toolbar stretched: ${m.actions.w.toFixed(1)}`);
+    if (m.rackTile && m.rackTile.w > 50) problems.push(`desktop rack tile huge: ${m.rackTile.w.toFixed(1)}`);
+    if (m.marketTile && m.marketTile.w > 50) problems.push(`desktop market tile huge: ${m.marketTile.w.toFixed(1)}`);
+  }
+
   console.log(`\n${t.name}  ${t.width}x${t.height} @${t.dpr}x`);
   console.log(`  viewport ${m.innerW}x${m.innerH}  doc scrollH ${m.docScrollH} clientH ${m.docClientH}`);
   console.log(`  board ${m.board.w.toFixed(1)}x${m.board.h.toFixed(1)}  cell ${m.cell.w.toFixed(1)}px  bottom ${m.board.bottom.toFixed(1)}`);
+  console.log(`  shell ${m.shell.w.toFixed(1)}  actions ${m.actions.w.toFixed(1)}  rackTile ${m.rackTile ? m.rackTile.w.toFixed(1) : 'n/a'}  marketTile ${m.marketTile ? m.marketTile.w.toFixed(1) : 'n/a'}`);
   console.log(`  buttons bottom ${bottomMost.toFixed(1)} of ${m.innerH}  (${(m.innerH - bottomMost).toFixed(1)}px clear)`);
   console.log(`  ${m.buttons.map(b => `${b.label}${b.disabled ? '(off)' : '(ON)'} h=${b.h.toFixed(0)}`).join('  ')}`);
   console.log(`  opponent: "${m.opponentCount}", ${m.opponentBacks} backs, ${m.opponentLettersRendered} letters shown`);
