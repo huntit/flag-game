@@ -92,12 +92,21 @@
   pointer-events: none;
 }
 
-.cell-flag {
-  width: calc(var(--cell) * 0.42);
-  height: calc(var(--cell) * 0.42);
-  border-radius: 3px;
+.corner-flag-mark {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: calc(var(--cell) * 0.04);
   pointer-events: none;
-  box-shadow: 0 0 0 1px rgba(44, 58, 61, 0.15);
+  line-height: 1;
+}
+
+.corner-token {
+  width: calc(var(--cell) * 0.88);
+  height: calc(var(--cell) * 0.88);
+  object-fit: contain;
+  pointer-events: none;
 }
 
 @media (min-width: 900px) and (pointer: fine) {

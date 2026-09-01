@@ -121,8 +121,8 @@ describe('desktop layout (wide fine-pointer windows only)', () => {
   });
 
   it('centers a compact play column with a stable action toolbar', () => {
-    expect(desktop).toMatch(/grid-template-areas:[\s\S]*'stage stage'/);
-    expect(desktop).toMatch(/grid-template-areas:[\s\S]*'rack actions'/);
+    expect(desktop).toMatch(/grid-template-areas:[\s\S]*'stage stage sidebar'/);
+    expect(desktop).toMatch(/grid-template-areas:[\s\S]*'rack actions sidebar'/);
     expect(desktop).toMatch(/\.actions[\s\S]*max-width:\s*\d+px/);
     expect(desktop).toMatch(/\.market-row[\s\S]*justify-self:\s*center/);
     expect(desktop).toMatch(/\.play-shell \.stage[\s\S]*grid-row:\s*auto/);
@@ -160,12 +160,80 @@ describe('tile score placement', () => {
 });
 
 describe('branding', () => {
-  it('uses the Skye v2 wordmark PNG as the home link on menu, HUD, and online', () => {
+  it('uses Skye v3 vector wordmark with PNG fallback — not a tiny upscaled bitmap only', () => {
     for (const file of ['GameInfo.tsx', 'Menu.tsx', 'OnlineMode.tsx']) {
       expect(read(`./${file}`)).toMatch(/HomeLink/);
     }
-    expect(read('./HomeLink.tsx')).toMatch(/logo-header\.png/);
+    const homeLink = read('./HomeLink.tsx');
+    expect(homeLink).toMatch(/logo-header\.svg/);
+    expect(homeLink).toMatch(/logo-header\.png/);
+    expect(homeLink).toMatch(/width=\{?\d+/);
+    expect(existsSync(resolve(__dirname, '../../public/logo-header.svg'))).toBe(true);
     expect(existsSync(resolve(__dirname, '../../public/logo-header.png'))).toBe(true);
+  });
+
+  it('ships pennant-only favicon without wordmark', () => {
+    expect(indexHtml).toMatch(/favicon\.svg/);
+    expect(existsSync(resolve(__dirname, '../../public/favicon.svg'))).toBe(true);
+    expect(existsSync(resolve(__dirname, '../../public/flag-mark.svg'))).toBe(true);
+  });
+
+  it('uses Skye corner token SVGs on the board', () => {
+    const board = read('./Board.tsx');
+    expect(board).toMatch(/token-p1\.svg/);
+    expect(board).toMatch(/token-p2\.svg/);
+    expect(board).toMatch(/token-corner-empty\.svg/);
+  });
+});
+
+describe('opponent rack tiles', () => {
+  it('uses square aspect-ratio for facedown opponent backs on all viewports', () => {
+    expect(rackCss).toMatch(/\.opponent-back[\s\S]*aspect-ratio:\s*1/);
+    const desktopRack = desktopBlock(rackCss);
+    expect(desktopRack).toMatch(/\.opponent-back[\s\S]*aspect-ratio:\s*1/);
+  });
+});
+
+describe('desktop move log', () => {
+  const desktop = desktopBlock(gameCss);
+  const sidePanelCss = read('./SidePanel.css');
+  const moveLogCss = read('./MoveLog.css');
+
+  it('renders a collapsible RHS panel at pointer:fine + min-width 900', () => {
+    expect(read('./Game.tsx')).toMatch(/SidePanel/);
+    expect(desktop).toMatch(/sidebar/);
+    expect(sidePanelCss).toMatch(/@media \(min-width:\s*900px\) and \(pointer:\s*fine\)/);
+    expect(moveLogCss).toMatch(/\.move-log-list[\s\S]*overflow-y:\s*auto/);
+  });
+});
+
+describe('market and tile backs', () => {
+  it('face-down market backs use neutral tile-back art, not player colours', () => {
+    expect(marketCss).toMatch(/tile-back\.svg/);
+    expect(marketCss).not.toMatch(/\.market-tile\.is-facedown[\s\S]*--color-p1/);
+    expect(marketCss).not.toMatch(/\.market-tile\.is-facedown[\s\S]*--color-p2/);
+    expect(rackCss).toMatch(/\.opponent-back[\s\S]*tile-back\.svg/);
+    expect(existsSync(resolve(__dirname, '../../public/tile-back.svg'))).toBe(true);
+  });
+});
+
+describe('assigned blanks on board', () => {
+  it('shows the chosen letter when a blank has been assigned', () => {
+    const tileFace = read('./TileFace.tsx');
+    expect(tileFace).toMatch(/hasLetter/);
+    expect(tileFace).toMatch(/isBlank \? '★'/);
+    expect(read('./Board.tsx')).toMatch(/isBlank=\{isBlank && !letter\}/);
+  });
+});
+
+describe('first-player banner (no menu)', () => {
+  it('shows banner copy before first action in Game, not a first-player menu', () => {
+    expect(read('./Game.tsx')).toMatch(/FirstPlayerBanner/);
+    expect(read('./Game.tsx')).toMatch(/soloFirstPlayerBanner/);
+    expect(read('./Game.tsx')).toMatch(/hotseatFirstPlayerBanner/);
+    expect(read('./Game.tsx')).toMatch(/pickHumanSeat/);
+    expect(read('./Menu.tsx')).not.toMatch(/first.?player|who goes first|choose.*player/i);
+    expect(read('../App.tsx')).not.toMatch(/first.?player|who goes first/i);
   });
 });
 

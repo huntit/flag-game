@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1179 332" width="1179" height="332">
+  <rect width="1179" height="332" fill="#F7F1E8"/>
+  <g transform="translate(40, 58.5) scale(2.15)">
+  <g>
+    <rect x="18" y="20" width="6.5" height="64" rx="3.25" fill="#2C3A3D"/>
+    <circle cx="21.25" cy="18" r="5.5" fill="#2C3A3D"/>
+    <path fill="#56867C" d="M25.5 24 C46 16 66 34 90 22 L82 44 L25.5 46 Z"/>
+    <path fill="#CB6B49" d="M25.5 46 L82 44 L90 68 C66 80 46 62 25.5 70 Z"/>
+  </g>
+  </g>
+  <g>
+    <rect x="291.0" y="66.0" width="200" height="200" rx="26" fill="#FFFAF2" stroke="#D6C4B0" stroke-width="3"/>
+    <text x="391.0" y="190.0" text-anchor="middle" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-weight="700" font-size="118" fill="#2C3A3D">F</text>
+    <text x="469.0" y="108.0" text-anchor="end" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-weight="700" font-size="32" fill="#2C3A3D">4</text>
+  </g>
+  <g>
+    <rect x="507.0" y="66.0" width="200" height="200" rx="26" fill="#FFFAF2" stroke="#D6C4B0" stroke-width="3"/>
+    <text x="607.0" y="190.0" text-anchor="middle" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-weight="700" font-size="118" fill="#2C3A3D">L</text>
+    <text x="685.0" y="108.0" text-anchor="end" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-weight="700" font-size="32" fill="#2C3A3D">1</text>
+  </g>
+  <g>
+    <rect x="723.0" y="66.0" width="200" height="200" rx="26" fill="#FFFAF2" stroke="#D6C4B0" stroke-width="3"/>
+    <text x="823.0" y="190.0" text-anchor="middle" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-weight="700" font-size="118" fill="#2C3A3D">A</text>
+    <text x="901.0" y="108.0" text-anchor="end" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-weight="700" font-size="32" fill="#2C3A3D">1</text>
+  </g>
+  <g>
+    <rect x="939.0" y="66.0" width="200" height="200" rx="26" fill="#FFFAF2" stroke="#D6C4B0" stroke-width="3"/>
+    <text x="1039.0" y="190.0" text-anchor="middle" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-weight="700" font-size="118" fill="#2C3A3D">G</text>
+    <text x="1117.0" y="108.0" text-anchor="end" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-weight="700" font-size="32" fill="#2C3A3D">2</text>
+  </g>
+</svg>

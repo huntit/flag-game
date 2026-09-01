@@ -1,11 +1,13 @@
 // Board component. Tap-to-place only — no HTML5 drag anywhere.
 
 import type { Board as BoardModel, FlagPost, Position } from '../engine/types';
-import { FLAG_POSTS, CENTRE_STAR, BOARD_SIZE, PLAYER_COLORS } from '../engine/types';
+import { FLAG_POSTS, CENTRE_STAR, BOARD_SIZE } from '../engine/types';
 import { getBoardTile, positionEquals, isFirstWord } from '../engine/game';
 import { effectiveLetter, tileScore } from '../engine/validator';
 import { TileFace } from './TileFace';
 import './Board.css';
+
+const base = import.meta.env.BASE_URL;
 
 export interface PendingPlacement {
   tileId: string;
@@ -33,6 +35,12 @@ function cornerFlagOwner(
     if (corner && positionEquals(position, FLAG_POSTS[corner])) return player;
   }
   return null;
+}
+
+function cornerTokenSrc(flagOwner: 'P1' | 'P2' | null): string {
+  if (flagOwner === 'P1') return `${base}token-p1.svg`;
+  if (flagOwner === 'P2') return `${base}token-p2.svg`;
+  return `${base}token-corner-empty.svg`;
 }
 
 function Board({ board, flags, pendingPlacements, highlight, onCellClick }: BoardProps) {
@@ -67,7 +75,7 @@ function Board({ board, flags, pendingPlacements, highlight, onCellClick }: Boar
     const tileClasses = [
       'board-tile',
       pending && 'is-pending',
-      isBlank && 'is-blank',
+      isBlank && !letter && 'is-blank',
       tilePlayer && `is-player-${tilePlayer.toLowerCase()}`,
     ]
       .filter(Boolean)
@@ -85,15 +93,16 @@ function Board({ board, flags, pendingPlacements, highlight, onCellClick }: Boar
       >
         {letter ? (
           <span className={tileClasses}>
-            <TileFace letter={letter} value={value} isBlank={isBlank} />
+            <TileFace letter={letter} value={value} isBlank={isBlank && !letter} />
           </span>
         ) : (
           <>
             {showCentreStar && isCentre && <span className="cell-mark">★</span>}
-            {flagOwner && (
-              <span
-                className={`cell-flag is-${flagOwner.toLowerCase()}`}
-                style={{ backgroundColor: PLAYER_COLORS[flagOwner] }}
+            {isCorner && (
+              <img
+                className="corner-token"
+                src={cornerTokenSrc(flagOwner)}
+                alt=""
                 aria-hidden="true"
               />
             )}

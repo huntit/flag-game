@@ -13,6 +13,8 @@ import type { GameAction, GameState, TileData } from '../engine/types';
 import { facedownRack, initializeGame } from '../engine/game';
 import { executeAction } from '../engine/actions';
 import { Dictionary } from '../engine/dictionary';
+import { hotseatFirstPlayerBanner } from '../gameSetup';
+import { markSeatConnected, shouldInitializeRemoteGame } from '../remoteSetup';
 
 /** Where the room fetches its data from; same files the app ships. */
 const DATA_BASE_URL = 'https://huntit.github.io/flag-game';
@@ -23,13 +25,17 @@ interface StoredState {
   gameState: GameState | null;
   p1Token: string;
   p2Token: string;
+  seatsConnected: { P1: boolean; P2: boolean };
+  firstPlayerBanner: string | null;
 }
 
 interface PublicState {
-  game: GameState;
+  game: GameState | null;
   yourSeat: Seat;
   bagCount: number;
   opponentTileCount: number;
+  awaitingOpponent: boolean;
+  firstPlayerBanner: string | null;
 }
 
 let dictionaryPromise: Promise<Dictionary> | null = null;
@@ -74,8 +80,11 @@ export default class FlagServer implements Party.Server {
       return;
     }
 
-    if (!stored.gameState) {
+    stored.seatsConnected = markSeatConnected(stored.seatsConnected, seat);
+
+    if (shouldInitializeRemoteGame(stored.seatsConnected, stored.gameState !== null)) {
       stored.gameState = initializeGame(await loadTileData());
+      stored.firstPlayerBanner = hotseatFirstPlayerBanner();
       await this.save(stored);
     }
 
@@ -160,6 +169,19 @@ export default class FlagServer implements Party.Server {
    * the bag's contents. Counts survive; identities do not.
    */
   private publicState(stored: StoredState, seat: Seat): PublicState {
+    const awaitingOpponent = stored.gameState === null;
+
+    if (awaitingOpponent) {
+      return {
+        game: null,
+        yourSeat: seat,
+        bagCount: 0,
+        opponentTileCount: 0,
+        awaitingOpponent: true,
+        firstPlayerBanner: null,
+      };
+    }
+
     const game = stored.gameState!;
     const youIndex = seat === 'P1' ? 0 : 1;
     const themIndex = youIndex === 0 ? 1 : 0;
@@ -179,17 +201,26 @@ export default class FlagServer implements Party.Server {
       yourSeat: seat,
       bagCount: game.bag.length,
       opponentTileCount: game.players[themIndex].rack.length,
+      awaitingOpponent: false,
+      firstPlayerBanner:
+        game.moveHistory.length === 0 ? stored.firstPlayerBanner : null,
     };
   }
 
   private async load(): Promise<StoredState> {
     const stored = await this.room.storage.get<StoredState>('state');
-    if (stored) return stored;
+    if (stored) {
+      stored.seatsConnected ??= { P1: false, P2: false };
+      stored.firstPlayerBanner ??= null;
+      return stored;
+    }
 
     const fresh: StoredState = {
       gameState: null,
       p1Token: secretToken(),
       p2Token: secretToken(),
+      seatsConnected: { P1: false, P2: false },
+      firstPlayerBanner: null,
     };
     await this.save(fresh);
     return fresh;
