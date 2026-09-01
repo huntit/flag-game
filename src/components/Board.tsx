@@ -99,10 +99,10 @@ function Board({ board, flags, pendingPlacements, highlight, onCellClick }: Boar
           <>
             {showCentreStar && isCentre && <span className="cell-mark">★</span>}
             {isCorner && (
-              <span
+              <img
                 className="corner-token"
-                style={{ backgroundImage: `url(${cornerTokenSrc(flagOwner)})` }}
-                aria-hidden="true"
+                src={cornerTokenSrc(flagOwner)}
+                alt=""
               />
             )}
           </>

@@ -1,28 +1,26 @@
-/* HUD: logo home link + player score chip. */
+/* HUD: player score chips with rack-count tile backs. */
 
 .hud-chip {
-  flex: 1 1 auto;
+  flex: 1 1 0;
   height: 100%;
   min-width: 0;
-  max-width: 50%;
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: 5px;
-  padding: 0 7px;
-  border-radius: 8px;
+  gap: 6px;
+  padding: 0 10px;
+  border-radius: 999px;
   background-color: var(--color-bg-light);
-  overflow: hidden;
-  border: 1px solid transparent;
+  overflow: visible;
+  border: 1.5px solid transparent;
 }
 
 .hud-chip.is-p1 {
-  border-color: color-mix(in srgb, var(--color-p1) 35%, transparent);
+  border-color: var(--color-p1);
   background-color: color-mix(in srgb, var(--color-p1) 12%, white);
 }
 
 .hud-chip.is-p2 {
-  border-color: color-mix(in srgb, var(--color-p2) 35%, transparent);
+  border-color: var(--color-p2);
   background-color: color-mix(in srgb, var(--color-p2) 12%, white);
 }
 
@@ -39,7 +37,7 @@
 }
 
 .hud-key {
-  font-size: 0.56rem;
+  font-size: 0.62rem;
   font-weight: 800;
   letter-spacing: 0.07em;
   text-transform: uppercase;
@@ -48,9 +46,34 @@
 }
 
 .hud-value {
-  font-size: 0.88rem;
+  font-size: 0.95rem;
   font-weight: 800;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
   color: var(--color-ink);
+}
+
+.score-backs {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 3px;
+  min-width: 0;
+}
+
+.score-back {
+  aspect-ratio: 1;
+  width: clamp(18px, calc(var(--scores-h) * 0.52), 28px);
+  height: auto;
+  max-height: calc(var(--scores-h) * 0.72);
+  border-radius: 4px;
+  flex: 0 0 auto;
+  background-color: var(--color-cream);
+  background-image: var(--tile-back-url);
+  background-size: 100% 100%;
+  background-position: center;
+  background-repeat: no-repeat;
+  border: 1px solid color-mix(in srgb, var(--color-chrome) 35%, transparent);
+  box-shadow: inset 0 0 0 1px rgba(44, 58, 61, 0.06);
 }

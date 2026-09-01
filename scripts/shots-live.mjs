@@ -16,13 +16,13 @@ const page = await context.newPage();
 
 const cell = (r, c) => page.locator(`.board-cell[data-row="${r}"][data-col="${c}"]`);
 const rack = () => page.locator('.rack-row .tray-tile');
-const third = () => page.locator('.actions .action-shuffle');
+const third = () => page.locator('.action-shuffle');
 
 const read = () =>
   page.evaluate(() => ({
     rack: [...document.querySelectorAll('.rack-row .tray-tile .tile-letter')].map(s => s.textContent),
     toast: document.querySelector('.toast')?.textContent,
-    playEnabled: !document.querySelector('.actions .action-play')?.disabled,
+    playEnabled: !document.querySelector('.action-play')?.disabled,
     tiles: document.querySelectorAll('.board-tile').length,
   }));
 
@@ -100,8 +100,8 @@ for (let round = 0; round < 10 && !hit; round++) {
       await market.nth(0).click();
       if ((await market.count()) > 1) await market.nth(1).click();
       await page.waitForTimeout(90);
-      if (!(await page.locator('.actions .action-draw').isDisabled())) {
-        await page.locator('.actions .action-draw').click();
+      if (!(await page.locator('.action-draw').isDisabled())) {
+        await page.locator('.action-draw').click();
         await page.waitForTimeout(1500);
       }
     }
@@ -111,7 +111,7 @@ for (let round = 0; round < 10 && !hit; round++) {
 if (hit) {
   console.log('valid placement:', hit.toast);
   await page.screenshot({ path: `${OUT}/screenshot_live_valid_word_play_enabled.png` });
-  await page.locator('.actions .action-play').click();
+  await page.locator('.action-play').click();
   await page.waitForTimeout(2600); // let the AI reply
   const after = await read();
   console.log('after AI reply:', after.toast, `${after.tiles} tiles on board`);

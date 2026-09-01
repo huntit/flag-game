@@ -26,11 +26,10 @@ function HomeLink({ variant, onNavigate }: HomeLinkProps) {
         <source srcSet={`${base}logo-header.svg`} type="image/svg+xml" />
         <img
           src={`${base}logo-header.png`}
-          srcSet={`${base}logo-header.png 1x`}
           alt="Flag"
           className="home-link-img"
-          width={320}
-          height={90}
+          width={1179}
+          height={292}
         />
       </picture>
     </a>

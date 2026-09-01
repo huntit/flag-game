@@ -44,19 +44,19 @@ console.log('P1 turn:', JSON.stringify(p1));
 if (p1.seatLabel !== 'P1') problems.push(`expected to start on P1, got ${p1.seatLabel}`);
 if (p1.opponentLabel !== 'P2') problems.push(`expected opponent P2, got ${p1.opponentLabel}`);
 if (p1.opponentLetters.length > 0) problems.push('P2 letters visible during P1 turn');
-if (!/\d+\s*tiles/i.test(p1.opponentCount ?? '')) problems.push('opponent count not readable');
+if (p1.opponentBacks < 1) problems.push('opponent rack backs missing');
 
 // Take a turn as P1 so the seat changes.
 const market = page.locator('.market-row .tray-tile');
 await market.nth(0).click();
 await market.nth(1).click();
 await page.waitForTimeout(120);
-if (await page.locator('.actions .action-draw').isDisabled()) {
+if (await page.locator('.action-draw').isDisabled()) {
   // A blank take is a single tile, which is legal on its own.
   await market.nth(1).click();
   await page.waitForTimeout(120);
 }
-await page.locator('.actions .action-draw').click();
+await page.locator('.action-draw').click();
 await page.waitForTimeout(400);
 
 const between = await snapshot();
