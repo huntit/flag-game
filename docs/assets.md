@@ -89,13 +89,24 @@ A9 B2 C2 D5 E13 F2 G3 H4 I8 J1 K1 L4 M2 N5 O8 P2 Q1 R6 S5 T7 U4 V2 W2 X1 Y2 Z1 B
 A1 B4 C4 D2 E1 F4 G3 H3 I1 J10 K5 L2 M4 N2 O1 P4 Q10 R1 S1 T1 U2 V5 W4 X8 Y3 Z10
 ```
 
-**Blanks:** Score 0 when played. Taking a blank from the market counts as the one-tile draw (no second tile allowed).
+**Blanks:** Score 0 when played. Blanks may appear in face-up or face-down market slots and are taken as part of a normal Draw (exactly 2 tiles from the 6 showing).
 
 ### Important Notes
 
 - **NOT NYT Crossplay bag** (100 tiles / 3 blanks / different values)
 - **NOT Scrabble bag** (100 tiles / different counts)
 - Flag uses the **WWF English bag (104 tiles)** paired with **Word Eagle's WWF letter values**
+
+## UI Notes (for Ada)
+
+Placeholder colours are OK until Skye delivers art. See [prototype-spec.md](prototype-spec.md) section 10 for full UI requirements. Highlights:
+
+- Player name cards in that player's colour
+- Played tiles rendered in that player's colour
+- Desktop/iPad: scrolling move log (human + AI) coloured by player
+- Nicer desktop layout/alignment
+- Title + logo is the home link; no back button
+- Favicon
 
 ## Word Eagle Assets
 
@@ -108,7 +119,3 @@ Peter's other game [Word Eagle](https://www.huntit.com.au/apps/wordgame/) ([sour
 - ✅ Bag counts (104 tiles, 2 blanks) recorded in `data/tiles.json`
 
 **Ada:** Do NOT vendor Word Eagle application code. The word list and complete tile set (counts + values) are now available as data files in this repository.
-
----
-
-**When files are ready, Peter will update this document with exact paths and any additional notes.**
