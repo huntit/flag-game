@@ -62,6 +62,22 @@ for (const t of targets) {
     const board = document.querySelector('.board');
     const cell = document.querySelector('.board-cell');
     const actionsEl = document.querySelector('.action-play') || document.querySelector('.rack-row');
+    const shuffle = document.querySelector('.action-shuffle');
+    const play = document.querySelector('.action-play');
+    const draw = document.querySelector('.action-draw');
+    const rackTiles = [...document.querySelectorAll('.rack-row .tray-tile')];
+    const lastRack = rackTiles[rackTiles.length - 1];
+    const youCard = document.querySelector('.hud-you');
+    const oppCard = document.querySelector('.opponent-inner');
+    const youName = document.querySelector('.hud-you .score-card-name');
+    const youScore = document.querySelector('.hud-you .score-card-score');
+    const youBacks = [...document.querySelectorAll('.hud-you .score-back')];
+    const rackLabel = document.querySelector('.rack-row .tray-label');
+    const toasts = [...document.querySelectorAll('.status-row .toast')];
+    const overlaps = (a, b) => {
+      if (!a || !b) return false;
+      return a.left < b.right - 0.5 && a.right > b.left + 0.5 && a.top < b.bottom - 0.5 && a.bottom > b.top + 0.5;
+    };
     return {
       innerH: window.innerHeight,
       innerW: window.innerWidth,
@@ -90,6 +106,19 @@ for (const t of targets) {
       shuffleNextToRack: Boolean(document.querySelector('.rack-row .action-shuffle')),
       opponentLettersRendered: [...document.querySelectorAll('.opponent-inner .tile-letter')].length,
       rackTiles: [...document.querySelectorAll('.rack-row .tray-tile .tile-letter')].map(s => s.textContent),
+      youCard: youCard ? rect(youCard) : null,
+      oppCard: oppCard ? rect(oppCard) : null,
+      youNameText: youName?.textContent ?? '',
+      rackLabelText: rackLabel?.textContent ?? '',
+      toastCount: toasts.length,
+      shuffleOverlapsTile: shuffle && lastRack ? overlaps(rect(shuffle), rect(lastRack)) : false,
+      playOverlapsTile: play && lastRack ? overlaps(rect(play), rect(lastRack)) : false,
+      drawOverlapsMarket: draw && marketTile ? overlaps(rect(draw), rect(marketTile)) : false,
+      backsOverlapName: youName && youBacks.some(b => overlaps(rect(b), rect(youName))),
+      backsOverlapScore: youScore && youBacks.some(b => overlaps(rect(b), rect(youScore))),
+      emptyCornerToken: [...document.querySelectorAll('.corner-token')].some(img =>
+        (img.currentSrc || img.src).includes('token-corner-empty')
+      ),
     };
   });
 
@@ -117,7 +146,22 @@ for (const t of targets) {
   if (m.opponentLettersRendered !== 0) problems.push('opponent letters rendered');
   if (m.opponentBacks < 1) problems.push(`opponent rack backs missing: ${m.opponentBacks}`);
   if (m.youBacks < 1) problems.push(`you rack backs missing: ${m.youBacks}`);
-  if (m.cornerTokens !== 4) problems.push(`expected 4 corner tokens, got ${m.cornerTokens}`);
+  if (m.cornerTokens !== 2) problems.push(`expected 2 flag tokens, got ${m.cornerTokens}`);
+  if (m.emptyCornerToken) problems.push('empty spare corners still show TWS tokens');
+  if (m.shuffleOverlapsTile) problems.push('shuffle overlaps a rack tile');
+  if (m.playOverlapsTile) problems.push('Play overlaps a rack tile');
+  if (m.drawOverlapsMarket) problems.push('Draw 2 overlaps a market tile');
+  if (m.backsOverlapName) problems.push('score-card backs overlap the name');
+  if (m.backsOverlapScore) problems.push('score-card backs overlap the score');
+  if (m.toastCount > 1) problems.push(`toasts stacked: ${m.toastCount}`);
+  if (m.youCard && m.oppCard) {
+    if (Math.abs(m.youCard.w - m.oppCard.w) > 2) {
+      problems.push(`score cards unequal width: ${m.youCard.w.toFixed(1)} vs ${m.oppCard.w.toFixed(1)}`);
+    }
+    if (Math.abs(m.youCard.h - m.oppCard.h) > 2) {
+      problems.push(`score cards unequal height: ${m.youCard.h.toFixed(1)} vs ${m.oppCard.h.toFixed(1)}`);
+    }
+  }
   if (!m.drawNextToMarket) problems.push('Draw 2 is not beside the market');
   if (!m.shuffleNextToRack) problems.push('Shuffle is not beside the rack');
   if (m.logo && m.logo.top < -1) problems.push(`logo clipped at top: ${m.logo.top}`);
@@ -126,11 +170,11 @@ for (const t of targets) {
 
   if (desktop) {
     if (!m.finePointer || !m.wide) problems.push(`desktop media gate missed: fine=${m.finePointer} wide=${m.wide}`);
-    if (m.board.w > 480) problems.push(`desktop board too large: ${m.board.w.toFixed(1)}`);
+    if (m.board.w < 520) problems.push(`desktop board too small: ${m.board.w.toFixed(1)}`);
+    if (m.board.w > 780) problems.push(`desktop board too large: ${m.board.w.toFixed(1)}`);
     if (m.shell.w > 1280) problems.push(`desktop shell not capped: ${m.shell.w.toFixed(1)}`);
-    if (Math.abs(m.board.left + m.board.w / 2 - m.innerW / 2) > 80) {
-      problems.push(`desktop board not centered: mid=${(m.board.left + m.board.w / 2).toFixed(1)}`);
-    }
+    if (!/you/i.test(m.youNameText)) problems.push(`YOU label missing: "${m.youNameText}"`);
+    if (!/you/i.test(m.rackLabelText)) problems.push(`rack label truncated: "${m.rackLabelText}"`);
     if (m.actions.w > 200) problems.push(`desktop Play stretched: ${m.actions.w.toFixed(1)}`);
     if (m.rackTile) {
       if (m.rackTile.w > 50) problems.push(`desktop rack tile huge: ${m.rackTile.w.toFixed(1)}`);

@@ -1,51 +1,77 @@
-/* HUD: player score chips with rack-count tile backs. */
+/* Equal-size score cards. Name + score are reserved; backs never cover them. */
 
-.hud-chip {
+.score-card,
+.hud-chip,
+.opponent-inner {
   flex: 1 1 0;
+  width: 0;
   height: 100%;
   min-width: 0;
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(6.25rem, max-content) minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
   align-items: center;
-  gap: 6px;
-  padding: 0 10px;
-  border-radius: 999px;
+  column-gap: 8px;
+  padding: 3px 10px;
+  border-radius: 12px;
   background-color: var(--color-bg-light);
-  overflow: visible;
+  overflow: hidden;
   border: 1.5px solid transparent;
 }
 
-.hud-chip.is-p1 {
+.score-card.is-p1,
+.hud-chip.is-p1,
+.opponent-inner.is-p1 {
   border-color: var(--color-p1);
   background-color: color-mix(in srgb, var(--color-p1) 12%, white);
 }
 
-.hud-chip.is-p2 {
+.score-card.is-p2,
+.hud-chip.is-p2,
+.opponent-inner.is-p2 {
   border-color: var(--color-p2);
   background-color: color-mix(in srgb, var(--color-p2) 12%, white);
 }
 
-.hud-chip.is-active {
-  box-shadow: inset 0 0 0 2px currentColor;
+.score-card.is-active.is-p1,
+.hud-chip.is-active.is-p1,
+.opponent-inner.is-their-turn.is-p1 {
+  box-shadow: inset 0 0 0 2px var(--color-p1);
 }
 
-.hud-chip.is-p1.is-active {
-  color: var(--color-p1);
+.score-card.is-active.is-p2,
+.hud-chip.is-active.is-p2,
+.opponent-inner.is-their-turn.is-p2 {
+  box-shadow: inset 0 0 0 2px var(--color-p2);
 }
 
-.hud-chip.is-p2.is-active {
-  color: var(--color-p2);
+.score-card-id {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+  overflow: hidden;
 }
 
-.hud-key {
+.score-card-name,
+.hud-key,
+.opponent-name {
+  flex: 1 1 auto;
+  min-width: 0;
   font-size: 0.62rem;
   font-weight: 800;
-  letter-spacing: 0.07em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--color-text-dim);
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.hud-value {
+.score-card-score,
+.hud-value,
+.opponent-score {
+  flex: 0 0 auto;
   font-size: 0.95rem;
   font-weight: 800;
   font-variant-numeric: tabular-nums;
@@ -54,26 +80,28 @@
 }
 
 .score-backs {
-  flex: 1 1 auto;
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 3px;
   min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  align-items: center;
+  pointer-events: none;
 }
 
 .score-back {
+  width: 100%;
+  max-width: 22px;
   aspect-ratio: 1;
-  width: clamp(18px, calc(var(--scores-h) * 0.52), 28px);
   height: auto;
-  max-height: calc(var(--scores-h) * 0.72);
+  max-height: calc(var(--scores-h) * 0.58);
   border-radius: 4px;
-  flex: 0 0 auto;
-  background-color: var(--color-cream);
+  justify-self: start;
+  background-color: #ebe6de;
   background-image: var(--tile-back-url);
   background-size: 100% 100%;
   background-position: center;
   background-repeat: no-repeat;
-  border: 1px solid color-mix(in srgb, var(--color-chrome) 35%, transparent);
-  box-shadow: inset 0 0 0 1px rgba(44, 58, 61, 0.06);
+  border: 1px solid color-mix(in srgb, var(--color-ink) 12%, transparent);
 }

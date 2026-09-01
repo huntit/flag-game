@@ -12,6 +12,7 @@
 
 .tray-label {
   flex: 0 0 auto;
+  flex-shrink: 0;
   writing-mode: vertical-rl;
   transform: rotate(180deg);
   font-size: 0.55rem;
@@ -19,6 +20,7 @@
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--color-text-dim);
+  white-space: nowrap;
 }
 
 .tray {
@@ -32,6 +34,7 @@
   border-radius: 9px;
   background-color: var(--color-bg-light);
   min-width: 0;
+  overflow: hidden;
 }
 
 .tray-tile,
@@ -98,69 +101,7 @@
   background-color: color-mix(in srgb, var(--color-p2) 8%, var(--color-bg-light));
 }
 
-/* Opponent / score-card facedown backs. */
-.opponent-inner {
-  height: 100%;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 0 8px;
-  border-radius: 999px;
-  background-color: var(--color-bg-light);
-  min-width: 0;
-  flex: 1 1 0;
-  border: 1.5px solid transparent;
-  overflow: visible;
-}
-
-.opponent-inner.is-p1 {
-  border-color: var(--color-p1);
-  background-color: color-mix(in srgb, var(--color-p1) 12%, white);
-}
-
-.opponent-inner.is-p2 {
-  border-color: var(--color-p2);
-  background-color: color-mix(in srgb, var(--color-p2) 12%, white);
-}
-
-.opponent-inner.is-their-turn.is-p1 {
-  box-shadow: inset 0 0 0 2px var(--color-p1);
-}
-
-.opponent-inner.is-their-turn.is-p2 {
-  box-shadow: inset 0 0 0 2px var(--color-p2);
-}
-
-.opponent-name {
-  flex: 0 0 auto;
-  font-size: 0.62rem;
-  font-weight: 800;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--color-text-dim);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 9ch;
-}
-
-.opponent-score {
-  flex: 0 0 auto;
-  font-size: 0.95rem;
-  font-weight: 800;
-  font-variant-numeric: tabular-nums;
-  color: var(--color-ink);
-}
-
-.opponent-tiles {
-  flex: 1 1 auto;
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 3px;
-  min-width: 0;
-}
-
+/* Facedown score-card backs share GameInfo.css; keep a square hook for tests. */
 .opponent-back {
   aspect-ratio: 1;
   background-image: var(--tile-back-url);
@@ -170,19 +111,20 @@
   display: none;
 }
 
-/* Desktop: readable mouse-sized tiles, compact facedown opponent count.
+/* Desktop: readable mouse-sized tiles that shrink instead of overlapping Shuffle/Play.
    Same pointer:fine gate as Game.css — never applies on iPhone/iPad. */
 @media (min-width: 900px) and (pointer: fine) {
   .tray {
     gap: 5px;
-    padding: 0 2px;
+    padding: 0 4px;
+    overflow: visible;
   }
 
   .tray-tile,
   .tray-slot-empty {
     aspect-ratio: 1;
-    width: var(--tile, 42px);
-    height: var(--tile, 42px);
+    width: min(var(--tile, 38px), calc((100% - 6 * 5px) / 7));
+    height: var(--tile, 38px);
     max-height: 48px;
     max-width: none;
     flex: 0 0 auto;
@@ -196,26 +138,10 @@
   .tray-label {
     writing-mode: horizontal-tb;
     transform: none;
-    font-size: 0.62rem;
+    font-size: 0.68rem;
     letter-spacing: 0.06em;
-    padding-right: 2px;
-  }
-
-  .opponent-inner {
-    gap: 8px;
-    padding: 0 10px;
-  }
-
-  .opponent-name {
-    max-width: 10ch;
-    font-size: 0.62rem;
-  }
-
-  .opponent-back,
-  .score-back {
-    width: 24px;
-    height: 24px;
-    max-height: 24px;
-    aspect-ratio: 1;
+    padding-right: 6px;
+    min-width: 4.2em;
+    flex-shrink: 0;
   }
 }
