@@ -76,7 +76,7 @@ describe('no-scroll phone shell', () => {
     // play first" instead of what that word scores.
     const game = read('./Game.tsx');
     const body = game.slice(game.indexOf('const statusToasts'), game.indexOf('return items;'));
-    const at = needle => body.indexOf(needle);
+    const at = (needle: string) => body.indexOf(needle);
     expect(at('toast-error')).toBeGreaterThan(-1);
     expect(at("kind: 'toast-score'")).toBeGreaterThan(at('text: error'));
     expect(at('firstPlayerBannerText')).toBeGreaterThan(at("kind: 'toast-score'"));
@@ -213,6 +213,48 @@ describe('branding', () => {
     expect(indexHtml).toMatch(/favicon\.svg/);
     expect(existsSync(resolve(__dirname, '../../public/favicon.svg'))).toBe(true);
     expect(existsSync(resolve(__dirname, '../../public/flag-mark.svg'))).toBe(true);
+    // No letters in the app mark — the wordmark is a separate asset.
+    expect(read('../../public/favicon.svg')).not.toMatch(/<text/);
+  });
+
+  it('draws the app mark to survive a 16px browser tab', () => {
+    const favicon = read('../../public/favicon.svg');
+
+    // A solid ground, so the mark is a shape on a tab bar rather than loose
+    // strokes floating on whatever colour the browser happens to use.
+    expect(favicon).toMatch(/<rect width="100" height="100" rx="\d+" fill="#[0-9A-Fa-f]{6}"\/>/);
+
+    // The pennant runs to the edge of the frame. The old mark stopped at 90
+    // with the flag body ending near 70, which left a third of a 16px icon
+    // empty and the rest too small to read.
+    const pennant = favicon.match(/<path fill="#[0-9A-Fa-f]{6}" d="M(.+?)"/)?.[1] ?? '';
+    const xs = [...pennant.matchAll(/(?:^|[ ,C])(\d+(?:\.\d+)?) \d/g)].map(m => Number(m[1]));
+    expect(Math.max(...xs)).toBeGreaterThanOrEqual(95);
+
+    // A pole thin enough to fall between pixels disappears at 16px; 14/100 is
+    // just over two pixels there.
+    const pole = favicon.match(/<rect x="\d+" y="\d+" width="(\d+)"/)?.[1];
+    expect(Number(pole)).toBeGreaterThanOrEqual(12);
+  });
+
+  it('ships every icon size index.html promises', () => {
+    for (const file of [
+      'favicon.svg',
+      'favicon.ico',
+      'favicon-16.png',
+      'favicon-32.png',
+      'apple-touch-icon.png',
+    ]) {
+      expect(indexHtml, `${file} is not linked`).toContain(file);
+      expect(existsSync(resolve(__dirname, `../../public/${file}`)), file).toBe(true);
+    }
+
+    // The .ico must really carry 16, 32 and 48 rather than one size padded out,
+    // which is what browsers fall back to when the SVG is not used.
+    const ico = readFileSync(resolve(__dirname, '../../public/favicon.ico'));
+    const count = ico.readUInt16LE(4);
+    const sizes = Array.from({ length: count }, (_, i) => ico[6 + 16 * i] || 256);
+    expect(sizes.sort((a, b) => a - b)).toEqual([16, 32, 48]);
   });
 
   it('marks each goal corner as a triple-word square in its owner\'s colour', () => {
