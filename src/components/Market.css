@@ -53,3 +53,33 @@
 .bag-toggle:disabled {
   opacity: 0.3;
 }
+
+@media (min-width: 900px) and (pointer: fine) {
+  .market-tile,
+  .market-tray .tray-slot-empty {
+    width: var(--tile, 42px);
+    height: var(--tile, 42px);
+  }
+
+  .market-tile .tile-letter {
+    font-size: 1.15rem;
+  }
+
+  .market-tile .tile-value {
+    font-size: 0.62rem;
+  }
+
+  .bag-toggle {
+    width: 42px;
+    height: 42px;
+    font-size: 0.78rem;
+  }
+
+  .bag-toggle small {
+    font-size: 0.52rem;
+  }
+
+  .bag-toggle:hover:not(:disabled) {
+    filter: brightness(1.1);
+  }
+}

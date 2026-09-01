@@ -283,6 +283,8 @@ Do NOT tie-break by who captured.
 
 The whole play UI (board, market, racks, action buttons) must fit the visual viewport on iPhone and iPad. The player must never scroll to reach Draw, Play, Shuffle or Pass. If space runs short, shrink the chrome — never the reachability of the buttons. Use the safe area (`env(safe-area-inset-*)` with `viewport-fit=cover`). State the constraint in CSS: the play screen is `100svh` tall (falling back to `100dvh`, then `100vh`) with `overflow: hidden`, and the board is sized from whatever height the chrome leaves over.
 
+Desktop browsers (wide window, `pointer: fine` — Safari on Mac) use a separate compact centered column: board and tiles are capped and do not grow with the window, the market sits under the board, the rack sits next to a stable action toolbar, and the opponent rack stays a facedown count. Gate that layout with `min-width` + `pointer: fine` only. Do not user-agent sniff. Do not change the iPhone/iPad shells.
+
 **Action buttons.** Every action button is enabled only when that action is legal or has a reason to press, and disabled otherwise. Pass included — see section 7.3.
 
 **Shuffle.** The player can shuffle their own rack. Shuffling is **not a turn**: it does not advance the flag, does not change the score, and does not change tile identity — only the order tiles sit in.

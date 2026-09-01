@@ -107,3 +107,9 @@
 .cell-mark.cell-flag {
   color: var(--color-live-post);
 }
+
+@media (min-width: 900px) and (pointer: fine) {
+  .board-cell:hover {
+    filter: brightness(1.22);
+  }
+}
