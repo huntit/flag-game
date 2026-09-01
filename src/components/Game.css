@@ -1,3 +1,6 @@
+@import './SidePanel.css';
+@import './FirstPlayerBanner.css';
+
 /* Play screen shell.
  *
  * Row heights are known, so the board can be sized from the leftover space with
@@ -124,28 +127,27 @@
     );
 
     /* Cap the play column and the board so neither grows with the window. */
-    --shell-max-w: 740px;
+    --shell-max-w: 960px;
+    --sidebar-w: minmax(44px, 220px);
     --board-max: 462px;
     --board-size: min(
       var(--board-max),
-      calc(var(--shell-w) - (2 * var(--shell-pad-x))),
+      calc(var(--shell-w) - (2 * var(--shell-pad-x)) - 232px),
       calc(var(--app-h) - var(--chrome-h))
     );
 
     max-width: var(--shell-max-w);
-    grid-template-columns: minmax(0, 1fr) minmax(200px, 240px);
+    grid-template-columns: minmax(0, 1fr) minmax(200px, 240px) var(--sidebar-w);
     grid-template-rows:
       var(--hud-h)
       var(--board-size)
       var(--market-h)
-      var(--dock-h)
-      minmax(80px, 120px);
+      var(--dock-h);
     grid-template-areas:
-      'hud opponent'
-      'stage stage'
-      'market market'
-      'rack actions'
-      'log log';
+      'hud opponent sidebar'
+      'stage stage sidebar'
+      'market market sidebar'
+      'rack actions sidebar';
     align-content: center;
     column-gap: 12px;
   }
@@ -170,13 +172,6 @@
     height: var(--dock-h);
     max-height: var(--dock-h);
     align-self: center;
-  }
-
-  .log-row {
-    display: block;
-    grid-area: log;
-    min-height: 0;
-    max-height: 120px;
   }
 
   /* Stable toolbar: four buttons in a compact group next to the rack,
@@ -283,10 +278,6 @@
 .action-pass:not(:disabled) {
   background-color: var(--color-sand);
   color: var(--color-ink);
-}
-
-.log-row {
-  display: none;
 }
 
 .icon-button {

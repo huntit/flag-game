@@ -16,7 +16,8 @@ import {
   BOARD_SIZE,
   MARKET_FACE_UP,
   MARKET_FACE_DOWN,
-  STARTING_RACK_TILES,
+  P1_STARTING_RACK_TILES,
+  P2_STARTING_RACK_TILES,
 } from './types';
 
 let tileIdCounter = 0;
@@ -168,8 +169,8 @@ export function initializeGame(tileData: TileData): GameState {
   const market = dealMarket(bag);
 
   const players: [Player, Player] = [
-    { id: 'P1', rack: drawFromBag(bag, STARTING_RACK_TILES), score: 0, flagsLost: 0 },
-    { id: 'P2', rack: drawFromBag(bag, STARTING_RACK_TILES), score: 0, flagsLost: 0 },
+    { id: 'P1', rack: drawFromBag(bag, P1_STARTING_RACK_TILES), score: 0, flagsLost: 0 },
+    { id: 'P2', rack: drawFromBag(bag, P2_STARTING_RACK_TILES), score: 0, flagsLost: 0 },
   ];
 
   const p1Corner = randomCorner();

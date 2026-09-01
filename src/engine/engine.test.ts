@@ -28,7 +28,8 @@ import {
   MARKET_FACE_DOWN,
   DRAW_COUNT,
   RACK_MAX,
-  STARTING_RACK_TILES,
+  P1_STARTING_RACK_TILES,
+  P2_STARTING_RACK_TILES,
 } from './types';
 
 const mockTileData: TileData = {
@@ -104,13 +105,13 @@ describe('flag setup', () => {
 });
 
 describe('setup', () => {
-  it('deals 4 face-up + 2 face-down market and 2 bag tiles per rack', () => {
+  it('deals 4 face-up + 2 face-down market and P1=2 / P2=3 bag tiles', () => {
     const state = initializeGame(mockTileData);
     expect(state.market).toHaveLength(MARKET_SLOTS);
     expect(state.market.filter(s => s.faceUp).length).toBe(MARKET_FACE_UP);
     expect(state.market.filter(s => !s.faceUp).length).toBe(MARKET_FACE_DOWN);
-    expect(state.players[0].rack).toHaveLength(STARTING_RACK_TILES);
-    expect(state.players[1].rack).toHaveLength(STARTING_RACK_TILES);
+    expect(state.players[0].rack).toHaveLength(P1_STARTING_RACK_TILES);
+    expect(state.players[1].rack).toHaveLength(P2_STARTING_RACK_TILES);
   });
 
   it('starts with no legal Pass while Draw is legal', () => {

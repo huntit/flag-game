@@ -30,7 +30,14 @@ export const MARKET_FACE_UP = 4;
 export const MARKET_FACE_DOWN = 2;
 export const MARKET_SLOTS = MARKET_FACE_UP + MARKET_FACE_DOWN;
 export const DRAW_COUNT = 2;
-export const STARTING_RACK_TILES = 2; // drawn from bag, not market
+/** Opening deal from bag — P1 acts first; P2 gets one extra tile (no points bonus). */
+export const P1_STARTING_RACK_TILES = 2;
+export const P2_STARTING_RACK_TILES = 3;
+
+export const SEAT_COLOR_NAMES = {
+  P1: 'Teal',
+  P2: 'Terracotta',
+} as const;
 export const MIN_WORD_LENGTH = 2;
 export const MAX_WORD_LENGTH = 11;
 

@@ -1,0 +1,62 @@
+/* RHS extras panel — desktop fine-pointer only; hidden on phone shell. */
+
+.side-panel {
+  display: none;
+}
+
+@media (min-width: 900px) and (pointer: fine) {
+  .side-panel {
+    display: flex;
+    flex-direction: column;
+    grid-area: sidebar;
+    min-height: 0;
+    min-width: 0;
+    gap: 8px;
+    align-self: stretch;
+  }
+
+  .side-panel.is-collapsed {
+    width: 44px;
+  }
+
+  .side-panel.is-expanded {
+    width: 100%;
+  }
+
+  .side-panel-toggle {
+    flex: 0 0 auto;
+    align-self: flex-end;
+    padding: 4px 10px;
+    border-radius: 8px;
+    font-size: 0.68rem;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    background-color: var(--color-bg-lift);
+    border: 1px solid var(--color-sand);
+    color: var(--color-text-dim);
+  }
+
+  .side-panel-toggle:hover {
+    filter: brightness(0.97);
+  }
+
+  .side-panel.is-collapsed .side-panel-toggle {
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+    align-self: center;
+    padding: 10px 6px;
+  }
+
+  .side-panel-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .side-panel.is-collapsed .side-panel-body {
+    display: none;
+  }
+}

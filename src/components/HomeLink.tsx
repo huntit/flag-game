@@ -1,4 +1,4 @@
-// Skye v2 2-band pennant wordmark (logo-header.png) as the home link.
+// Skye v3 wordmark home link — vector SVG, PNG fallback (never upscale a tiny bitmap).
 
 import './HomeLink.css';
 
@@ -6,6 +6,8 @@ interface HomeLinkProps {
   variant: 'menu' | 'hud' | 'online';
   onNavigate?: () => void;
 }
+
+const base = import.meta.env.BASE_URL;
 
 function HomeLink({ variant, onNavigate }: HomeLinkProps) {
   return (
@@ -20,11 +22,17 @@ function HomeLink({ variant, onNavigate }: HomeLinkProps) {
       }}
       aria-label="Flag home"
     >
-      <img
-        src={`${import.meta.env.BASE_URL}logo-header.png`}
-        alt="Flag"
-        className="home-link-img"
-      />
+      <picture>
+        <source srcSet={`${base}logo-header.svg`} type="image/svg+xml" />
+        <img
+          src={`${base}logo-header.png`}
+          srcSet={`${base}logo-header.png 1x`}
+          alt="Flag"
+          className="home-link-img"
+          width={320}
+          height={90}
+        />
+      </picture>
     </a>
   );
 }

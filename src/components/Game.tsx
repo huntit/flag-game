@@ -13,11 +13,20 @@ import Board, { type PendingPlacement } from './Board';
 import { Rack, OpponentRack } from './Rack';
 import Market from './Market';
 import GameInfo from './GameInfo';
-import MoveLog, { type MoveLogEntry } from './MoveLog';
+import { type MoveLogEntry } from './MoveLog';
+import SidePanel from './SidePanel';
+import FirstPlayerBanner from './FirstPlayerBanner';
 import GameOverOverlay from './GameOverOverlay';
 import PassThePhone from './PassThePhone';
 import BlankPicker from './BlankPicker';
+import {
+  pickHumanSeat,
+  soloFirstPlayerBanner,
+  hotseatFirstPlayerBanner,
+  gameHasStarted,
+} from '../gameSetup';
 import './Game.css';
+import './SidePanel.css';
 
 interface GameProps {
   tileData: TileData;
@@ -70,6 +79,7 @@ function describeMove(state: GameState): MoveLogEntry | null {
 }
 
 function Game({ tileData, dictionary, mode, aiOpponent, onBackToMenu }: GameProps) {
+  const [humanSeat, setHumanSeat] = useState<0 | 1>(() => pickHumanSeat(Math.random));
   const [gameState, setGameState] = useState<GameState>(() => initializeGame(tileData));
   const [moveLog, setMoveLog] = useState<MoveLogEntry[]>([]);
   const [selectedRackTileId, setSelectedRackTileId] = useState<string | null>(null);
@@ -88,13 +98,22 @@ function Game({ tileData, dictionary, mode, aiOpponent, onBackToMenu }: GameProp
 
   const activeIndex = gameState.currentPlayer;
   const active = gameState.players[activeIndex];
-  const viewerIndex = isVsAI ? 0 : activeIndex;
+  const viewerIndex = isVsAI ? humanSeat : activeIndex;
   const viewer = gameState.players[viewerIndex];
   const other = gameState.players[viewerIndex === 0 ? 1 : 0];
   const viewerColor = viewer.id;
 
-  const isAITurn = isVsAI && activeIndex === 1;
+  const isAITurn = isVsAI && activeIndex !== humanSeat;
   const interactive = !isAITurn && !gameState.gameOver && !awaitingHandover;
+
+  const firstPlayerBannerText = useMemo(() => {
+    if (gameHasStarted(gameState.moveHistory.length)) return null;
+    if (isVsAI && aiOpponent) {
+      return soloFirstPlayerBanner(humanSeat, AI_NAMES[aiOpponent]);
+    }
+    if (isHotseat) return hotseatFirstPlayerBanner();
+    return null;
+  }, [gameState.moveHistory.length, isVsAI, isHotseat, aiOpponent, humanSeat]);
 
   const resetSelection = useCallback(() => {
     setSelectedRackTileId(null);
@@ -119,7 +138,7 @@ function Game({ tileData, dictionary, mode, aiOpponent, onBackToMenu }: GameProp
   const aiFailures = useRef(0);
   useEffect(() => {
     if (!isVsAI || !aiOpponent || gameState.gameOver) return;
-    if (gameState.currentPlayer !== 1) return;
+    if (gameState.currentPlayer === humanSeat) return;
     if (aiFailures.current > 2) return;
 
     setIsAIThinking(true);
@@ -143,7 +162,7 @@ function Game({ tileData, dictionary, mode, aiOpponent, onBackToMenu }: GameProp
       window.clearTimeout(timer);
       setIsAIThinking(false);
     };
-  }, [gameState, isVsAI, aiOpponent, dictionary, resetSelection]);
+  }, [gameState, isVsAI, aiOpponent, dictionary, resetSelection, humanSeat]);
 
   const lastSeat = useRef(gameState.currentPlayer);
   useEffect(() => {
@@ -409,6 +428,8 @@ function Game({ tileData, dictionary, mode, aiOpponent, onBackToMenu }: GameProp
 
   return (
     <div className="play-shell">
+      {firstPlayerBannerText && <FirstPlayerBanner text={firstPlayerBannerText} />}
+
       <div className="hud">
         <GameInfo
           youLabel={youLabel}
@@ -462,9 +483,7 @@ function Game({ tileData, dictionary, mode, aiOpponent, onBackToMenu }: GameProp
         />
       </div>
 
-      <div className="log-row">
-        <MoveLog entries={moveLog} />
-      </div>
+      <SidePanel entries={moveLog} />
 
       <div className="actions">
         <button type="button" className="action-button action-draw" onClick={handleDraw} disabled={!canDrawNow}>
@@ -510,6 +529,7 @@ function Game({ tileData, dictionary, mode, aiOpponent, onBackToMenu }: GameProp
             aiFailures.current = 0;
             lastSeat.current = 0;
             setMoveLog([]);
+            setHumanSeat(pickHumanSeat(Math.random));
             commit(initializeGame(tileData));
           }}
           onBackToMenu={onBackToMenu}

@@ -1,19 +1,22 @@
-/* Skye v2 wordmark home link (2-band pennant + FLAG tiles). */
+/* Skye v2 wordmark home link (inline SVG — crisp at any CSS width). */
 
 .home-link {
   display: inline-flex;
   align-items: center;
   text-decoration: none;
   line-height: 0;
+  color: inherit;
 }
 
-.home-link-img {
+.home-link-wordmark {
   display: block;
   height: auto;
+  width: 100%;
 }
 
-.home-link.is-menu .home-link-img {
+.home-link.is-menu .home-link-wordmark {
   width: min(100%, 320px);
+  max-height: 72px;
 }
 
 .home-link.is-hud {
@@ -21,17 +24,17 @@
   height: 100%;
 }
 
-.home-link.is-hud .home-link-img {
+.home-link.is-hud .home-link-wordmark {
   height: 100%;
   width: auto;
-  max-width: 132px;
-  object-fit: contain;
+  max-width: 140px;
 }
 
 .home-link.is-online {
   justify-content: center;
 }
 
-.home-link.is-online .home-link-img {
+.home-link.is-online .home-link-wordmark {
   width: min(100%, 280px);
+  max-height: 64px;
 }
