@@ -173,7 +173,7 @@ describe.sequential('games terminate on the shipping data', () => {
   ];
 
   it.each(matchups)('%s vs %s reaches a game-end condition', (p1, p2) => {
-    const validEndings = ['self_capture', 'second_steal', 'no_spare', 'double_pass', 'stuck_out'];
+    const validEndings = ['self_capture', 'second_steal', 'no_spare', 'bag_empty', 'swap_out'];
 
     for (let seed = 2; seed <= 4; seed++) {
       setRandomSource(mulberry32(seed * 977));

@@ -1,7 +1,7 @@
 // Action executor - validates then applies game actions
 
 import type { GameState, GameAction, DrawAction, PlayAction, Tile, Letter, Position } from './types';
-import { DRAW_COUNT, RACK_MAX } from './types';
+import { DRAW_COUNT, RACK_MAX, MAX_CONSECUTIVE_DRAWS } from './types';
 import {
   returnToBag,
   shuffleBag,
@@ -12,7 +12,6 @@ import {
   emptySpareCorners,
 } from './game';
 import { validatePlay, type FlagContext } from './validator';
-import { hasLegalPlay } from './moveGenerator';
 import type { Dictionary } from './dictionary';
 
 export interface ActionResult {
@@ -22,17 +21,13 @@ export interface ActionResult {
 
 /** Draw is legal when at least 2 tiles are showing in the market. */
 export function canDraw(state: GameState): boolean {
+  if (state.gameOver) return false;
   return marketShowingCount(state.market) >= DRAW_COUNT;
 }
 
-/**
- * Pass is legal only when no legal Play AND Draw is illegal (market showing < 2).
- */
-export function canPass(state: GameState, dictionary?: Dictionary): boolean {
-  if (canDraw(state)) return false;
-  if (!dictionary) return true;
-  const player = state.players[state.currentPlayer];
-  return !hasLegalPlay(state, player.rack, dictionary, player.id);
+/** The next Draw would be the 6th consecutive (swap-out end). */
+export function wouldTriggerSwapOutOnDraw(state: GameState): boolean {
+  return state.consecutiveDraws === MAX_CONSECUTIVE_DRAWS - 1;
 }
 
 function buildFlagContext(state: GameState, playerId: 'P1' | 'P2'): FlagContext {
@@ -44,6 +39,16 @@ function buildFlagContext(state: GameState, playerId: 'P1' | 'P2'): FlagContext 
   };
 }
 
+function endIfBagEmpty(state: GameState): boolean {
+  if (state.bag.length === 0) {
+    state.gameOver = true;
+    state.endReason = 'bag_empty';
+    determineWinner(state);
+    return true;
+  }
+  return false;
+}
+
 export function executeAction(
   state: GameState,
   action: GameAction,
@@ -53,13 +58,18 @@ export function executeAction(
     return { success: false, error: 'Game is over' };
   }
 
+  if (state.bag.length === 0) {
+    state.gameOver = true;
+    state.endReason = 'bag_empty';
+    determineWinner(state);
+    return { success: false, error: 'The tile bag is empty' };
+  }
+
   switch (action.type) {
     case 'draw':
       return executeDraw(state, action);
     case 'play':
       return executePlay(state, action, dictionary);
-    case 'pass':
-      return executePass(state, dictionary);
     default:
       return { success: false, error: 'Invalid action type' };
   }
@@ -158,9 +168,20 @@ function executeDraw(state: GameState, action: DrawAction): ActionResult {
     refillMarketSlot(state.bag, slot);
   }
 
-  state.consecutivePasses = 0;
+  state.consecutiveDraws++;
   state.lastPlay = undefined;
   state.moveHistory.push({ player: player.id, action });
+
+  if (state.consecutiveDraws >= MAX_CONSECUTIVE_DRAWS) {
+    state.gameOver = true;
+    state.endReason = 'swap_out';
+    determineWinner(state);
+    return { success: true };
+  }
+
+  if (endIfBagEmpty(state)) {
+    return { success: true };
+  }
 
   advanceTurn(state);
 
@@ -211,7 +232,7 @@ function executePlay(state: GameState, action: PlayAction, dictionary: Dictionar
 
   player.score += result.totalScore ?? 0;
 
-  state.consecutivePasses = 0;
+  state.consecutiveDraws = 0;
   state.lastPlay = {
     player: player.id,
     words: result.words ?? [],
@@ -256,32 +277,6 @@ function executePlay(state: GameState, action: PlayAction, dictionary: Dictionar
 
   if (result.endsGame) {
     state.gameOver = true;
-    determineWinner(state);
-    return { success: true };
-  }
-
-  advanceTurn(state);
-
-  return { success: true };
-}
-
-function executePass(state: GameState, dictionary: Dictionary): ActionResult {
-  if (canDraw(state)) {
-    return { success: false, error: 'Pass is only for when Draw and Play are both impossible' };
-  }
-  if (!canPass(state, dictionary)) {
-    return { success: false, error: 'You still have a legal play' };
-  }
-
-  const player = state.players[state.currentPlayer];
-
-  state.consecutivePasses++;
-  state.lastPlay = undefined;
-  state.moveHistory.push({ player: player.id, action: { type: 'pass' } });
-
-  if (state.consecutivePasses >= 2) {
-    state.gameOver = true;
-    state.endReason = 'double_pass';
     determineWinner(state);
     return { success: true };
   }

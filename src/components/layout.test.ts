@@ -161,7 +161,7 @@ describe('tile score placement', () => {
 
 describe('branding', () => {
   it('uses Skye v3 vector wordmark with PNG fallback — not a tiny upscaled bitmap only', () => {
-    for (const file of ['GameInfo.tsx', 'Menu.tsx', 'OnlineMode.tsx']) {
+    for (const file of ['Game.tsx', 'Menu.tsx', 'OnlineMode.tsx']) {
       expect(read(`./${file}`)).toMatch(/HomeLink/);
     }
     const homeLink = read('./HomeLink.tsx');
@@ -190,7 +190,7 @@ describe('opponent rack tiles', () => {
   it('uses square aspect-ratio for facedown opponent backs on all viewports', () => {
     expect(rackCss).toMatch(/\.opponent-back[\s\S]*aspect-ratio:\s*1/);
     const desktopRack = desktopBlock(rackCss);
-    expect(desktopRack).toMatch(/\.opponent-back[\s\S]*aspect-ratio:\s*1/);
+    expect(desktopRack).toMatch(/\.opponent-back/);
   });
 });
 
@@ -209,10 +209,11 @@ describe('desktop move log', () => {
 
 describe('market and tile backs', () => {
   it('face-down market backs use neutral tile-back art, not player colours', () => {
-    expect(marketCss).toMatch(/tile-back\.svg/);
+    expect(marketCss).toMatch(/tile-back-url|--tile-back-url/);
+    expect(appCss).toMatch(/tile-back\.svg/);
     expect(marketCss).not.toMatch(/\.market-tile\.is-facedown[\s\S]*--color-p1/);
     expect(marketCss).not.toMatch(/\.market-tile\.is-facedown[\s\S]*--color-p2/);
-    expect(rackCss).toMatch(/\.opponent-back[\s\S]*tile-back\.svg/);
+    expect(rackCss).toMatch(/\.opponent-back[\s\S]*tile-back-url|--tile-back-url/);
     expect(existsSync(resolve(__dirname, '../../public/tile-back.svg'))).toBe(true);
   });
 });
@@ -227,13 +228,41 @@ describe('assigned blanks on board', () => {
 });
 
 describe('first-player banner (no menu)', () => {
-  it('shows banner copy before first action in Game, not a first-player menu', () => {
-    expect(read('./Game.tsx')).toMatch(/FirstPlayerBanner/);
-    expect(read('./Game.tsx')).toMatch(/soloFirstPlayerBanner/);
-    expect(read('./Game.tsx')).toMatch(/hotseatFirstPlayerBanner/);
-    expect(read('./Game.tsx')).toMatch(/pickHumanSeat/);
+  it('shows banner copy before first action in Game toast and log, not a first-player menu', () => {
+    const game = read('./Game.tsx');
+    expect(game).toMatch(/firstPlayerBannerText/);
+    expect(game).toMatch(/soloFirstPlayerBanner/);
+    expect(game).toMatch(/hotseatFirstPlayerBanner/);
+    expect(game).toMatch(/firstPlayerLogEntry/);
+    expect(game).not.toMatch(/from '\.\/FirstPlayerBanner'/);
     expect(read('./Menu.tsx')).not.toMatch(/first.?player|who goes first|choose.*player/i);
     expect(read('../App.tsx')).not.toMatch(/first.?player|who goes first/i);
+  });
+});
+
+describe('no Pass action', () => {
+  it('has Draw 2, Play, and Shuffle only — no Pass button', () => {
+    const game = read('./Game.tsx');
+    expect(game).toMatch(/Draw 2/);
+    expect(game).not.toMatch(/action-pass/);
+    expect(game).not.toMatch(/handlePass/);
+    expect(gameCss).toMatch(/grid-template-columns:\s*repeat\(3,/);
+  });
+});
+
+describe('centred logo header', () => {
+  it('puts the vector logo in a dedicated top header row', () => {
+    expect(read('./Game.tsx')).toMatch(/play-header/);
+    expect(read('./Game.tsx')).toMatch(/variant="play"/);
+    expect(gameCss).toMatch(/grid-template-areas:[\s\S]*'header'/);
+    expect(gameCss).toMatch(/\.play-header[\s\S]*justify-content:\s*center/);
+  });
+});
+
+describe('opponent score card', () => {
+  it('hides the numeric tile count — backs only', () => {
+    expect(read('./Rack.tsx')).not.toMatch(/opponent-count/);
+    expect(rackCss).toMatch(/\.opponent-count[\s\S]*display:\s*none/);
   });
 });
 

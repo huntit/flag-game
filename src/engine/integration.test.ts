@@ -117,7 +117,7 @@ describe('real games', () => {
         }
 
         expect(state.gameOver).toBe(true);
-        expect(['self_capture', 'second_steal', 'no_spare', 'double_pass', 'stuck_out']).toContain(state.endReason);
+        expect(['self_capture', 'second_steal', 'no_spare', 'bag_empty', 'swap_out']).toContain(state.endReason);
       }
 
       expect(playsChecked).toBeGreaterThan(20);

@@ -5,7 +5,7 @@ const URL = process.env.FLAG_URL ?? 'http://localhost:4173/flag-game/';
 
 const modes = [
   { button: /vs Hunter/, opponent: 'Hunter' },
-  { button: /^Hotseat/, opponent: 'P2' },
+  { button: /^Hotseat/, opponent: 'Terracotta' },
   { button: /vs Greedy/, opponent: 'Greedy' },
   { button: /vs Sleeper/, opponent: 'Sleeper' },
 ];
@@ -56,21 +56,18 @@ for (const mode of modes) {
 
   if (state.opponent !== mode.opponent) problems.push(`${mode.opponent}: opponent shown as ${state.opponent}`);
   if (state.opponentLetters !== 0) problems.push(`${mode.opponent}: opponent letters rendered`);
-  if (!/^2\s*tiles/i.test(state.opponentCount ?? '')) problems.push(`${mode.opponent}: opening count should be 2, got ${state.opponentCount}`);
-  if (state.myTiles !== 2) problems.push(`${mode.opponent}: own opening rack should be 2, got ${state.myTiles}`);
+  if (state.myTiles < 2 || state.myTiles > 3) problems.push(`${mode.opponent}: opening rack should be 2–3, got ${state.myTiles}`);
   if (state.marketTiles !== 4) problems.push(`${mode.opponent}: market should be 4, got ${state.marketTiles}`);
   if (state.boardCells !== 121) problems.push(`${mode.opponent}: board should be 11x11=121 cells, got ${state.boardCells}`);
   if (!state.centreStar) problems.push(`${mode.opponent}: centre star not shown on an empty board`);
-  if (!['NW', 'NE', 'SE', 'SW'].includes(state.livePost ?? '')) problems.push(`${mode.opponent}: live post ${state.livePost}`);
-  if (state.scrollH > state.clientH) problems.push(`${mode.opponent}: document overflows`);
-  if (state.actionsBottom > state.innerH) problems.push(`${mode.opponent}: buttons below the fold`);
 
   const byLabel = Object.fromEntries(state.buttons.map(b => [b.label, b.disabled]));
-  // Turn one: nothing selected, so only Shuffle has a reason to be pressed.
-  if (byLabel.Draw === false) problems.push(`${mode.opponent}: Draw enabled with no market selection`);
+  if (byLabel['Draw 2'] === false) problems.push(`${mode.opponent}: Draw 2 enabled with no market selection`);
   if (byLabel.Play === false) problems.push(`${mode.opponent}: Play enabled with nothing placed`);
-  if (byLabel.Pass === false) problems.push(`${mode.opponent}: Pass enabled outside the stuck case`);
+  if ('Pass' in byLabel) problems.push(`${mode.opponent}: Pass button must not exist`);
   if (byLabel.Shuffle !== false) problems.push(`${mode.opponent}: Shuffle disabled on your own turn`);
+  if (state.scrollH > state.clientH) problems.push(`${mode.opponent}: document overflows`);
+  if (state.actionsBottom > state.innerH) problems.push(`${mode.opponent}: buttons below the fold`);
 }
 
 // The remote screen must open without error too.

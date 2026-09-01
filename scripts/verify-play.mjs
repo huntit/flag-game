@@ -36,7 +36,7 @@ const readState = () =>
     toast: document.querySelector('.toast')?.textContent,
     playEnabled: !document.querySelector('.actions .action-play')?.disabled,
     drawEnabled: !document.querySelector('.actions .action-draw')?.disabled,
-    passEnabled: !document.querySelector('.actions .action-pass')?.disabled,
+    passEnabled: document.querySelector('.actions .action-pass') != null,
     boardTiles: [...document.querySelectorAll('.board-cell')]
       .map(c => {
         const letter = c.querySelector('.board-tile .tile-letter')?.textContent;
@@ -60,7 +60,7 @@ const problems = [];
 const start = await readState();
 console.log('start:', JSON.stringify(start));
 
-if (start.passEnabled) problems.push('Pass is enabled at the start of a normal game');
+if (start.passEnabled) problems.push('Pass button must not exist');
 if (start.drawEnabled) problems.push('Draw is enabled before any market tile is picked');
 if (start.playEnabled) problems.push('Play is enabled with nothing placed');
 

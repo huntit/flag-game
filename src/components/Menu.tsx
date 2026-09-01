@@ -40,7 +40,7 @@ function Menu({ onSelectMode }: MenuProps) {
         </div>
 
         <p className="menu-note">
-          Draw exactly 2 from the market <strong>or</strong> play tiles — never both. Pass only when stuck.
+          Draw exactly 2 from the market <strong>or</strong> play tiles — never both.
         </p>
       </div>
     </div>

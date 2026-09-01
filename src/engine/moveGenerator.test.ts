@@ -55,7 +55,7 @@ function mockState(
     market: [],
     bag: [],
     flags,
-    consecutivePasses: 0,
+    consecutiveDraws: 0,
     gameOver: false,
     turnCount: 0,
     moveHistory: [],

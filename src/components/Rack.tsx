@@ -81,7 +81,7 @@ export function OpponentRack({ name, playerColor, count, score, isTheirTurn }: O
     >
       <span className="opponent-name">{name}</span>
       <span className="opponent-score">{score}</span>
-      <div className="opponent-tiles" aria-hidden="true">
+      <div className="opponent-tiles" aria-label={`${name} holds ${count} tiles`}>
         {Array.from({ length: count }, (_, i) => (
           <span key={`back-${i}`} className="opponent-back" />
         ))}
@@ -89,9 +89,6 @@ export function OpponentRack({ name, playerColor, count, score, isTheirTurn }: O
           <span key={`gap-${i}`} className="opponent-gap" />
         ))}
       </div>
-      <span className="opponent-count" aria-label={`${name} holds ${count} tiles`}>
-        {count} <small>tiles</small>
-      </span>
     </div>
   );
 }

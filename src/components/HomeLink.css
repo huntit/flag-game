@@ -1,22 +1,36 @@
-/* Skye v2 wordmark home link (inline SVG — crisp at any CSS width). */
+/* Skye wordmark home link — vector SVG with PNG fallback. */
 
 .home-link {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   text-decoration: none;
   line-height: 0;
   color: inherit;
 }
 
-.home-link-wordmark {
+.home-link-img {
   display: block;
   height: auto;
   width: 100%;
 }
 
-.home-link.is-menu .home-link-wordmark {
+.home-link.is-menu .home-link-img {
   width: min(100%, 320px);
   max-height: 72px;
+}
+
+.home-link.is-play {
+  height: 100%;
+  max-height: 100%;
+}
+
+.home-link.is-play .home-link-img {
+  height: 100%;
+  width: auto;
+  max-width: min(280px, 72vw);
+  max-height: 100%;
+  object-fit: contain;
 }
 
 .home-link.is-hud {
@@ -24,7 +38,7 @@
   height: 100%;
 }
 
-.home-link.is-hud .home-link-wordmark {
+.home-link.is-hud .home-link-img {
   height: 100%;
   width: auto;
   max-width: 140px;
@@ -34,7 +48,7 @@
   justify-content: center;
 }
 
-.home-link.is-online .home-link-wordmark {
+.home-link.is-online .home-link-img {
   width: min(100%, 280px);
   max-height: 64px;
 }

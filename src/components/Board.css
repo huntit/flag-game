@@ -103,9 +103,12 @@
 }
 
 .corner-token {
+  display: block;
   width: calc(var(--cell) * 0.88);
   height: calc(var(--cell) * 0.88);
-  object-fit: contain;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
   pointer-events: none;
 }
 

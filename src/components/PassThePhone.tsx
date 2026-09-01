@@ -1,6 +1,7 @@
 // Hotseat handover. Nothing from the incoming player's game is on screen behind
 // this, so the outgoing player cannot glimpse the next rack.
 
+import { SEAT_COLOR_NAMES } from '../engine/types';
 import './PassThePhone.css';
 
 interface PassThePhoneProps {
@@ -13,7 +14,7 @@ function PassThePhone({ seat, onContinue }: PassThePhoneProps) {
     <div className="screen handover">
       <div className="screen-panel">
         <p className="handover-kicker">Pass the phone</p>
-        <h1>{seat}&apos;s turn</h1>
+        <h1>{SEAT_COLOR_NAMES[seat]}&apos;s turn</h1>
         <p>Hand the device over, then tap Ready.</p>
         <button type="button" className="handover-button" onClick={onContinue}>
           Ready

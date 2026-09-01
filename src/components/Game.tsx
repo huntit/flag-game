@@ -2,10 +2,10 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { TileData, GameState, GameAction, Tile, Position, Letter } from '../engine/types';
-import { DRAW_COUNT, RACK_MAX } from '../engine/types';
+import { DRAW_COUNT, RACK_MAX, SEAT_COLOR_NAMES } from '../engine/types';
 import type { Dictionary } from '../engine/dictionary';
 import { getBoardTile, initializeGame, shuffleRack, emptySpareCorners } from '../engine/game';
-import { executeAction, canPass, validateDraw } from '../engine/actions';
+import { executeAction, validateDraw, wouldTriggerSwapOutOnDraw } from '../engine/actions';
 import { validatePlay, type FlagContext } from '../engine/validator';
 import { selectAIAction } from '../engine/ai';
 import type { GameMode, AIOpponent } from '../App';
@@ -13,9 +13,8 @@ import Board, { type PendingPlacement } from './Board';
 import { Rack, OpponentRack } from './Rack';
 import Market from './Market';
 import GameInfo from './GameInfo';
-import { type MoveLogEntry } from './MoveLog';
+import HomeLink from './HomeLink';
 import SidePanel from './SidePanel';
-import FirstPlayerBanner from './FirstPlayerBanner';
 import GameOverOverlay from './GameOverOverlay';
 import PassThePhone from './PassThePhone';
 import BlankPicker from './BlankPicker';
@@ -25,6 +24,12 @@ import {
   hotseatFirstPlayerBanner,
   gameHasStarted,
 } from '../gameSetup';
+import {
+  describeMove,
+  firstPlayerLogEntry,
+  type MoveLogEntry,
+  type SeatNameContext,
+} from '../moveLog';
 import './Game.css';
 import './SidePanel.css';
 
@@ -48,6 +53,9 @@ const AI_NAMES: Record<AIOpponent, string> = {
   sleeper: 'Sleeper',
 };
 
+const SWAP_DRAW_WARNING =
+  'Third swap each — Draw 2 now ends the game. Play to break the streak.';
+
 function buildFlagContext(state: GameState, playerId: 'P1' | 'P2'): FlagContext {
   return {
     flags: state.flags,
@@ -55,27 +63,6 @@ function buildFlagContext(state: GameState, playerId: 'P1' | 'P2'): FlagContext 
     flagsLost: { P1: state.players[0].flagsLost, P2: state.players[1].flagsLost },
     emptySpareCount: emptySpareCorners(state).length,
   };
-}
-
-function describeMove(state: GameState): MoveLogEntry | null {
-  const last = state.moveHistory[state.moveHistory.length - 1];
-  if (!last) return null;
-
-  if (last.action.type === 'pass') {
-    return { player: last.player, text: 'Pass' };
-  }
-  if (last.action.type === 'draw') {
-    const discards = last.action.discardTiles?.length ?? 0;
-    return {
-      player: last.player,
-      text: discards > 0 ? `Draw 2, discard ${discards}` : 'Draw 2',
-    };
-  }
-  if (last.action.type === 'play' && state.lastPlay) {
-    const words = state.lastPlay.words.map(w => w.word).join(' + ');
-    return { player: last.player, text: `${words} +${state.lastPlay.totalScore}` };
-  }
-  return null;
 }
 
 function Game({ tileData, dictionary, mode, aiOpponent, onBackToMenu }: GameProps) {
@@ -106,6 +93,16 @@ function Game({ tileData, dictionary, mode, aiOpponent, onBackToMenu }: GameProp
   const isAITurn = isVsAI && activeIndex !== humanSeat;
   const interactive = !isAITurn && !gameState.gameOver && !awaitingHandover;
 
+  const seatCtx: SeatNameContext = useMemo(
+    () => ({
+      isVsAI,
+      isHotseat,
+      humanSeat,
+      aiName: opponentName,
+    }),
+    [isVsAI, isHotseat, humanSeat, opponentName]
+  );
+
   const firstPlayerBannerText = useMemo(() => {
     if (gameHasStarted(gameState.moveHistory.length)) return null;
     if (isVsAI && aiOpponent) {
@@ -114,6 +111,8 @@ function Game({ tileData, dictionary, mode, aiOpponent, onBackToMenu }: GameProp
     if (isHotseat) return hotseatFirstPlayerBanner();
     return null;
   }, [gameState.moveHistory.length, isVsAI, isHotseat, aiOpponent, humanSeat]);
+
+  const firstLogAdded = useRef(false);
 
   const resetSelection = useCallback(() => {
     setSelectedRackTileId(null);
@@ -125,15 +124,29 @@ function Game({ tileData, dictionary, mode, aiOpponent, onBackToMenu }: GameProp
     setHint(null);
   }, []);
 
+  const appendLog = useCallback(
+    (next: GameState) => {
+      const entry = describeMove(next, seatCtx);
+      if (entry) setMoveLog(current => [...current, entry]);
+    },
+    [seatCtx]
+  );
+
   const commit = useCallback(
     (next: GameState) => {
-      const entry = describeMove(next);
-      if (entry) setMoveLog(current => [...current, entry]);
+      appendLog(next);
       setGameState({ ...next });
       resetSelection();
     },
-    [resetSelection]
+    [appendLog, resetSelection]
   );
+
+  useEffect(() => {
+    if (firstLogAdded.current || !firstPlayerBannerText) return;
+    if (gameHasStarted(gameState.moveHistory.length)) return;
+    firstLogAdded.current = true;
+    setMoveLog([firstPlayerLogEntry(firstPlayerBannerText)]);
+  }, [firstPlayerBannerText, gameState.moveHistory.length]);
 
   const aiFailures = useRef(0);
   useEffect(() => {
@@ -150,8 +163,7 @@ function Game({ tileData, dictionary, mode, aiOpponent, onBackToMenu }: GameProp
         setError(`${AI_NAMES[aiOpponent]} could not move: ${result.error}`);
       } else {
         aiFailures.current = 0;
-        const entry = describeMove(gameState);
-        if (entry) setMoveLog(current => [...current, entry]);
+        appendLog(gameState);
       }
       setIsAIThinking(false);
       setGameState({ ...gameState });
@@ -162,7 +174,7 @@ function Game({ tileData, dictionary, mode, aiOpponent, onBackToMenu }: GameProp
       window.clearTimeout(timer);
       setIsAIThinking(false);
     };
-  }, [gameState, isVsAI, aiOpponent, dictionary, resetSelection, humanSeat]);
+  }, [gameState, isVsAI, aiOpponent, dictionary, resetSelection, humanSeat, appendLog]);
 
   const lastSeat = useRef(gameState.currentPlayer);
   useEffect(() => {
@@ -194,6 +206,7 @@ function Game({ tileData, dictionary, mode, aiOpponent, onBackToMenu }: GameProp
     [interactive, pending.length, gameState, drawAction]
   );
   const canDrawNow = Boolean(drawCheck?.valid);
+  const swapDrawWarning = interactive && wouldTriggerSwapOutOnDraw(gameState);
 
   const playEvaluation = useMemo(() => {
     if (!interactive || pending.length === 0) return null;
@@ -206,7 +219,6 @@ function Game({ tileData, dictionary, mode, aiOpponent, onBackToMenu }: GameProp
   }, [interactive, pending, active.rack, active.id, gameState, dictionary]);
 
   const canPlayNow = Boolean(playEvaluation?.valid);
-  const canPassNow = interactive && canPass(gameState, dictionary);
   const canShuffleNow = interactive && pending.length === 0 && viewer.rack.length > 1;
   const canClearNow =
     interactive &&
@@ -327,11 +339,6 @@ function Game({ tileData, dictionary, mode, aiOpponent, onBackToMenu }: GameProp
     });
   };
 
-  const handlePass = () => {
-    if (!canPassNow) return;
-    run({ type: 'pass' });
-  };
-
   const handleShuffle = () => {
     if (!canShuffleNow) return;
     gameState.players[viewerIndex].rack = shuffleRack(viewer.rack);
@@ -365,42 +372,61 @@ function Game({ tileData, dictionary, mode, aiOpponent, onBackToMenu }: GameProp
     [gameState.lastPlay]
   );
 
-  const youLabel = isHotseat ? viewer.id : 'You';
-  const otherLabel = opponentName ?? other.id;
+  const youLabel = isHotseat ? SEAT_COLOR_NAMES[viewer.id] : 'You';
+  const otherLabel = isVsAI
+    ? (opponentName ?? 'Opponent')
+    : SEAT_COLOR_NAMES[other.id];
   const otherColor = other.id;
 
-  const statusToast = useMemo(() => {
-    if (error) return { kind: 'toast-error', text: error };
-    if (isAIThinking) return { kind: 'toast-info', text: `${otherLabel} is thinking…` };
-    if (pending.length > 0 && playEvaluation && !playEvaluation.valid) {
-      return { kind: 'toast-error', text: playEvaluation.reason ?? 'Not a legal play' };
+  const drawButtonLabel = swapDrawWarning ? 'Draw 2 — ends game' : 'Draw 2';
+
+  const statusToasts = useMemo(() => {
+    const items: { kind: string; text: string }[] = [];
+    if (error) items.push({ kind: 'toast-error', text: error });
+    if (firstPlayerBannerText) items.push({ kind: 'toast-info', text: firstPlayerBannerText });
+    if (swapDrawWarning && interactive) {
+      items.push({ kind: 'toast-hint', text: SWAP_DRAW_WARNING });
     }
-    if (playEvaluation?.valid) {
+    if (isAIThinking) items.push({ kind: 'toast-info', text: `${otherLabel} is thinking…` });
+    if (pending.length > 0 && playEvaluation && !playEvaluation.valid) {
+      items.push({ kind: 'toast-error', text: playEvaluation.reason ?? 'Not a legal play' });
+    } else if (playEvaluation?.valid) {
       const words = playEvaluation.words?.map(w => w.word).join(' + ') ?? '';
-      return { kind: 'toast-hint', text: `${words} for ${playEvaluation.totalScore}` };
+      items.push({ kind: 'toast-hint', text: `${words} for ${playEvaluation.totalScore}` });
     }
     if (selectedMarketIds.length > 0 && selectedMarketIds.length < DRAW_COUNT) {
-      return { kind: 'toast-hint', text: `Select ${DRAW_COUNT - selectedMarketIds.length} more market tile${DRAW_COUNT - selectedMarketIds.length === 1 ? '' : 's'}` };
+      items.push({
+        kind: 'toast-hint',
+        text: `Select ${DRAW_COUNT - selectedMarketIds.length} more market tile${DRAW_COUNT - selectedMarketIds.length === 1 ? '' : 's'}`,
+      });
     }
     if (requiredDiscards > 0) {
       const left = requiredDiscards - discardIds.length;
-      return {
+      items.push({
         kind: 'toast-hint',
         text:
           left > 0
             ? `Tap ${left} rack tile${left === 1 ? '' : 's'} to discard`
-            : 'Ready — tap Draw',
-      };
+            : 'Ready — tap Draw 2',
+      });
     }
-    if (hint) return { kind: 'toast-hint', text: hint };
-    if (gameState.lastPlay) {
+    if (hint) items.push({ kind: 'toast-hint', text: hint });
+    if (!firstPlayerBannerText && gameState.lastPlay) {
       const words = gameState.lastPlay.words.map(w => w.word).join(' + ');
-      const who = gameState.lastPlay.player === viewer.id ? youLabel : otherLabel;
-      return { kind: 'toast-info', text: `${who} played ${words} +${gameState.lastPlay.totalScore}` };
+      const who =
+        gameState.lastPlay.player === viewer.id
+          ? youLabel
+          : isVsAI
+            ? otherLabel
+            : SEAT_COLOR_NAMES[gameState.lastPlay.player];
+      items.push({ kind: 'toast-info', text: `${who} played ${words} +${gameState.lastPlay.totalScore}` });
     }
-    return null;
+    return items;
   }, [
     error,
+    firstPlayerBannerText,
+    swapDrawWarning,
+    interactive,
     isAIThinking,
     otherLabel,
     pending.length,
@@ -411,6 +437,7 @@ function Game({ tileData, dictionary, mode, aiOpponent, onBackToMenu }: GameProp
     gameState.lastPlay,
     viewer.id,
     youLabel,
+    isVsAI,
     hint,
   ]);
 
@@ -428,7 +455,9 @@ function Game({ tileData, dictionary, mode, aiOpponent, onBackToMenu }: GameProp
 
   return (
     <div className="play-shell">
-      {firstPlayerBannerText && <FirstPlayerBanner text={firstPlayerBannerText} />}
+      <header className="play-header">
+        <HomeLink variant="play" onNavigate={onBackToMenu} />
+      </header>
 
       <div className="hud">
         <GameInfo
@@ -436,7 +465,6 @@ function Game({ tileData, dictionary, mode, aiOpponent, onBackToMenu }: GameProp
           yourScore={viewer.score}
           isYourTurn={activeIndex === viewerIndex}
           playerColor={viewerColor}
-          onHome={onBackToMenu}
         />
       </div>
 
@@ -486,8 +514,14 @@ function Game({ tileData, dictionary, mode, aiOpponent, onBackToMenu }: GameProp
       <SidePanel entries={moveLog} />
 
       <div className="actions">
-        <button type="button" className="action-button action-draw" onClick={handleDraw} disabled={!canDrawNow}>
-          Draw
+        <button
+          type="button"
+          className={`action-button action-draw ${swapDrawWarning ? 'is-swap-warning' : ''}`}
+          onClick={handleDraw}
+          disabled={!canDrawNow}
+          aria-label={swapDrawWarning ? `${drawButtonLabel}. ${SWAP_DRAW_WARNING}` : drawButtonLabel}
+        >
+          {drawButtonLabel}
         </button>
         <button type="button" className="action-button action-play" onClick={handlePlay} disabled={!canPlayNow}>
           Play
@@ -500,20 +534,15 @@ function Game({ tileData, dictionary, mode, aiOpponent, onBackToMenu }: GameProp
         >
           {canClearNow ? 'Clear' : 'Shuffle'}
         </button>
-        <button
-          type="button"
-          className="action-button action-pass"
-          data-pass-stuck-only="true"
-          onClick={handlePass}
-          disabled={!canPassNow}
-        >
-          Pass
-        </button>
       </div>
 
-      {statusToast && (
+      {statusToasts.length > 0 && (
         <div className="toast-layer">
-          <div className={`toast ${statusToast.kind}`}>{statusToast.text}</div>
+          {statusToasts.map((toast, i) => (
+            <div key={i} className={`toast ${toast.kind}`}>
+              {toast.text}
+            </div>
+          ))}
         </div>
       )}
 
@@ -528,6 +557,7 @@ function Game({ tileData, dictionary, mode, aiOpponent, onBackToMenu }: GameProp
           onNewGame={() => {
             aiFailures.current = 0;
             lastSeat.current = 0;
+            firstLogAdded.current = false;
             setMoveLog([]);
             setHumanSeat(pickHumanSeat(Math.random));
             commit(initializeGame(tileData));

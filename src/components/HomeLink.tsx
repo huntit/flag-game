@@ -3,7 +3,7 @@
 import './HomeLink.css';
 
 interface HomeLinkProps {
-  variant: 'menu' | 'hud' | 'online';
+  variant: 'menu' | 'hud' | 'online' | 'play';
   onNavigate?: () => void;
 }
 

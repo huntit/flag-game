@@ -16,8 +16,8 @@ const END_REASONS: Record<string, string> = {
   self_capture: 'Own flag captured (triple-word)',
   second_steal: 'Second flag stolen',
   no_spare: 'Flag stolen — no spare corner',
-  double_pass: 'Both players passed',
-  stuck_out: 'Both players stuck',
+  bag_empty: 'Tile bag empty',
+  swap_out: 'Six consecutive draws',
 };
 
 function GameOverOverlay({

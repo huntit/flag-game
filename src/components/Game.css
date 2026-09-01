@@ -1,5 +1,4 @@
 @import './SidePanel.css';
-@import './FirstPlayerBanner.css';
 
 /* Play screen shell.
  *
@@ -10,28 +9,22 @@
  */
 
 .play-shell {
-  /* Chrome rows shrink on short screens; the buttons never do. On a tall phone
-     the board is limited by width, so the spare height goes into bigger tiles
-     and bigger tap targets rather than dead space. */
-  --hud-h: clamp(26px, calc(var(--app-h) * 0.048), 42px);
-  --opp-h: clamp(26px, calc(var(--app-h) * 0.044), 38px);
+  --header-h: clamp(24px, calc(var(--app-h) * 0.042), 38px);
+  --hud-h: clamp(24px, calc(var(--app-h) * 0.042), 36px);
+  --opp-h: clamp(24px, calc(var(--app-h) * 0.04), 34px);
   --market-h: clamp(46px, calc(var(--app-h) * 0.09), 76px);
   --rack-h: clamp(48px, calc(var(--app-h) * 0.098), 82px);
   --actions-h: clamp(40px, calc(var(--app-h) * 0.072), 60px);
   --shell-gap: clamp(3px, calc(var(--app-h) * 0.008), 8px);
   --shell-pad-x: 6px;
-  --shell-pad-y: 5px;
+  --shell-pad-y: 4px;
 
-  /* Total height taken by everything that is not the board. */
   --chrome-h: calc(
-    var(--hud-h) + var(--opp-h) + var(--market-h) + var(--rack-h) + var(--actions-h) +
-      (5 * var(--shell-gap)) + (2 * var(--shell-pad-y)) + var(--safe-top) + var(--safe-bottom) + 2px
+    var(--header-h) + var(--hud-h) + var(--opp-h) + var(--market-h) + var(--rack-h) +
+      var(--actions-h) + (6 * var(--shell-gap)) + (2 * var(--shell-pad-y)) + var(--safe-top) +
+      var(--safe-bottom) + 2px
   );
 
-  /* The shell is centred and capped, so the board's width budget is the shell
-     width, not the viewport width — otherwise a wide-but-tall screen (iPad in
-     portrait) computes a board taller than the column it sits in and the cells
-     come out rectangular. */
   --shell-max-w: 560px;
   --shell-w: min(
     var(--shell-max-w),
@@ -50,6 +43,7 @@
 
   display: grid;
   grid-template-rows:
+    var(--header-h)
     var(--hud-h)
     var(--opp-h)
     minmax(0, 1fr)
@@ -57,6 +51,7 @@
     var(--rack-h)
     var(--actions-h);
   grid-template-areas:
+    'header'
     'hud'
     'opponent'
     'stage'
@@ -70,8 +65,6 @@
   margin: 0 auto;
 }
 
-/* Landscape (and iPad): put the board beside the controls so the board can use
-   the full height without the controls being pushed off-screen. */
 @media (orientation: landscape) and (min-width: 640px) {
   .play-shell {
     --shell-max-w: 1100px;
@@ -82,8 +75,15 @@
 
     max-width: var(--shell-max-w);
     grid-template-columns: var(--board-size) minmax(0, 1fr);
-    grid-template-rows: var(--hud-h) var(--opp-h) var(--market-h) minmax(0, 1fr) var(--actions-h);
+    grid-template-rows:
+      var(--header-h)
+      var(--hud-h)
+      var(--opp-h)
+      var(--market-h)
+      minmax(0, 1fr)
+      var(--actions-h);
     grid-template-areas:
+      'stage header'
       'stage hud'
       'stage opponent'
       'stage market'
@@ -95,38 +95,32 @@
   .play-shell .stage {
     grid-row: 1 / -1;
   }
+
+  .play-shell .play-header {
+    grid-column: 2;
+  }
 }
 
-/* Desktop (Safari on Mac, and any wide fine-pointer window).
- *
- * The landscape rule above is for iPad: a side-by-side board that fills the
- * short height. On a desktop monitor that same rule makes the board, rack and
- * buttons enormous and docks the board to the left. These overrides only fire
- * for min-width + pointer:fine — iPhone and iPad (coarse pointer) never match,
- * so the phone shell and the iPad landscape shell stay exactly as they are.
- */
 @media (min-width: 900px) and (pointer: fine) {
   .play-shell {
-    --hud-h: 36px;
-    --opp-h: 36px;
+    --header-h: 28px;
+    --hud-h: 32px;
+    --opp-h: 32px;
     --market-h: 52px;
     --rack-h: 52px;
     --actions-h: 40px;
     --dock-h: 52px;
-    --shell-gap: 10px;
-    --shell-pad-x: 16px;
-    --shell-pad-y: 12px;
+    --shell-gap: 8px;
+    --shell-pad-x: 14px;
+    --shell-pad-y: 6px;
     --tile: 42px;
 
-    /* Chrome no longer includes a separate opponent row: HUD and opponent
-       share the top line, rack and actions share the dock. */
     --chrome-h: calc(
-      var(--hud-h) + var(--market-h) + var(--dock-h) +
+      var(--header-h) + var(--hud-h) + var(--market-h) + var(--dock-h) +
         (3 * var(--shell-gap)) + (2 * var(--shell-pad-y)) + var(--safe-top) +
         var(--safe-bottom) + 2px
     );
 
-    /* Cap the play column and the board so neither grows with the window. */
     --shell-max-w: 960px;
     --sidebar-w: minmax(44px, 220px);
     --board-max: 462px;
@@ -139,11 +133,13 @@
     max-width: var(--shell-max-w);
     grid-template-columns: minmax(0, 1fr) minmax(200px, 240px) var(--sidebar-w);
     grid-template-rows:
+      var(--header-h)
       var(--hud-h)
       var(--board-size)
       var(--market-h)
       var(--dock-h);
     grid-template-areas:
+      'header header sidebar'
       'hud opponent sidebar'
       'stage stage sidebar'
       'market market sidebar'
@@ -174,11 +170,9 @@
     align-self: center;
   }
 
-  /* Stable toolbar: four buttons in a compact group next to the rack,
-     not a strip stretched across the monitor. */
   .actions {
     width: 100%;
-    max-width: 280px;
+    max-width: 240px;
     justify-self: end;
     align-self: center;
     height: var(--actions-h);
@@ -195,8 +189,31 @@
   }
 
   .toast-layer {
-    bottom: calc(var(--safe-bottom) + var(--dock-h) + var(--market-h) + (2 * var(--shell-gap)));
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: flex-end;
+    left: calc(var(--safe-left) + var(--shell-pad-x));
+    right: calc(var(--safe-right) + var(--shell-pad-x) + var(--sidebar-w, 220px) + 12px);
+    bottom: calc(var(--safe-bottom) + var(--shell-pad-y));
+    gap: 6px;
   }
+
+  .toast {
+    white-space: normal;
+    max-width: min(420px, 100%);
+    border-radius: 10px;
+  }
+}
+
+.play-header {
+  grid-area: header;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .hud {
@@ -235,7 +252,7 @@
 .actions {
   grid-area: actions;
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 5px;
   min-width: 0;
 }
@@ -243,7 +260,7 @@
 .action-button {
   height: 100%;
   border-radius: 9px;
-  font-size: clamp(0.72rem, calc(var(--app-h) * 0.021), 0.95rem);
+  font-size: clamp(0.68rem, calc(var(--app-h) * 0.02), 0.92rem);
   font-weight: 700;
   letter-spacing: 0.02em;
   background-color: var(--color-bg-lift);
@@ -252,13 +269,15 @@
   align-items: center;
   justify-content: center;
   transition: transform 0.08s ease, opacity 0.12s ease;
+  padding: 0 4px;
+  text-align: center;
+  line-height: 1.15;
 }
 
 .action-button:active:not(:disabled) {
   transform: scale(0.96);
 }
 
-/* A disabled button means "this action is not legal right now". */
 .action-button:disabled {
   opacity: 0.32;
   background-color: var(--color-bg-light);
@@ -270,14 +289,13 @@
   color: white;
 }
 
+.action-draw.is-swap-warning:not(:disabled) {
+  box-shadow: inset 0 0 0 2px var(--color-ink);
+}
+
 .action-play:not(:disabled) {
   background-color: var(--color-p2);
   color: white;
-}
-
-.action-pass:not(:disabled) {
-  background-color: var(--color-sand);
-  color: var(--color-ink);
 }
 
 .icon-button {
@@ -291,12 +309,14 @@
   flex: 0 0 auto;
 }
 
-/* Toasts float over the board so showing one never changes the layout. */
 .toast-layer {
   position: absolute;
   left: 0;
   right: 0;
-  bottom: calc(var(--safe-bottom) + var(--actions-h) + var(--rack-h) + var(--market-h) + (4 * var(--shell-gap)));
+  bottom: calc(
+    var(--safe-bottom) + var(--actions-h) + var(--rack-h) + var(--market-h) +
+      (4 * var(--shell-gap))
+  );
   display: flex;
   flex-direction: column;
   align-items: center;

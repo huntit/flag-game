@@ -235,8 +235,8 @@ function computeSummary(results: GameResult[], options: CLIOptions) {
     selfCaptureEndRate: results.filter(r => r.endReason === 'self_capture').length / games,
     secondStealEndRate: results.filter(r => r.endReason === 'second_steal').length / games,
     noSpareEndRate: results.filter(r => r.endReason === 'no_spare').length / games,
-    doublePassEndRate: results.filter(r => r.endReason === 'double_pass').length / games,
-    stuckOutEndRate: results.filter(r => r.endReason === 'stuck_out').length / games,
+    bagEmptyEndRate: results.filter(r => r.endReason === 'bag_empty').length / games,
+    swapOutEndRate: results.filter(r => r.endReason === 'swap_out').length / games,
     turnCapGames: results.filter(r => r.endReason === 'turn_cap').length,
     selfCapturerWinRate: selfCaptureGames.length > 0 ? selfCapturerWins / selfCaptureGames.length : null,
     meanScore: mean(allScores),
@@ -317,8 +317,8 @@ function main() {
   console.log(`Self-capture end      ${pct(summary.selfCaptureEndRate)}`);
   console.log(`Second-steal end      ${pct(summary.secondStealEndRate)}`);
   console.log(`No-spare end          ${pct(summary.noSpareEndRate)}`);
-  console.log(`Double-pass end       ${pct(summary.doublePassEndRate)}`);
-  console.log(`Stuck-out end         ${pct(summary.stuckOutEndRate)}`);
+  console.log(`Bag-empty end         ${pct(summary.bagEmptyEndRate)}`);
+  console.log(`Swap-out end          ${pct(summary.swapOutEndRate)}`);
   console.log(`Stalled (turn cap)    ${summary.turnCapGames}`);
   console.log(`Self-capturer win     ${pct(summary.selfCapturerWinRate)}`);
   console.log(`Mean / median score   ${num(summary.meanScore)} / ${num(summary.medianScore)}`);

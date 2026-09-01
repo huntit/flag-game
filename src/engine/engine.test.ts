@@ -15,7 +15,7 @@ import {
   getMarketTiles,
   emptySpareCorners,
 } from './game';
-import { executeAction, canDraw, canPass, validateDraw } from './actions';
+import { executeAction, canDraw, validateDraw, wouldTriggerSwapOutOnDraw } from './actions';
 import { Dictionary } from './dictionary';
 import { validatePlay } from './validator';
 import type { GameState, TileData, Tile } from './types';
@@ -114,10 +114,10 @@ describe('setup', () => {
     expect(state.players[1].rack).toHaveLength(P2_STARTING_RACK_TILES);
   });
 
-  it('starts with no legal Pass while Draw is legal', () => {
+  it('starts with Draw legal and zero consecutive draws', () => {
     const state = initializeGame(mockTileData);
     expect(canDraw(state)).toBe(true);
-    expect(canPass(state, dictionary)).toBe(false);
+    expect(state.consecutiveDraws).toBe(0);
   });
 });
 
@@ -148,7 +148,6 @@ describe('draw', () => {
     state.players[1].rack = [];
     expect(marketShowingCount(state.market)).toBe(1);
     expect(canDraw(state)).toBe(false);
-    expect(canPass(state, dictionary)).toBe(true);
   });
 
   it('does not block Draw on a full rack — draw 2 then discard to 7', () => {
@@ -162,7 +161,6 @@ describe('draw', () => {
     });
     expect(check.valid).toBe(true);
     expect(canDraw(state)).toBe(true);
-    expect(canPass(state, dictionary)).toBe(false);
   });
 
   it('refills emptied slots preserving orientation', () => {
@@ -173,39 +171,80 @@ describe('draw', () => {
   });
 });
 
-describe('pass', () => {
-  let state: GameState;
-
-  beforeEach(() => {
-    state = initializeGame(mockTileData);
-  });
-
-  it('is legal only when no Play and Draw is illegal', () => {
-    expect(canPass(state, dictionary)).toBe(false);
-    state.market.forEach(s => (s.tile = null));
-    state.players[0].rack = [];
-    expect(canPass(state, dictionary)).toBe(true);
-  });
-
-  it('ends after two consecutive passes; Draw breaks the streak', () => {
-    state.market.forEach(s => (s.tile = null));
-    state.players[0].rack = [];
-    state.players[1].rack = [];
-
-    executeAction(state, { type: 'pass' }, dictionary);
-    expect(state.gameOver).toBe(false);
-    expect(state.consecutivePasses).toBe(1);
-
-    state.market[0].tile = tile('m1', 'A');
-    state.market[1].tile = tile('m2', 'E');
-    executeAction(state, { type: 'draw', marketTiles: marketIds(state) }, dictionary);
-    expect(state.consecutivePasses).toBe(0);
-
-    state.market.forEach(s => (s.tile = null));
-    executeAction(state, { type: 'pass' }, dictionary);
-    executeAction(state, { type: 'pass' }, dictionary);
+describe('bag empty', () => {
+  it('ends the game when the bag is empty at turn start', () => {
+    const state = initializeGame(mockTileData);
+    state.bag = [];
+    const result = executeAction(state, { type: 'draw', marketTiles: marketIds(state) }, dictionary);
+    expect(result.success).toBe(false);
     expect(state.gameOver).toBe(true);
-    expect(state.endReason).toBe('double_pass');
+    expect(state.endReason).toBe('bag_empty');
+  });
+
+  it('ends after a draw when refill depletes the bag', () => {
+    const state = initializeGame(mockTileData);
+    state.bag = [tile('last', 'A')];
+    executeAction(state, { type: 'draw', marketTiles: marketIds(state) }, dictionary);
+    expect(state.bag).toHaveLength(0);
+    expect(state.gameOver).toBe(true);
+    expect(state.endReason).toBe('bag_empty');
+  });
+});
+
+describe('swap-out (six consecutive draws)', () => {
+  function drawOnce(state: GameState) {
+    const player = state.players[state.currentPlayer];
+    if (player.rack.length + DRAW_COUNT > RACK_MAX) {
+      player.rack = player.rack.slice(0, RACK_MAX - DRAW_COUNT);
+    }
+    executeAction(state, { type: 'draw', marketTiles: marketIds(state) }, dictionary);
+  }
+
+  function ensureBag(state: GameState) {
+    for (let i = 0; i < 40; i++) {
+      state.bag.push(tile(`bag-${i}`, 'A'));
+    }
+  }
+
+  it('warns before the sixth consecutive draw', () => {
+    const state = initializeGame(mockTileData);
+    ensureBag(state);
+    for (let i = 0; i < 4; i++) drawOnce(state);
+    expect(wouldTriggerSwapOutOnDraw(state)).toBe(false);
+    drawOnce(state);
+    expect(wouldTriggerSwapOutOnDraw(state)).toBe(true);
+  });
+
+  it('ends after six consecutive draws; Play breaks the streak', () => {
+    const state = initializeGame(mockTileData);
+    ensureBag(state);
+    for (let i = 0; i < 5; i++) {
+      drawOnce(state);
+      expect(state.gameOver).toBe(false);
+      expect(state.consecutiveDraws).toBe(i + 1);
+    }
+    drawOnce(state);
+    expect(state.gameOver).toBe(true);
+    expect(state.endReason).toBe('swap_out');
+
+    const fresh = initializeGame(mockTileData);
+    ensureBag(fresh);
+    drawOnce(fresh);
+    expect(fresh.consecutiveDraws).toBe(1);
+    fresh.currentPlayer = 0;
+    fresh.players[0].rack = [tile('a1', 'A'), tile('t1', 'T')];
+    executeAction(
+      fresh,
+      {
+        type: 'play',
+        placements: [
+          { tileId: 'a1', position: { row: 6, col: 6 } },
+          { tileId: 't1', position: { row: 6, col: 7 } },
+        ],
+      },
+      dictionary
+    );
+    expect(fresh.consecutiveDraws).toBe(0);
   });
 });
 

@@ -183,7 +183,7 @@ export function initializeGame(tileData: TileData): GameState {
     market,
     bag,
     flags: { P1: p1Corner, P2: p2Corner },
-    consecutivePasses: 0,
+    consecutiveDraws: 0,
     gameOver: false,
     turnCount: 0,
     moveHistory: [],
