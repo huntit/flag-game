@@ -1,9 +1,11 @@
-// Market: 4 face-up + 2 face-down tiles, bag count nearby. No +1 bag button.
+// Market: 4 face-up + 2 face-down tiles. Bag art + remaining count (no MARKET word).
 
 import type { MarketSlot, Tile } from '../engine/types';
 import { MARKET_SLOTS } from '../engine/types';
 import { TileFace } from './TileFace';
 import './Market.css';
+
+const base = import.meta.env.BASE_URL;
 
 interface MarketProps {
   market: MarketSlot[];
@@ -18,7 +20,10 @@ function Market({ market, selectedTileIds, bagCount, disabled, onTileClick }: Ma
 
   return (
     <div className="market-row-inner" data-market-count={market.length}>
-      <span className="tray-label">Market</span>
+      <div className="market-bag" aria-label={`${bagCount} tiles in bag`}>
+        <img className="market-bag-art" src={`${base}market-bag.svg`} alt="" />
+        <span className="market-bag-count">{bagCount}</span>
+      </div>
       <div className="tray market-tray" aria-label="Market">
         {market.map((slot, index) => {
           const tile = slot.tile;
@@ -71,11 +76,6 @@ function Market({ market, selectedTileIds, bagCount, disabled, onTileClick }: Ma
         {Array.from({ length: emptySlots }, (_, i) => (
           <span key={`market-pad-${i}`} className="tray-slot-empty" aria-hidden="true" />
         ))}
-      </div>
-
-      <div className="bag-count" aria-label={`${bagCount} tiles in bag`}>
-        <span className="bag-count-label">Bag</span>
-        <span className="bag-count-value">{bagCount}</span>
       </div>
     </div>
   );

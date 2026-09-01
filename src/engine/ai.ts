@@ -3,7 +3,7 @@
 import type { GameState, AIPersonality, GameAction, DrawAction, PlayAction, Tile, WordPlacement } from './types';
 import { RACK_MAX, DRAW_COUNT } from './types';
 import { generateLegalPlays } from './moveGenerator';
-import { canDraw, wouldTriggerSwapOutOnDraw } from './actions';
+import { canDraw, wouldTriggerExchangeThreeOnDraw } from './actions';
 import { random, getMarketTiles } from './game';
 import type { Dictionary } from './dictionary';
 
@@ -37,10 +37,13 @@ export function planAIAction(
   const legalPlays = generateLegalPlays(state, player.rack, dictionary, player.id);
 
   if (legalPlays.length === 0) {
-    return { action: selectDrawAction(state), legalPlays };
+    if (canDraw(state)) {
+      return { action: selectDrawAction(state), legalPlays };
+    }
+    return { action: { type: 'pass' }, legalPlays };
   }
 
-  if (wouldTriggerSwapOutOnDraw(state)) {
+  if (wouldTriggerExchangeThreeOnDraw(state)) {
     const bestPlay = findBestPlay(legalPlays);
     if (bestPlay) {
       return { action: toPlayAction(bestPlay), legalPlays };
@@ -85,7 +88,8 @@ function selectGreedyAction(
     return selectDrawAction(state);
   }
 
-  return toPlayAction(bestPlay!);
+  if (bestPlay) return toPlayAction(bestPlay);
+  return { type: 'pass' };
 }
 
 function selectHunterAction(

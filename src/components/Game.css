@@ -46,15 +46,15 @@
     var(--scores-h)
     minmax(0, 1fr)
     var(--market-h)
-    var(--status-h)
-    var(--rack-h);
+    var(--rack-h)
+    var(--status-h);
   grid-template-areas:
     'header'
     'scores'
     'stage'
     'market'
-    'status'
-    'rack';
+    'rack'
+    'status';
   gap: var(--shell-gap);
   padding: calc(var(--safe-top) + var(--shell-pad-y)) calc(var(--safe-right) + var(--shell-pad-x))
     calc(var(--safe-bottom) + var(--shell-pad-y)) calc(var(--safe-left) + var(--shell-pad-x));
@@ -85,15 +85,15 @@
       var(--header-h)
       var(--scores-h)
       var(--market-h)
-      var(--status-h)
       var(--rack-h)
+      var(--status-h)
       minmax(0, 1fr);
     grid-template-areas:
       'stage header'
       'stage scores'
       'stage market'
-      'stage status'
       'stage rack'
+      'stage status'
       'stage .';
     align-content: start;
   }
@@ -232,6 +232,10 @@
   min-width: 4.8rem;
 }
 
+.action-pass {
+  min-width: 4.2rem;
+}
+
 .action-draw.is-swap-warning:not(:disabled) {
   box-shadow: inset 0 0 0 2px var(--color-ink);
 }
@@ -322,76 +326,92 @@
 @media (min-width: 900px) and (pointer: fine) {
   .play-shell {
     --header-h: 52px;
-    --scores-h: 56px;
-    --market-h: 52px;
-    --status-h: 32px;
-    --rack-h: 52px;
-    --dock-h: 52px;
-    --dock-min: 480px;
-    --shell-gap: 10px;
+    --scores-h: 48px;
+    --market-h: 48px;
+    --status-h: 28px;
+    --rack-h: 48px;
+    --dock-h: 48px;
+    --shell-gap: 8px;
     --shell-pad-x: 16px;
     --shell-pad-y: 10px;
     --tile: 38px;
-    --log-w: 200px;
+    --log-w: 220px;
 
     --chrome-h: calc(
-      var(--header-h) + var(--scores-h) + (2 * var(--shell-gap)) + (2 * var(--shell-pad-y)) +
-        var(--safe-top) + var(--safe-bottom) + 2px
+      var(--header-h) + var(--scores-h) + var(--market-h) + var(--rack-h) + var(--status-h) +
+        (5 * var(--shell-gap)) + (2 * var(--shell-pad-y)) + var(--safe-top) +
+        var(--safe-bottom) + 2px
     );
 
-    --shell-max-w: 1600px;
-    --board-max: 770px;
+    --shell-max-w: 1100px;
+    --board-max: 440px;
     --board-size: min(
       var(--board-max),
-      calc(var(--app-h) - var(--chrome-h)),
-      calc(
-        100vw - var(--log-w) - var(--dock-min) - (2 * var(--shell-pad-x)) -
-          (2 * var(--shell-gap)) - var(--safe-left) - var(--safe-right) - 8px
-      )
+      calc(var(--app-h) - var(--chrome-h))
     );
 
     max-width: none;
     width: 100%;
     margin: 0;
     display: grid;
-    grid-template-columns: var(--board-size) var(--dock-min) var(--log-w);
-    grid-template-rows: var(--header-h) var(--scores-h) var(--board-size);
-    grid-template-areas:
-      'header header sidebar'
-      'scores scores sidebar'
-      'stage dock sidebar';
-    align-content: center;
-    justify-content: center;
-    column-gap: var(--shell-gap);
+    grid-template-columns: 1fr auto 1fr;
+    grid-template-rows: auto;
+    grid-template-areas: none;
+    align-content: start;
+    justify-content: stretch;
+    column-gap: 0;
     row-gap: var(--shell-gap);
   }
 
   .play-main {
-    display: contents;
+    display: grid;
+    grid-column: 2;
+    width: var(--board-size);
+    grid-template-columns: var(--board-size);
+    grid-template-rows:
+      var(--header-h)
+      var(--scores-h)
+      var(--board-size)
+      var(--market-h)
+      var(--dock-h)
+      var(--status-h);
+    grid-template-areas:
+      'header'
+      'scores'
+      'stage'
+      'market'
+      'rack'
+      'status';
+    gap: var(--shell-gap);
+    align-content: start;
   }
 
   .play-shell .dock {
-    display: flex;
-    flex-direction: column;
-    grid-area: dock;
-    gap: var(--shell-gap);
-    min-width: 0;
-    min-height: 0;
-    justify-content: center;
-    align-self: stretch;
-    width: 100%;
+    display: contents;
   }
 
-  .play-shell .play-header {
-    grid-area: header;
-    width: auto;
+  .play-shell .stage,
+  .play-shell .play-header,
+  .play-header,
+  .scores-row,
+  .stage,
+  .market-row,
+  .status-row,
+  .rack-row {
+    grid-column: auto;
+    grid-row: auto;
+    width: 100%;
     max-width: none;
-    overflow: visible;
     justify-self: stretch;
   }
 
+  .play-shell .play-header {
+    overflow: visible;
+    width: auto;
+    max-width: none;
+  }
+
   .play-shell .scores-row {
-    grid-area: scores;
     width: auto;
     max-width: none;
     justify-self: stretch;
@@ -403,31 +423,33 @@
     max-width: var(--board-size);
     justify-self: stretch;
     align-self: start;
+    overflow: visible;
   }
 
-  .play-shell .market-row,
-  .play-shell .status-row,
-  .play-shell .rack-row {
-    width: 100%;
-    max-width: none;
+  .play-shell .market-row {
+    width: var(--board-size);
+    max-width: var(--board-size);
+    height: var(--market-h);
+    flex: 0 0 var(--market-h);
     justify-self: stretch;
   }
 
-  .market-row {
-    height: var(--market-h);
-    flex: 0 0 var(--market-h);
-  }
-
-  .status-row {
+  .play-shell .status-row {
+    width: var(--board-size);
+    max-width: var(--board-size);
     height: var(--status-h);
     flex: 0 0 var(--status-h);
+    justify-self: stretch;
   }
 
-  .rack-row {
+  .play-shell .rack-row {
+    width: var(--board-size);
+    max-width: var(--board-size);
+    min-width: 0;
     height: var(--dock-h);
     max-height: var(--dock-h);
     flex: 0 0 var(--dock-h);
-    min-width: 0;
+    justify-self: stretch;
   }
 
   .action-play {
@@ -436,7 +458,8 @@
     flex: 0 0 76px;
   }
 
-  .action-draw {
+  .action-draw,
+  .action-pass {
     width: 88px;
     min-width: 88px;
     flex: 0 0 88px;

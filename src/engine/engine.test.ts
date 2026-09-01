@@ -15,7 +15,14 @@ import {
   getMarketTiles,
   emptySpareCorners,
 } from './game';
-import { executeAction, canDraw, validateDraw, wouldTriggerSwapOutOnDraw } from './actions';
+import {
+  executeAction,
+  canDraw,
+  canPass,
+  validateDraw,
+  isExchangeDraw,
+  wouldTriggerExchangeThreeOnDraw,
+} from './actions';
 import { Dictionary } from './dictionary';
 import { validatePlay } from './validator';
 import type { GameState, TileData, Tile } from './types';
@@ -114,10 +121,12 @@ describe('setup', () => {
     expect(state.players[1].rack).toHaveLength(P2_STARTING_RACK_TILES);
   });
 
-  it('starts with Draw legal and zero consecutive draws', () => {
+  it('starts with Draw legal, Pass illegal, and zero consecutive Exchanges', () => {
     const state = initializeGame(mockTileData);
     expect(canDraw(state)).toBe(true);
-    expect(state.consecutiveDraws).toBe(0);
+    expect(canPass(state, dictionary)).toBe(false);
+    expect(state.consecutiveExchanges).toBe(0);
+    expect(state.consecutivePasses).toBe(0);
   });
 });
 
@@ -148,6 +157,7 @@ describe('draw', () => {
     state.players[1].rack = [];
     expect(marketShowingCount(state.market)).toBe(1);
     expect(canDraw(state)).toBe(false);
+    expect(canPass(state, dictionary)).toBe(true);
   });
 
   it('does not block Draw on a full rack — draw 2 then discard to 7', () => {
@@ -161,6 +171,7 @@ describe('draw', () => {
     });
     expect(check.valid).toBe(true);
     expect(canDraw(state)).toBe(true);
+    expect(canPass(state, dictionary)).toBe(false);
   });
 
   it('refills emptied slots preserving orientation', () => {
@@ -191,50 +202,102 @@ describe('bag empty', () => {
   });
 });
 
-describe('swap-out (six consecutive draws)', () => {
-  function drawOnce(state: GameState) {
-    const player = state.players[state.currentPlayer];
-    if (player.rack.length + DRAW_COUNT > RACK_MAX) {
-      player.rack = player.rack.slice(0, RACK_MAX - DRAW_COUNT);
-    }
-    executeAction(state, { type: 'draw', marketTiles: marketIds(state) }, dictionary);
-  }
-
+describe('exchange vs non-exchange draw', () => {
   function ensureBag(state: GameState) {
     for (let i = 0; i < 40; i++) {
       state.bag.push(tile(`bag-${i}`, 'A'));
     }
   }
 
-  it('warns before the sixth consecutive draw', () => {
+  function fillRack(state: GameState, size: number) {
+    const player = state.players[state.currentPlayer];
+    player.rack = Array.from({ length: size }, (_, i) => tile(`r${player.id}-${size}-${i}`, 'T'));
+  }
+
+  function drawWithDiscards(state: GameState) {
+    const player = state.players[state.currentPlayer];
+    const required = Math.max(0, player.rack.length + DRAW_COUNT - RACK_MAX);
+    const result = executeAction(
+      state,
+      {
+        type: 'draw',
+        marketTiles: marketIds(state),
+        discardTiles: required > 0 ? player.rack.slice(0, required).map(t => t.id) : undefined,
+      },
+      dictionary
+    );
+    expect(result.success, result.error).toBe(true);
+  }
+
+  it('counts a full-rack Draw 2 + Discard 2 as an Exchange, not a 6-tile Draw', () => {
     const state = initializeGame(mockTileData);
     ensureBag(state);
-    for (let i = 0; i < 4; i++) drawOnce(state);
-    expect(wouldTriggerSwapOutOnDraw(state)).toBe(false);
-    drawOnce(state);
-    expect(wouldTriggerSwapOutOnDraw(state)).toBe(true);
+    fillRack(state, RACK_MAX);
+    expect(isExchangeDraw(state)).toBe(true);
+    drawWithDiscards(state);
+    expect(state.consecutiveExchanges).toBe(1);
+
+    fillRack(state, 6);
+    expect(isExchangeDraw(state)).toBe(false);
+    drawWithDiscards(state);
+    expect(state.consecutiveExchanges).toBe(0);
   });
 
-  it('ends after six consecutive draws; Play breaks the streak', () => {
+  it('does not count a Draw that discards 0 or 1 as an Exchange', () => {
     const state = initializeGame(mockTileData);
     ensureBag(state);
-    for (let i = 0; i < 5; i++) {
-      drawOnce(state);
-      expect(state.gameOver).toBe(false);
-      expect(state.consecutiveDraws).toBe(i + 1);
-    }
-    drawOnce(state);
-    expect(state.gameOver).toBe(true);
-    expect(state.endReason).toBe('swap_out');
+    fillRack(state, 5);
+    drawWithDiscards(state);
+    expect(state.consecutiveExchanges).toBe(0);
 
-    const fresh = initializeGame(mockTileData);
-    ensureBag(fresh);
-    drawOnce(fresh);
-    expect(fresh.consecutiveDraws).toBe(1);
-    fresh.currentPlayer = 0;
-    fresh.players[0].rack = [tile('a1', 'A'), tile('t1', 'T')];
+    fillRack(state, 6);
+    drawWithDiscards(state);
+    expect(state.consecutiveExchanges).toBe(0);
+  });
+
+  it('increments consecutiveExchanges across both players and ends on the third', () => {
+    const state = initializeGame(mockTileData);
+    ensureBag(state);
+    for (let i = 0; i < 2; i++) {
+      fillRack(state, RACK_MAX);
+      expect(wouldTriggerExchangeThreeOnDraw(state)).toBe(false);
+      drawWithDiscards(state);
+      expect(state.gameOver).toBe(false);
+      expect(state.consecutiveExchanges).toBe(i + 1);
+    }
+    fillRack(state, RACK_MAX);
+    expect(wouldTriggerExchangeThreeOnDraw(state)).toBe(true);
+    drawWithDiscards(state);
+    expect(state.gameOver).toBe(true);
+    expect(state.endReason).toBe('exchange_three');
+    expect(state.consecutiveExchanges).toBe(3);
+  });
+
+  it('resets consecutiveExchanges on a non-Exchange Draw', () => {
+    const state = initializeGame(mockTileData);
+    ensureBag(state);
+    fillRack(state, RACK_MAX);
+    drawWithDiscards(state);
+    expect(state.consecutiveExchanges).toBe(1);
+    fillRack(state, 6);
+    drawWithDiscards(state);
+    expect(state.consecutiveExchanges).toBe(0);
+    fillRack(state, RACK_MAX);
+    drawWithDiscards(state);
+    expect(state.consecutiveExchanges).toBe(1);
+    expect(state.gameOver).toBe(false);
+  });
+
+  it('resets consecutiveExchanges on Play', () => {
+    const state = initializeGame(mockTileData);
+    ensureBag(state);
+    fillRack(state, RACK_MAX);
+    drawWithDiscards(state);
+    expect(state.consecutiveExchanges).toBe(1);
+    state.currentPlayer = 0;
+    state.players[0].rack = [tile('a1', 'A'), tile('t1', 'T')];
     executeAction(
-      fresh,
+      state,
       {
         type: 'play',
         placements: [
@@ -244,7 +307,71 @@ describe('swap-out (six consecutive draws)', () => {
       },
       dictionary
     );
-    expect(fresh.consecutiveDraws).toBe(0);
+    expect(state.consecutiveExchanges).toBe(0);
+  });
+
+  it('resets consecutiveExchanges on Pass', () => {
+    const state = initializeGame(mockTileData);
+    ensureBag(state);
+    fillRack(state, RACK_MAX);
+    drawWithDiscards(state);
+    expect(state.consecutiveExchanges).toBe(1);
+    state.market.forEach(s => {
+      s.tile = null;
+    });
+    state.players[state.currentPlayer].rack = [];
+    executeAction(state, { type: 'pass' }, dictionary);
+    expect(state.consecutiveExchanges).toBe(0);
+    expect(state.consecutivePasses).toBe(1);
+    expect(state.gameOver).toBe(false);
+  });
+});
+
+describe('pass', () => {
+  it('is legal only when no Play and Draw is illegal', () => {
+    const state = initializeGame(mockTileData);
+    expect(canPass(state, dictionary)).toBe(false);
+    state.market.forEach(s => {
+      s.tile = null;
+    });
+    state.players[0].rack = [];
+    expect(canPass(state, dictionary)).toBe(true);
+  });
+
+  it('ends double_pass when both players are stuck with market showing < 2', () => {
+    const state = initializeGame(mockTileData);
+    state.market.forEach(s => {
+      s.tile = null;
+    });
+    state.players[0].rack = [];
+    state.players[1].rack = [];
+    expect(canDraw(state)).toBe(false);
+
+    executeAction(state, { type: 'pass' }, dictionary);
+    expect(state.gameOver).toBe(false);
+    expect(state.consecutivePasses).toBe(1);
+
+    executeAction(state, { type: 'pass' }, dictionary);
+    expect(state.gameOver).toBe(true);
+    expect(state.endReason).toBe('double_pass');
+  });
+
+  it('Draw between Passes breaks the pass streak', () => {
+    const state = initializeGame(mockTileData);
+    for (let i = 0; i < 20; i++) state.bag.push(tile(`extra-${i}`, 'A'));
+    state.market.forEach(s => {
+      s.tile = null;
+    });
+    state.players[0].rack = [];
+    state.players[1].rack = [];
+
+    executeAction(state, { type: 'pass' }, dictionary);
+    expect(state.consecutivePasses).toBe(1);
+
+    state.market[0].tile = tile('m1', 'A');
+    state.market[1].tile = tile('m2', 'E');
+    executeAction(state, { type: 'draw', marketTiles: marketIds(state) }, dictionary);
+    expect(state.consecutivePasses).toBe(0);
   });
 });
 

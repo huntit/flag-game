@@ -67,8 +67,16 @@ for (const t of targets) {
     const draw = document.querySelector('.action-draw');
     const rackTiles = [...document.querySelectorAll('.rack-row .tray-tile')];
     const lastRack = rackTiles[rackTiles.length - 1];
+    const p1Card = document.querySelector('[data-seat="P1"]');
+    const p2Card = document.querySelector('[data-seat="P2"]');
     const youCard = document.querySelector('.hud-you');
     const oppCard = document.querySelector('.opponent-inner');
+    const marketLabel = document.querySelector('.market-row .tray-label');
+    const bagArt = document.querySelector('.market-bag-art');
+    const bagCount = document.querySelector('.market-bag-count');
+    const avatars = document.querySelectorAll('.player-avatar');
+    const emptyPips = document.querySelectorAll('.score-pip.is-empty');
+    const raisedTile = document.querySelector('.board-tile');
     const youName = document.querySelector('.hud-you .score-card-name');
     const youScore = document.querySelector('.hud-you .score-card-score');
     const youBacks = [...document.querySelectorAll('.hud-you .score-back')];
@@ -108,8 +116,28 @@ for (const t of targets) {
       rackTiles: [...document.querySelectorAll('.rack-row .tray-tile .tile-letter')].map(s => s.textContent),
       youCard: youCard ? rect(youCard) : null,
       oppCard: oppCard ? rect(oppCard) : null,
+      p1Card: p1Card ? rect(p1Card) : null,
+      p2Card: p2Card ? rect(p2Card) : null,
       youNameText: youName?.textContent ?? '',
       rackLabelText: rackLabel?.textContent ?? '',
+      marketWordLabel: Boolean(marketLabel),
+      bagArt: Boolean(bagArt),
+      bagCountText: bagCount?.textContent ?? '',
+      avatarCount: avatars.length,
+      emptyPipCount: emptyPips.length,
+      tileBoxShadow: raisedTile ? getComputedStyle(raisedTile).boxShadow : '',
+      marketRow: (() => {
+        const el = document.querySelector('.market-row');
+        return el ? rect(el) : null;
+      })(),
+      rackRow: (() => {
+        const el = document.querySelector('.rack-row');
+        return el ? rect(el) : null;
+      })(),
+      statusRow: (() => {
+        const el = document.querySelector('.status-row');
+        return el ? rect(el) : null;
+      })(),
       toastCount: toasts.length,
       shuffleOverlapsTile: shuffle && lastRack ? overlaps(rect(shuffle), rect(lastRack)) : false,
       playOverlapsTile: play && lastRack ? overlaps(rect(play), rect(lastRack)) : false,
@@ -154,14 +182,32 @@ for (const t of targets) {
   if (m.backsOverlapName) problems.push('score-card backs overlap the name');
   if (m.backsOverlapScore) problems.push('score-card backs overlap the score');
   if (m.toastCount > 1) problems.push(`toasts stacked: ${m.toastCount}`);
-  if (m.youCard && m.oppCard) {
-    if (Math.abs(m.youCard.w - m.oppCard.w) > 2) {
-      problems.push(`score cards unequal width: ${m.youCard.w.toFixed(1)} vs ${m.oppCard.w.toFixed(1)}`);
+  if (m.p1Card && m.p2Card) {
+    if (m.p1Card.left > m.p2Card.left - 2) {
+      problems.push(`P1 is not left of P2: ${m.p1Card.left.toFixed(1)} vs ${m.p2Card.left.toFixed(1)}`);
     }
-    if (Math.abs(m.youCard.h - m.oppCard.h) > 2) {
-      problems.push(`score cards unequal height: ${m.youCard.h.toFixed(1)} vs ${m.oppCard.h.toFixed(1)}`);
+    if (Math.abs(m.p1Card.w - m.p2Card.w) > 2) {
+      problems.push(`score cards unequal width: ${m.p1Card.w.toFixed(1)} vs ${m.p2Card.w.toFixed(1)}`);
+    }
+    if (Math.abs(m.p1Card.h - m.p2Card.h) > 2) {
+      problems.push(`score cards unequal height: ${m.p1Card.h.toFixed(1)} vs ${m.p2Card.h.toFixed(1)}`);
     }
   }
+  if (m.youCard && m.oppCard) {
+    if (Math.abs(m.youCard.w - m.oppCard.w) > 2) {
+      problems.push(`you/opp cards unequal width: ${m.youCard.w.toFixed(1)} vs ${m.oppCard.w.toFixed(1)}`);
+    }
+  }
+  if (m.marketWordLabel) problems.push('MARKET word label is still visible');
+  if (!m.bagArt) problems.push('bag art missing');
+  if (!/^\d+$/.test(m.bagCountText)) problems.push(`bag count missing: "${m.bagCountText}"`);
+  if (m.avatarCount < 3) problems.push(`avatars missing: ${m.avatarCount}`);
+  if (m.emptyPipCount < 1) problems.push('empty score-card pips missing');
+  if (m.statusRow && m.rackRow && m.statusRow.top + 1 < m.rackRow.bottom) {
+    problems.push('toast strip is not below the rack');
+  }
+  if (m.marketRow && m.marketRow.bottom > m.innerH) problems.push('market below the fold');
+  if (m.rackRow && m.rackRow.bottom > m.innerH) problems.push('rack below the fold');
   if (!m.drawNextToMarket) problems.push('Draw 2 is not beside the market');
   if (!m.shuffleNextToRack) problems.push('Shuffle is not beside the rack');
   if (m.logo && m.logo.top < -1) problems.push(`logo clipped at top: ${m.logo.top}`);
@@ -170,11 +216,16 @@ for (const t of targets) {
 
   if (desktop) {
     if (!m.finePointer || !m.wide) problems.push(`desktop media gate missed: fine=${m.finePointer} wide=${m.wide}`);
-    if (m.board.w < 520) problems.push(`desktop board too small: ${m.board.w.toFixed(1)}`);
-    if (m.board.w > 780) problems.push(`desktop board too large: ${m.board.w.toFixed(1)}`);
+    if (m.board.w < 400) problems.push(`desktop board too small: ${m.board.w.toFixed(1)}`);
+    if (m.board.w > 480) problems.push(`desktop board too large: ${m.board.w.toFixed(1)}`);
     if (m.shell.w > 1280) problems.push(`desktop shell not capped: ${m.shell.w.toFixed(1)}`);
-    if (!/you/i.test(m.youNameText)) problems.push(`YOU label missing: "${m.youNameText}"`);
+    if (!/you/i.test(m.youNameText) && !/hunter/i.test(m.youNameText)) {
+      problems.push(`viewer name missing on a score card: "${m.youNameText}"`);
+    }
     if (!/you/i.test(m.rackLabelText)) problems.push(`rack label truncated: "${m.rackLabelText}"`);
+    if (m.tileBoxShadow === 'none' || /inset 0 [2-9]px [2-9]px/.test(m.tileBoxShadow)) {
+      problems.push(`board tiles are not raised: ${m.tileBoxShadow}`);
+    }
     if (m.actions.w > 200) problems.push(`desktop Play stretched: ${m.actions.w.toFixed(1)}`);
     if (m.rackTile) {
       if (m.rackTile.w > 50) problems.push(`desktop rack tile huge: ${m.rackTile.w.toFixed(1)}`);

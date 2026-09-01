@@ -17,7 +17,9 @@ const END_REASONS: Record<string, string> = {
   second_steal: 'Second flag stolen',
   no_spare: 'Flag stolen — no spare corner',
   bag_empty: 'Tile bag empty',
-  swap_out: 'Six consecutive draws',
+  exchange_three: 'Three consecutive Exchanges',
+  double_pass: 'Both players passed',
+  stuck_out: 'Both players stuck',
 };
 
 function GameOverOverlay({

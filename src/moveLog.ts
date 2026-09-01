@@ -47,8 +47,8 @@ function captureSuffix(state: GameState): string {
 }
 
 function drawSuffix(state: GameState): string {
-  if (state.endReason === 'swap_out') {
-    return ' — six consecutive draws, game over';
+  if (state.endReason === 'exchange_three') {
+    return ' — three consecutive Exchanges, game over';
   }
   if (state.endReason === 'bag_empty') {
     return ' — bag empty, game over';
@@ -67,6 +67,18 @@ export function describeMove(state: GameState, ctx: SeatNameContext): MoveLogEnt
       player: last.player,
       name: seatDisplayName(last.player, ctx),
       text: `${base}${drawSuffix(state)}`,
+    };
+  }
+
+  if (last.action.type === 'pass') {
+    const suffix =
+      state.endReason === 'double_pass' || state.endReason === 'stuck_out'
+        ? ' — game over'
+        : '';
+    return {
+      player: last.player,
+      name: seatDisplayName(last.player, ctx),
+      text: `Pass${suffix}`,
     };
   }
 
