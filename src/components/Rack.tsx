@@ -73,20 +73,15 @@ interface OpponentRackProps {
 }
 
 export function OpponentRack({ name, playerColor, count, score, isTheirTurn }: OpponentRackProps) {
-  const emptySlots = Math.max(0, RACK_MAX - count);
-
   return (
     <div
       className={`opponent-inner is-${playerColor.toLowerCase()} ${isTheirTurn ? 'is-their-turn' : ''}`}
     >
       <span className="opponent-name">{name}</span>
       <span className="opponent-score">{score}</span>
-      <div className="opponent-tiles" aria-label={`${name} holds ${count} tiles`}>
+      <div className="score-backs opponent-tiles" aria-label={`${name} holds ${count} tiles`}>
         {Array.from({ length: count }, (_, i) => (
-          <span key={`back-${i}`} className="opponent-back" />
-        ))}
-        {Array.from({ length: emptySlots }, (_, i) => (
-          <span key={`gap-${i}`} className="opponent-gap" />
+          <span key={`back-${i}`} className="score-back opponent-back" />
         ))}
       </div>
     </div>

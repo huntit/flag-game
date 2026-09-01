@@ -56,6 +56,35 @@ const AI_NAMES: Record<AIOpponent, string> = {
 const SWAP_DRAW_WARNING =
   'Third swap each — Draw 2 now ends the game. Play to break the streak.';
 
+function ShuffleIcon() {
+  return (
+    <svg className="shuffle-icon" viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M16 3h5v5M4 20 10 14M21 3l-9 9M16 21h5v-5M21 21l-5.5-5.5M4 4l6 6"
+      />
+    </svg>
+  );
+}
+
+function ClearIcon() {
+  return (
+    <svg className="shuffle-icon" viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2.2"
+        strokeLinecap="round"
+        d="M6 6l12 12M18 6 6 18"
+      />
+    </svg>
+  );
+}
+
 function buildFlagContext(state: GameState, playerId: 'P1' | 'P2'): FlagContext {
   return {
     flags: state.flags,
@@ -455,96 +484,93 @@ function Game({ tileData, dictionary, mode, aiOpponent, onBackToMenu }: GameProp
 
   return (
     <div className="play-shell">
-      <header className="play-header">
-        <HomeLink variant="play" onNavigate={onBackToMenu} />
-      </header>
+      <div className="play-main">
+        <header className="play-header">
+          <HomeLink variant="play" onNavigate={onBackToMenu} />
+        </header>
 
-      <div className="hud">
-        <GameInfo
-          youLabel={youLabel}
-          yourScore={viewer.score}
-          isYourTurn={activeIndex === viewerIndex}
-          playerColor={viewerColor}
-        />
-      </div>
+        <div className="scores-row">
+          <GameInfo
+            youLabel={youLabel}
+            yourScore={viewer.score}
+            rackCount={viewer.rack.length}
+            isYourTurn={activeIndex === viewerIndex}
+            playerColor={viewerColor}
+          />
+          <OpponentRack
+            name={otherLabel}
+            playerColor={otherColor}
+            count={other.rack.length}
+            score={other.score}
+            isTheirTurn={activeIndex !== viewerIndex}
+          />
+        </div>
 
-      <div className="opponent-bar">
-        <OpponentRack
-          name={otherLabel}
-          playerColor={otherColor}
-          count={other.rack.length}
-          score={other.score}
-          isTheirTurn={activeIndex !== viewerIndex}
-        />
-      </div>
+        <div className="stage">
+          <Board
+            board={gameState.board}
+            flags={gameState.flags}
+            pendingPlacements={pendingForBoard}
+            highlight={pending.length === 0 ? lastPlayHighlight : []}
+            onCellClick={handleCellClick}
+          />
+        </div>
 
-      <div className="stage">
-        <Board
-          board={gameState.board}
-          flags={gameState.flags}
-          pendingPlacements={pendingForBoard}
-          highlight={pending.length === 0 ? lastPlayHighlight : []}
-          onCellClick={handleCellClick}
-        />
-      </div>
+        <div className="market-row">
+          <Market
+            market={gameState.market}
+            selectedTileIds={selectedMarketIds}
+            bagCount={gameState.bag.length}
+            disabled={!interactive}
+            onTileClick={handleMarketTileClick}
+          />
+          <button
+            type="button"
+            className={`action-button action-draw ${swapDrawWarning ? 'is-swap-warning' : ''}`}
+            onClick={handleDraw}
+            disabled={!canDrawNow}
+            aria-label={swapDrawWarning ? `${drawButtonLabel}. ${SWAP_DRAW_WARNING}` : drawButtonLabel}
+          >
+            {drawButtonLabel}
+          </button>
+        </div>
 
-      <div className="market-row">
-        <Market
-          market={gameState.market}
-          selectedTileIds={selectedMarketIds}
-          bagCount={gameState.bag.length}
-          disabled={!interactive}
-          onTileClick={handleMarketTileClick}
-        />
-      </div>
-
-      <div className="rack-row">
-        <Rack
-          tiles={viewer.rack}
-          label={youLabel}
-          playerColor={viewerColor}
-          selectedTileId={selectedRackTileId}
-          discardTileIds={discardIds}
-          placedTileIds={placedTileIds}
-          disabled={!interactive}
-          onTileClick={handleRackTileClick}
-        />
-      </div>
-
-      <SidePanel entries={moveLog} />
-
-      <div className="actions">
-        <button
-          type="button"
-          className={`action-button action-draw ${swapDrawWarning ? 'is-swap-warning' : ''}`}
-          onClick={handleDraw}
-          disabled={!canDrawNow}
-          aria-label={swapDrawWarning ? `${drawButtonLabel}. ${SWAP_DRAW_WARNING}` : drawButtonLabel}
-        >
-          {drawButtonLabel}
-        </button>
-        <button type="button" className="action-button action-play" onClick={handlePlay} disabled={!canPlayNow}>
-          Play
-        </button>
-        <button
-          type="button"
-          className="action-button action-shuffle"
-          onClick={canClearNow ? handleClear : handleShuffle}
-          disabled={!canClearNow && !canShuffleNow}
-        >
-          {canClearNow ? 'Clear' : 'Shuffle'}
-        </button>
-      </div>
-
-      {statusToasts.length > 0 && (
-        <div className="toast-layer">
+        <div className="status-row" aria-live="polite">
           {statusToasts.map((toast, i) => (
             <div key={i} className={`toast ${toast.kind}`}>
               {toast.text}
             </div>
           ))}
         </div>
-      )}
+
+        <div className="rack-row">
+          <Rack
+            tiles={viewer.rack}
+            label={youLabel}
+            playerColor={viewerColor}
+            selectedTileId={selectedRackTileId}
+            discardTileIds={discardIds}
+            placedTileIds={placedTileIds}
+            disabled={!interactive}
+            onTileClick={handleRackTileClick}
+          />
+          <button
+            type="button"
+            className="icon-button action-shuffle"
+            onClick={canClearNow ? handleClear : handleShuffle}
+            disabled={!canClearNow && !canShuffleNow}
+            aria-label={canClearNow ? 'Clear' : 'Shuffle'}
+          >
+            {canClearNow ? <ClearIcon /> : <ShuffleIcon />}
+            <span className="sr-only">{canClearNow ? 'Clear' : 'Shuffle'}</span>
+          </button>
+          <button type="button" className="action-button action-play" onClick={handlePlay} disabled={!canPlayNow}>
+            Play
+          </button>
+        </div>
+      </div>
+
+      <SidePanel entries={moveLog} />
 
       {blankPrompt && <BlankPicker onPick={handleBlankPick} onCancel={handleBlankCancel} />}
 

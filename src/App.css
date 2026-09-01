@@ -21,6 +21,8 @@
   --color-tile: #fdf9f2;
   --color-tile-text: var(--color-ink);
   --color-tile-blank: #dce8e4;
+  /* Neutral slate-blue chrome: cream/ink family, not P1 teal or P2 terracotta. */
+  --color-chrome: #5b7a92;
 
   --app-h: 100vh;
 
@@ -121,27 +123,34 @@ button:disabled {
   font-size: 0.95rem;
 }
 
-/* Tile score placement — top-right everywhere (WWF / Crossplay), never Scrabble bottom-right. */
+/* Tile faces are SVG text (see TileFace). Score sits top-right in the viewBox. */
 .tray-tile,
-.market-tile {
+.market-tile,
+.board-tile {
   position: relative;
 }
 
-.tile-value {
-  position: absolute;
-  top: 6%;
-  right: 8%;
-  bottom: auto;
-  left: auto;
-  font-weight: 800;
-  line-height: 1;
-  color: var(--color-ink);
-  opacity: 0.72;
+.tile-face {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
   pointer-events: none;
 }
 
-.tile-letter {
-  position: relative;
-  transform: translate(-4%, 6%);
+.tile-face .tile-letter {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 52px;
+  font-weight: 800;
+  fill: currentColor;
+  pointer-events: none;
+}
+
+.tile-face .tile-value {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 20px;
+  font-weight: 800;
+  fill: currentColor;
+  opacity: 0.72;
   pointer-events: none;
 }

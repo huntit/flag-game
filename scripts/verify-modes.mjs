@@ -38,14 +38,14 @@ for (const mode of modes) {
     myTiles: document.querySelectorAll('.rack-row .tray-tile').length,
     marketTiles: document.querySelectorAll('.market-row .tray-tile').length,
     boardCells: document.querySelectorAll('.board-cell').length,
-    buttons: [...document.querySelectorAll('.actions .action-button')].map(b => ({
-      label: b.textContent.trim(),
+    buttons: [...document.querySelectorAll('.action-draw, .action-play, .action-shuffle')].map(b => ({
+      label: (b.getAttribute('aria-label') || b.textContent || '').trim(),
       disabled: b.disabled,
     })),
     scrollH: document.documentElement.scrollHeight,
     clientH: document.documentElement.clientHeight,
     actionsBottom: Math.max(
-      ...[...document.querySelectorAll('.actions .action-button')].map(b => b.getBoundingClientRect().bottom)
+      ...[...document.querySelectorAll('.action-draw, .action-play, .action-shuffle')].map(b => b.getBoundingClientRect().bottom)
     ),
     innerH: window.innerHeight,
     centreStar: Boolean(document.querySelector('.board-cell.is-centre .cell-mark')),

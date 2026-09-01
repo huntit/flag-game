@@ -41,8 +41,9 @@ describe('no-scroll phone shell', () => {
     expect(shell).toMatch(/--board-size:\s*min\(/);
     expect(shell).toMatch(/var\(--app-h\) - var\(--chrome-h\)/);
     expect(shell).toMatch(/--chrome-h:/);
-    // The action bar is a fixed grid row, not content that can overflow.
-    expect(shell).toMatch(/grid-template-areas:[\s\S]*'actions'/);
+    // Rack + Play + Shuffle sit in a fixed grid row, never below the fold.
+    expect(shell).toMatch(/grid-template-areas:[\s\S]*'rack'/);
+    expect(shell).toMatch(/grid-template-areas:[\s\S]*'status'/);
   });
 
   it('budgets the board against the shell width, not the raw viewport width', () => {
@@ -64,16 +65,19 @@ describe('no-scroll phone shell', () => {
 
   it('shrinks chrome on short screens instead of the buttons', () => {
     const shell = gameCss.match(/\.play-shell\s*\{[\s\S]*?\n\}/)?.[0] ?? '';
-    for (const row of ['--hud-h', '--opp-h', '--market-h', '--rack-h', '--actions-h']) {
+    for (const row of ['--header-h', '--scores-h', '--market-h', '--status-h', '--rack-h']) {
       expect(shell, `${row} should clamp against --app-h`).toMatch(
         new RegExp(`${row}:\\s*clamp\\([^)]*var\\(--app-h\\)`)
       );
     }
   });
 
-  it('keeps toasts out of the layout so a message cannot cause a scroll', () => {
+  it('keeps toasts in a dedicated status row so they cannot cover the rack', () => {
+    expect(gameCss).toMatch(/\.status-row/);
+    expect(gameCss).toMatch(/grid-template-areas:[\s\S]*'status'/);
     expect(gameCss).toMatch(/\.toast-layer\s*\{[^}]*position:\s*absolute/s);
     expect(gameCss).toMatch(/\.toast-layer\s*\{[^}]*pointer-events:\s*none/s);
+    expect(read('./Game.tsx')).toMatch(/status-row/);
   });
 
   it('has a landscape layout for iPad that keeps the controls on screen', () => {
@@ -120,12 +124,15 @@ describe('desktop layout (wide fine-pointer windows only)', () => {
     expect(desktop).not.toMatch(/grid-template-rows:[^;]*minmax\(0,\s*1fr\)/);
   });
 
-  it('centers a compact play column with a stable action toolbar', () => {
-    expect(desktop).toMatch(/grid-template-areas:[\s\S]*'stage stage sidebar'/);
-    expect(desktop).toMatch(/grid-template-areas:[\s\S]*'rack actions sidebar'/);
-    expect(desktop).toMatch(/\.actions[\s\S]*max-width:\s*\d+px/);
+  it('centers a compact play column with Draw 2 by the market and Shuffle by the rack', () => {
+    expect(desktop).toMatch(/grid-template-columns:\s*1fr auto 1fr/);
+    expect(desktop).toMatch(/\.play-main/);
+    expect(desktop).toMatch(/grid-template-areas:[\s\S]*'status'/);
+    expect(desktop).toMatch(/grid-template-areas:[\s\S]*'rack'/);
+    expect(read('./Game.tsx')).toMatch(/className="market-row"/);
+    expect(read('./Game.tsx')).toMatch(/action-draw/);
+    expect(read('./Game.tsx')).toMatch(/icon-button action-shuffle/);
     expect(desktop).toMatch(/\.market-row[\s\S]*max-width:\s*var\(--board-size\)/);
-    expect(desktop).toMatch(/\.market-row[\s\S]*justify-self:\s*center/);
     expect(desktop).toMatch(/\.play-shell \.stage[\s\S]*grid-row:\s*auto/);
   });
 
@@ -133,7 +140,7 @@ describe('desktop layout (wide fine-pointer windows only)', () => {
     const phone = gameCss.slice(0, gameCss.indexOf('@media'));
     expect(phone).toMatch(/\.play-shell\s*\{/);
     expect(phone).toMatch(/--shell-max-w:\s*560px/);
-    expect(phone).toMatch(/grid-template-areas:[\s\S]*'actions'/);
+    expect(phone).toMatch(/grid-template-areas:[\s\S]*'rack'/);
     expect(phone).not.toMatch(/pointer:\s*fine/);
     expect(phone).not.toMatch(/--board-max:/);
   });
@@ -141,13 +148,14 @@ describe('desktop layout (wide fine-pointer windows only)', () => {
 
 describe('tile score placement', () => {
   it('puts letter values top-right (WWF / Crossplay), never bottom-right (Scrabble)', () => {
-    const valueBlock = appCss.match(/\.tile-value\s*\{[\s\S]*?\}/)?.[0] ?? '';
-    expect(valueBlock).toMatch(/\btop:/);
-    expect(valueBlock).toMatch(/\bright:/);
-    expect(valueBlock).toMatch(/bottom:\s*auto/);
-    expect(valueBlock).not.toMatch(/\bbottom:\s*[0-9]/);
+    const tileFace = read('./TileFace.tsx');
+    expect(tileFace).toMatch(/className="tile-value"/);
+    expect(tileFace).toMatch(/textAnchor="end"/);
+    expect(tileFace).toMatch(/x="90"/);
+    expect(tileFace).toMatch(/y="22"/);
+    expect(tileFace).not.toMatch(/y="8[0-9]"/);
 
-    for (const css of [rackCss, boardCss, marketCss]) {
+    for (const css of [rackCss, boardCss, marketCss, appCss]) {
       expect(css).not.toMatch(/\.tile-value[\s\S]*?\bbottom:\s*[0-9]/);
     }
   });
@@ -184,6 +192,8 @@ describe('branding', () => {
     expect(board).toMatch(/token-p1\.svg/);
     expect(board).toMatch(/token-p2\.svg/);
     expect(board).toMatch(/token-corner-empty\.svg/);
+    expect(board).toMatch(/<img/);
+    expect(board).toMatch(/className="corner-token"/);
   });
 });
 
@@ -203,6 +213,7 @@ describe('desktop move log', () => {
   it('renders a collapsible RHS panel at pointer:fine + min-width 900', () => {
     expect(read('./Game.tsx')).toMatch(/SidePanel/);
     expect(desktop).toMatch(/sidebar/);
+    expect(sidePanelCss).toMatch(/grid-column:\s*3/);
     expect(sidePanelCss).toMatch(/@media \(min-width:\s*900px\) and \(pointer:\s*fine\)/);
     expect(moveLogCss).toMatch(/\.move-log-list[\s\S]*overflow-y:\s*auto/);
   });
@@ -245,9 +256,11 @@ describe('no Pass action', () => {
   it('has Draw 2, Play, and Shuffle only — no Pass button', () => {
     const game = read('./Game.tsx');
     expect(game).toMatch(/Draw 2/);
+    expect(game).toMatch(/action-play/);
+    expect(game).toMatch(/action-shuffle/);
     expect(game).not.toMatch(/action-pass/);
     expect(game).not.toMatch(/handlePass/);
-    expect(gameCss).toMatch(/grid-template-columns:\s*repeat\(3,/);
+    expect(gameCss).not.toMatch(/grid-template-columns:\s*repeat\(3,/);
   });
 });
 
@@ -257,6 +270,7 @@ describe('centred logo header', () => {
     expect(read('./Game.tsx')).toMatch(/variant="play"/);
     expect(gameCss).toMatch(/grid-template-areas:[\s\S]*'header'/);
     expect(gameCss).toMatch(/\.play-header[\s\S]*justify-content:\s*center/);
+    expect(gameCss).toMatch(/\.play-header[\s\S]*overflow:\s*visible/);
   });
 });
 
@@ -275,15 +289,15 @@ describe('board rendering', () => {
     expect(boardCss).toMatch(/height:\s*var\(--board-size\)/);
   });
 
-  it('aligns each tile to its cell and scales text from the cell size', () => {
+  it('aligns each tile to its cell and renders letters as SVG text', () => {
     const tile = boardCss.match(/\.board-tile\s*\{[\s\S]*?\n\}/)?.[0] ?? '';
     expect(tile).toMatch(/position:\s*absolute/);
     expect(tile).toMatch(/inset:/);
 
-    // Letter and value both scale with --cell, so nothing clips or drifts.
-    expect(boardCss).toMatch(/\.board-tile \.tile-letter\s*\{[^}]*font-size:\s*calc\(var\(--cell\)/s);
-    expect(boardCss).toMatch(/\.board-tile \.tile-value\s*\{[^}]*font-size:\s*calc\(var\(--cell\)/s);
+    expect(read('./TileFace.tsx')).toMatch(/<svg className="tile-face"/);
+    expect(boardCss).toMatch(/\.board-tile \.tile-face/);
     expect(boardCss).toMatch(/\.board-cell\s*\{[^}]*overflow:\s*hidden/s);
+    expect(appCss).not.toMatch(/\.tile-letter[\s\S]*transform:\s*translate/);
   });
 });
 
@@ -302,5 +316,27 @@ describe('input model', () => {
       expect(source).not.toMatch(/onDrop/);
     }
     expect(read('./Board.tsx')).toMatch(/onCellClick/);
+  });
+});
+
+describe('score cards', () => {
+  it('shows rack-count tile backs on both the You and opponent cards', () => {
+    expect(read('./GameInfo.tsx')).toMatch(/rackCount/);
+    expect(read('./GameInfo.tsx')).toMatch(/score-back/);
+    expect(read('./Rack.tsx')).toMatch(/score-back opponent-back/);
+    expect(read('./Game.tsx')).toMatch(/rackCount=\{viewer\.rack\.length\}/);
+  });
+});
+
+describe('chrome colour', () => {
+  it('uses a neutral blue for buttons and tile backs, not P1 teal or P2 terracotta', () => {
+    expect(appCss).toMatch(/--color-chrome:\s*#5b7a92/i);
+    expect(gameCss).toMatch(/background-color:\s*var\(--color-chrome\)/);
+    expect(gameCss).not.toMatch(/\.action-draw:not\(:disabled\)[^{]*\{[^}]*--color-p1/s);
+    expect(gameCss).not.toMatch(/\.action-play:not\(:disabled\)[^{]*\{[^}]*--color-p2/s);
+    expect(read('./SidePanel.css')).toMatch(/--color-chrome/);
+    expect(read('../../public/tile-back.svg')).toMatch(/#5B7A92/i);
+    expect(read('../../public/tile-back.svg')).not.toMatch(/#56867C/i);
+    expect(read('../../public/tile-back.svg')).not.toMatch(/#CB6B49/i);
   });
 });

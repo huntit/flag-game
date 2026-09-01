@@ -24,8 +24,8 @@ page.on('console', m => m.type() === 'error' && errors.push(m.text()));
 
 const cell = (row, col) => page.locator(`.board-cell[data-row="${row}"][data-col="${col}"]`);
 const rackTiles = () => page.locator('.rack-row .tray-tile');
-const actionButton = name => page.locator(`.actions .action-${name}`);
-const thirdButton = () => page.locator('.actions .action-shuffle');
+const actionButton = name => page.locator(`.action-${name}`);
+const thirdButton = () => page.locator('.action-shuffle');
 
 const readState = () =>
   page.evaluate(() => ({
@@ -34,9 +34,9 @@ const readState = () =>
     oppCount: document.querySelector('.opponent-count')?.textContent.trim(),
     rack: [...document.querySelectorAll('.rack-row .tray-tile .tile-letter')].map(s => s.textContent),
     toast: document.querySelector('.toast')?.textContent,
-    playEnabled: !document.querySelector('.actions .action-play')?.disabled,
-    drawEnabled: !document.querySelector('.actions .action-draw')?.disabled,
-    passEnabled: document.querySelector('.actions .action-pass') != null,
+    playEnabled: !document.querySelector('.action-play')?.disabled,
+    drawEnabled: !document.querySelector('.action-draw')?.disabled,
+    passEnabled: document.querySelector('.action-pass') != null,
     boardTiles: [...document.querySelectorAll('.board-cell')]
       .map(c => {
         const letter = c.querySelector('.board-tile .tile-letter')?.textContent;
@@ -220,7 +220,7 @@ if (!played) {
     scrollH: document.documentElement.scrollHeight,
     clientH: document.documentElement.clientHeight,
     actionsBottom: Math.max(
-      ...[...document.querySelectorAll('.actions .action-button')].map(b => b.getBoundingClientRect().bottom)
+      ...[...document.querySelectorAll('.action-draw, .action-play, .action-shuffle')].map(b => b.getBoundingClientRect().bottom)
     ),
     innerH: window.innerHeight,
   }));

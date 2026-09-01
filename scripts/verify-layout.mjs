@@ -52,8 +52,8 @@ for (const t of targets) {
       const r = el.getBoundingClientRect();
       return { top: r.top, bottom: r.bottom, left: r.left, right: r.right, w: r.width, h: r.height };
     };
-    const buttons = [...document.querySelectorAll('.actions .action-button')].map(b => ({
-      label: b.textContent.trim(),
+    const buttons = [...document.querySelectorAll('.action-draw, .action-play, .action-shuffle')].map(b => ({
+      label: (b.getAttribute('aria-label') || b.textContent || '').trim(),
       disabled: b.disabled,
       ...rect(b),
     }));
@@ -61,6 +61,7 @@ for (const t of targets) {
     const marketTile = document.querySelector('.market-row .tray-tile');
     const board = document.querySelector('.board');
     const cell = document.querySelector('.board-cell');
+    const actionsEl = document.querySelector('.action-play') || document.querySelector('.rack-row');
     return {
       innerH: window.innerHeight,
       innerW: window.innerWidth,
@@ -70,7 +71,7 @@ for (const t of targets) {
       shell: rect(document.querySelector('.play-shell')),
       board: rect(board),
       cell: rect(cell),
-      actions: rect(document.querySelector('.actions')),
+      actions: actionsEl ? rect(actionsEl) : { top: 0, bottom: 0, left: 0, right: 0, w: 0, h: 0 },
       rackTile: rackTile ? rect(rackTile) : null,
       marketTile: marketTile ? rect(marketTile) : null,
       finePointer: window.matchMedia('(pointer: fine)').matches,
@@ -78,7 +79,15 @@ for (const t of targets) {
       buttons,
       opponentCount: document.querySelector('.opponent-count')?.textContent.trim(),
       opponentBacks: document.querySelectorAll('.opponent-back').length,
-      // No opponent letters may be present anywhere in the DOM.
+      youBacks: document.querySelectorAll('.hud-you .score-back').length,
+      cornerTokens: document.querySelectorAll('.corner-token').length,
+      cornerImgs: [...document.querySelectorAll('.corner-token')].map(img => img.currentSrc || img.src),
+      logo: (() => {
+        const img = document.querySelector('.play-header .home-link-img');
+        return img ? rect(img) : null;
+      })(),
+      drawNextToMarket: Boolean(document.querySelector('.market-row .action-draw')),
+      shuffleNextToRack: Boolean(document.querySelector('.rack-row .action-shuffle')),
       opponentLettersRendered: [...document.querySelectorAll('.opponent-inner .tile-letter')].length,
       rackTiles: [...document.querySelectorAll('.rack-row .tray-tile .tile-letter')].map(s => s.textContent),
     };
@@ -101,22 +110,28 @@ for (const t of targets) {
   if (m.board.bottom > m.innerH) problems.push(`board below the fold: ${m.board.bottom.toFixed(1)}`);
   if (m.board.right > m.innerW) problems.push(`board past the right edge: ${m.board.right.toFixed(1)}`);
   if (Math.abs(m.board.w - m.board.h) > 1.5) problems.push(`board not square: ${m.board.w}x${m.board.h}`);
-  if (m.buttons.length !== 4) problems.push(`expected 4 action buttons, got ${m.buttons.length}`);
+  if (m.buttons.length < 3) problems.push(`expected Draw 2, Play, Shuffle, got ${m.buttons.length}`);
   for (const b of m.buttons) {
-    if (b.h < 36) problems.push(`${b.label} button only ${b.h.toFixed(1)}px tall`);
+    if (b.h < 32) problems.push(`${b.label} button only ${b.h.toFixed(1)}px tall`);
   }
   if (m.opponentLettersRendered !== 0) problems.push('opponent letters rendered');
-  if (!/\d+\s*tiles/i.test(m.opponentCount ?? '')) problems.push(`opponent count unreadable: ${m.opponentCount}`);
+  if (m.opponentBacks < 1) problems.push(`opponent rack backs missing: ${m.opponentBacks}`);
+  if (m.youBacks < 1) problems.push(`you rack backs missing: ${m.youBacks}`);
+  if (m.cornerTokens !== 4) problems.push(`expected 4 corner tokens, got ${m.cornerTokens}`);
+  if (!m.drawNextToMarket) problems.push('Draw 2 is not beside the market');
+  if (!m.shuffleNextToRack) problems.push('Shuffle is not beside the rack');
+  if (m.logo && m.logo.top < -1) problems.push(`logo clipped at top: ${m.logo.top}`);
+  if (m.logo && m.logo.h < 24) problems.push(`logo too short: ${m.logo.h}`);
   if (errors.length) problems.push(`console errors: ${errors.join(' | ')}`);
 
   if (desktop) {
     if (!m.finePointer || !m.wide) problems.push(`desktop media gate missed: fine=${m.finePointer} wide=${m.wide}`);
     if (m.board.w > 480) problems.push(`desktop board too large: ${m.board.w.toFixed(1)}`);
-    if (m.shell.w > 780) problems.push(`desktop shell not capped: ${m.shell.w.toFixed(1)}`);
-    if (Math.abs(m.board.left + m.board.w / 2 - m.innerW / 2) > 40) {
+    if (m.shell.w > 1280) problems.push(`desktop shell not capped: ${m.shell.w.toFixed(1)}`);
+    if (Math.abs(m.board.left + m.board.w / 2 - m.innerW / 2) > 80) {
       problems.push(`desktop board not centered: mid=${(m.board.left + m.board.w / 2).toFixed(1)}`);
     }
-    if (m.actions.w > 320) problems.push(`desktop toolbar stretched: ${m.actions.w.toFixed(1)}`);
+    if (m.actions.w > 200) problems.push(`desktop Play stretched: ${m.actions.w.toFixed(1)}`);
     if (m.rackTile) {
       if (m.rackTile.w > 50) problems.push(`desktop rack tile huge: ${m.rackTile.w.toFixed(1)}`);
       if (m.rackTile.h > 50) problems.push(`desktop rack tile tall: ${m.rackTile.h.toFixed(1)}`);

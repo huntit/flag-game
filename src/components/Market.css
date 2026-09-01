@@ -1,4 +1,4 @@
-/* Market: 6 slots + bag count. */
+/* Market: 6 slots + bag count + Draw 2 (sibling in the market row). */
 
 .market-tray {
   justify-content: center;
@@ -6,15 +6,19 @@
 
 .market-tile,
 .market-tray .tray-slot-empty {
-  width: min(calc((100% - 5 * 6px) / 6), calc(var(--market-h) * 0.78));
+  max-width: calc((100% - 5 * 5px) / 6);
+  height: 82%;
+  width: auto;
+  aspect-ratio: 1;
 }
 
 .market-tile.is-facedown {
   background-color: var(--color-cream);
   background-image: var(--tile-back-url);
-  background-size: cover;
+  background-size: 100% 100%;
   background-position: center;
-  box-shadow: inset 0 0 0 1px rgba(44, 58, 61, 0.12);
+  background-repeat: no-repeat;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-chrome) 28%, transparent);
 }
 
 .market-tile.is-facedown.is-selected {
@@ -23,18 +27,15 @@
 
 .tray-slot-empty.is-face-down {
   border-style: solid;
-  border-color: color-mix(in srgb, var(--color-ink) 18%, var(--color-sand));
+  border-color: color-mix(in srgb, var(--color-chrome) 28%, var(--color-sand));
   background: var(--color-cream);
   background-image: var(--tile-back-url);
-  background-size: cover;
+  background-size: 100% 100%;
 }
 
-.market-tile .tile-letter {
-  font-size: calc(var(--market-h) * 0.42);
-}
-
-.market-tile .tile-value {
-  font-size: calc(var(--market-h) * 0.2);
+.market-tile .tile-face {
+  width: 100%;
+  height: 100%;
 }
 
 .market-tile.is-selected {
@@ -46,8 +47,8 @@
   min-width: calc(var(--market-h) * 0.55);
   height: 82%;
   border-radius: 8px;
-  background-color: var(--color-bg-lift);
-  border: 1px solid var(--color-sand);
+  background-color: color-mix(in srgb, var(--color-chrome) 12%, var(--color-cream));
+  border: 1px solid color-mix(in srgb, var(--color-chrome) 28%, transparent);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -61,7 +62,7 @@
   font-weight: 800;
   letter-spacing: 0.05em;
   text-transform: uppercase;
-  color: var(--color-text-dim);
+  color: var(--color-chrome);
   line-height: 1;
 }
 
@@ -88,9 +89,9 @@
 
   .market-tray {
     flex: 0 0 auto;
-    width: calc(6 * var(--tile, 42px) + 5 * 6px);
-    gap: 6px;
-    padding: 0 4px;
+    width: calc(6 * var(--tile, 42px) + 5 * 5px);
+    gap: 5px;
+    padding: 0 2px;
     justify-content: center;
   }
 
@@ -98,15 +99,8 @@
   .market-tray .tray-slot-empty {
     width: var(--tile, 42px);
     height: var(--tile, 42px);
+    max-width: none;
     flex: 0 0 auto;
-  }
-
-  .market-tile .tile-letter {
-    font-size: 1.15rem;
-  }
-
-  .market-tile .tile-value {
-    font-size: 0.62rem;
   }
 
   .bag-count {
