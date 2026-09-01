@@ -11,12 +11,12 @@ interface PassThePhoneProps {
 
 function PassThePhone({ seat, onContinue }: PassThePhoneProps) {
   return (
-    <div className="screen handover">
+    <div className={`screen handover is-${seat.toLowerCase()}`}>
       <div className="screen-panel">
         <p className="handover-kicker">Pass the phone</p>
-        <h1>{SEAT_COLOR_NAMES[seat]}&apos;s turn</h1>
-        <p>Hand the device over, then tap Ready.</p>
-        <button type="button" className="handover-button" onClick={onContinue}>
+        <h1 className="handover-seat">{SEAT_COLOR_NAMES[seat]}&apos;s turn</h1>
+        <p className="handover-note">Hand the device over, then tap Ready.</p>
+        <button type="button" className="control control-solid handover-button" onClick={onContinue}>
           Ready
         </button>
       </div>

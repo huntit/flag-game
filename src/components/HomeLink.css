@@ -38,10 +38,10 @@
 }
 
 .home-link.is-play .home-link-img {
-  height: calc(var(--header-h) - 8px);
+  height: calc(var(--header-h) - 6px);
   width: auto;
   max-width: 100%;
-  max-height: calc(var(--header-h) - 8px);
+  max-height: calc(var(--header-h) - 6px);
   object-fit: contain;
   object-position: center;
 }

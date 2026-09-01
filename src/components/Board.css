@@ -1,4 +1,5 @@
-/* Board grid — player-coloured tiles, corner flags as token images. */
+/* Board grid. Cells are separated by the grid gap, so a tile can fill its
+   cell edge-to-edge and still show its whole border — nothing is clipped. */
 
 .board {
   width: var(--board-size);
@@ -6,80 +7,170 @@
   display: grid;
   grid-template-columns: repeat(11, 1fr);
   grid-template-rows: repeat(11, 1fr);
-  gap: 1px;
-  padding: 2px;
+  gap: max(1px, calc(var(--cell) * 0.035));
+  padding: max(2px, calc(var(--cell) * 0.05));
   background-color: var(--color-board);
-  border-radius: 8px;
+  border-radius: calc(var(--cell) * 0.16);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.5),
+    0 1px 2px rgba(44, 58, 61, 0.14);
   touch-action: manipulation;
-  overflow: visible;
+  overflow: hidden;
 }
 
 .board-cell {
   appearance: none;
   -webkit-appearance: none;
   position: relative;
-  overflow: visible;
+  overflow: hidden;
   padding: 0;
-  border-radius: calc(var(--cell) * 0.1);
+  border-radius: calc(var(--cell) * 0.11);
   background-color: var(--color-cell);
   display: flex;
   align-items: center;
   justify-content: center;
   min-width: 0;
   min-height: 0;
+  transition: background-color var(--dur-quick) ease;
 }
 
 .board-cell.is-centre {
   background-color: color-mix(in srgb, var(--color-sand) 80%, white);
 }
 
-.board-cell.has-flag {
-  background-color: color-mix(in srgb, var(--color-sand) 40%, var(--color-cream));
-}
-
+/* The last play can belong to either seat, so this is neutral rather than a
+   player colour — the tiles sitting on it already carry their owner's tint. */
 .board-cell.is-highlighted {
-  background-color: color-mix(in srgb, var(--color-p1) 18%, var(--color-cream));
-  box-shadow: inset 0 0 0 2px var(--color-p1);
+  background-color: color-mix(in srgb, var(--color-chrome) 16%, var(--color-cream));
 }
 
 .board-cell:active {
   background-color: color-mix(in srgb, var(--color-sand) 65%, white);
 }
 
+/* Live drop target under a dragged tile: the square itself lights up, so the
+   feedback reads at a glance without moving anything. */
+.board-cell.is-drop-target {
+  background-color: color-mix(in srgb, var(--color-chrome) 34%, var(--color-cream));
+  box-shadow: inset 0 0 0 max(2px, calc(var(--cell) * 0.075)) var(--color-chrome);
+}
+
+/* A goal square keeps its own colour, but still shows it is the live target. */
+.board-cell.has-flag.is-drop-target {
+  box-shadow: inset 0 0 0 max(2px, calc(var(--cell) * 0.075)) var(--color-ink);
+}
+
+/* ---- Goal squares -------------------------------------------------------
+   A player's goal is a triple-word square painted in that player's colour.
+   Solid fill, white lettering, same hue as their score card. */
+
+.board-cell.has-flag {
+  background-color: var(--color-cell);
+}
+
+.goal-square {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: calc(var(--cell) * 0.02);
+  border-radius: inherit;
+  color: #fff;
+  pointer-events: none;
+  line-height: 1;
+  box-shadow: inset 0 0 0 1px rgba(44, 58, 61, 0.16);
+}
+
+.goal-square.is-p1 {
+  background-color: var(--color-p1);
+}
+
+.goal-square.is-p2 {
+  background-color: var(--color-p2);
+}
+
+.goal-mult {
+  font-size: calc(var(--cell) * 0.42);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.goal-word {
+  font-size: calc(var(--cell) * 0.19);
+  font-weight: 800;
+  letter-spacing: 0.09em;
+  opacity: 0.92;
+}
+
+/* ---- Placed tiles -------------------------------------------------------
+   The tile fills its cell. Its edge is drawn with an inset ring rather than a
+   border so it can never be cropped by the cell's rounded corners, and the
+   pending ring uses the same trick. */
+
 .board-tile {
   position: absolute;
-  inset: 3%;
-  border-radius: calc(var(--cell) * 0.12);
+  inset: 0;
+  border-radius: inherit;
   background-color: var(--color-tile);
-  background-image: linear-gradient(
-    180deg,
-    rgba(255, 255, 255, 0.72) 0%,
-    rgba(255, 255, 255, 0.12) 38%,
-    rgba(44, 58, 61, 0.08) 100%
-  );
+  background-image: var(--tile-sheen);
   color: var(--color-tile-text);
   display: flex;
   align-items: center;
   justify-content: center;
   box-shadow:
-    inset 0 1.5px 0 rgba(255, 255, 255, 0.88),
-    1px 2px 3px rgba(44, 58, 61, 0.28);
-  border: 1px solid color-mix(in srgb, var(--color-ink) 12%, transparent);
-  overflow: visible;
+    inset 0 0 0 1px var(--tile-edge),
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.85),
+    inset 0 -1.5px 0 rgba(44, 58, 61, 0.1);
+  overflow: hidden;
+  animation: tile-land var(--dur-settle) var(--ease-settle) both;
+}
+
+@keyframes tile-land {
+  from {
+    transform: scale(1.16);
+    opacity: 0.4;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
 
 .board-tile.is-player-p1 {
   background-color: color-mix(in srgb, var(--color-p1) 18%, var(--color-tile));
-  border-color: color-mix(in srgb, var(--color-p1) 32%, transparent);
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--color-p1) 38%, transparent),
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.8),
+    inset 0 -1.5px 0 rgba(44, 58, 61, 0.1);
 }
 
 .board-tile.is-player-p2 {
   background-color: color-mix(in srgb, var(--color-p2) 18%, var(--color-tile));
-  border-color: color-mix(in srgb, var(--color-p2) 32%, transparent);
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--color-p2) 38%, transparent),
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.8),
+    inset 0 -1.5px 0 rgba(44, 58, 61, 0.1);
 }
 
+/* Not committed yet: a full inset ring in ink, drawn inside the tile so the
+   whole outline stays visible. */
 .board-tile.is-pending {
-  box-shadow: 0 0 0 2px var(--color-ink);
+  box-shadow:
+    inset 0 0 0 max(2px, calc(var(--cell) * 0.055)) var(--color-ink),
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.5);
+  cursor: grab;
+  touch-action: none;
+}
+
+.board-tile.is-pending:active {
+  cursor: grabbing;
+}
+
+/* Being dragged: the real tile is drawn under the cursor instead. */
+.board-tile.is-lifted {
+  opacity: 0;
 }
 
 .board-tile.is-blank {
@@ -92,25 +183,18 @@
 }
 
 .cell-mark {
-  font-size: calc(var(--cell) * 0.42);
+  font-size: calc(var(--cell) * 0.66);
   line-height: 1;
-  color: var(--color-p1);
+  color: color-mix(in srgb, var(--color-p1) 78%, var(--color-ink));
   pointer-events: none;
-}
-
-.corner-token {
-  position: absolute;
-  inset: 4%;
-  width: 92%;
-  height: 92%;
-  object-fit: contain;
-  object-position: center;
-  pointer-events: none;
-  display: block;
 }
 
 @media (min-width: 900px) and (pointer: fine) {
   .board-cell:hover {
     background-color: color-mix(in srgb, var(--color-sand) 70%, white);
+  }
+
+  .board-cell.has-flag:hover {
+    background-color: var(--color-cell);
   }
 }

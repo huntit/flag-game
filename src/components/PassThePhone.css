@@ -1,7 +1,11 @@
-/* Hotseat handover screen. Fits the viewport; no scrolling. */
+/* Hotseat handover screen — a dark curtain so the outgoing player cannot
+   glimpse the incoming rack. Everything on it is set light: the page palette
+   is ink-on-cream, and inheriting that here leaves dark text on a dark
+   ground. Fits the viewport; no scrolling. */
 
 .handover {
-  background-color: #0d1016;
+  background-color: var(--color-ink);
+  color: var(--color-cream);
 }
 
 .handover .screen-panel {
@@ -10,25 +14,38 @@
 }
 
 .handover-kicker {
-  font-size: 0.7rem;
+  font-size: 0.72rem;
   font-weight: 800;
   letter-spacing: 0.18em;
   text-transform: uppercase;
-  color: var(--color-primary);
+  color: color-mix(in srgb, var(--color-cream) 62%, transparent);
 }
 
+/* The seat colour, lifted toward cream so it stays legible on the curtain
+   while still naming the player by their colour. */
+.handover-seat {
+  color: var(--color-cream);
+}
+
+.handover.is-p1 .handover-seat {
+  color: color-mix(in srgb, var(--color-p1) 45%, var(--color-cream));
+}
+
+.handover.is-p2 .handover-seat {
+  color: color-mix(in srgb, var(--color-p2) 45%, var(--color-cream));
+}
+
+.handover .handover-note {
+  color: color-mix(in srgb, var(--color-cream) 78%, transparent);
+  font-size: 1rem;
+}
+
+/* Same pill family as the in-game controls. */
 .handover-button {
+  --ctl-h: 54px;
   margin-top: 22px;
   width: 100%;
   max-width: 260px;
-  height: 54px;
-  border-radius: 12px;
-  background-color: var(--color-primary);
-  color: #06121f;
   font-size: 1.05rem;
   font-weight: 800;
-}
-
-.handover-button:active {
-  transform: scale(0.98);
 }

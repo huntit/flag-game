@@ -2,29 +2,40 @@
 
 /* Play screen shell — phone-first, no vertical page scroll.
  *
- * Row heights are known, so the board is sized from leftover viewport space.
- * Header / scores / market / status / rack share --board-size so they align
- * with the board edges. Draw 2 lives in the market row; Shuffle is an icon
- * beside the rack; toasts occupy a dedicated status row.
+ * Row heights are known, so the board is sized from leftover viewport space
+ * and every row is then pinned to --board-size, giving one clean left and
+ * right edge from the wordmark down to the toast.
+ *
+ * The player-interaction area is three plain rows rather than a mixed bag of
+ * tiles and buttons:
+ *
+ *   market   bag + six tiles lying on the table
+ *   rack     your seven tiles standing in a seat-coloured rail
+ *   actions  every button, one family, one baseline
+ *
+ * Tiles are ONE size everywhere. --tile-size is the largest square that fits
+ * both rows and still sits sensibly against a board cell, so a tile looks the
+ * same object whether it is in the market, on your rack, or under your cursor.
  */
 
 .play-shell {
-  --header-h: clamp(52px, calc(var(--app-h) * 0.078), 72px);
-  --scores-h: clamp(40px, calc(var(--app-h) * 0.06), 52px);
-  --market-h: clamp(48px, calc(var(--app-h) * 0.086), 68px);
-  --status-h: clamp(22px, calc(var(--app-h) * 0.038), 32px);
-  --rack-h: clamp(48px, calc(var(--app-h) * 0.09), 70px);
-  --shell-gap: clamp(3px, calc(var(--app-h) * 0.006), 6px);
-  --shell-pad-x: 6px;
+  --header-h: clamp(44px, calc(var(--app-h) * 0.06), 62px);
+  --scores-h: clamp(48px, calc(var(--app-h) * 0.082), 84px);
+  --market-h: clamp(50px, calc(var(--app-h) * 0.095), 98px);
+  --rack-h: clamp(52px, calc(var(--app-h) * 0.10), 104px);
+  --actions-h: clamp(42px, calc(var(--app-h) * 0.064), 64px);
+  --status-h: clamp(24px, calc(var(--app-h) * 0.04), 36px);
+  --shell-gap: clamp(3px, calc(var(--app-h) * 0.007), 8px);
+  --shell-pad-x: 4px;
   --shell-pad-y: 4px;
 
   --chrome-h: calc(
-    var(--header-h) + var(--scores-h) + var(--market-h) + var(--status-h) + var(--rack-h) +
-      (5 * var(--shell-gap)) + (2 * var(--shell-pad-y)) + var(--safe-top) +
+    var(--header-h) + var(--scores-h) + var(--market-h) + var(--rack-h) + var(--actions-h) +
+      var(--status-h) + (6 * var(--shell-gap)) + (2 * var(--shell-pad-y)) + var(--safe-top) +
       var(--safe-bottom) + 2px
   );
 
-  --shell-max-w: 560px;
+  --shell-max-w: 720px;
   --shell-w: min(
     var(--shell-max-w),
     calc(100vw - var(--safe-left) - var(--safe-right))
@@ -34,6 +45,28 @@
     calc(var(--app-h) - var(--chrome-h))
   );
   --cell: calc(var(--board-size) / 11);
+
+  /* ---- One tile size for the whole game ------------------------------- */
+  --tile-gap: clamp(3px, calc(var(--board-size) * 0.014), 9px);
+  --tray-pad: calc(var(--tile-gap) + 2px);
+  /* The bag and its count, reserved out of the market row. The bag stacks its
+     count underneath so this stays a narrow, predictable column. */
+  --bag-block: clamp(40px, calc(var(--board-size) * 0.115), 76px);
+  /* Widest a tile can be and still fit seven across the rack… */
+  --rack-fit: calc(
+    (var(--board-size) - (2 * var(--tray-pad)) - (6 * var(--tile-gap))) / 7
+  );
+  /* …and six across the market beside the bag. */
+  --market-fit: calc((var(--board-size) - var(--bag-block) - (6 * var(--tile-gap))) / 6);
+  --tile-size: min(
+    var(--rack-fit),
+    var(--market-fit),
+    calc(var(--rack-h) * 0.82),
+    calc(var(--market-h) * 0.9),
+    /* Comfortably larger than a board square, never so large the tile
+       visibly shrinks when it lands. */
+    calc(var(--cell) * 1.4)
+  );
 
   position: relative;
   height: var(--app-h);
@@ -47,6 +80,7 @@
     minmax(0, 1fr)
     var(--market-h)
     var(--rack-h)
+    var(--actions-h)
     var(--status-h);
   grid-template-areas:
     'header'
@@ -54,6 +88,7 @@
     'stage'
     'market'
     'rack'
+    'actions'
     'status';
   gap: var(--shell-gap);
   padding: calc(var(--safe-top) + var(--shell-pad-y)) calc(var(--safe-right) + var(--shell-pad-x))
@@ -63,58 +98,12 @@
   align-content: start;
 }
 
-.play-main {
-  display: contents;
-}
-
+/* On phone every row is a direct grid item; the wrappers only matter on
+   desktop, where they become the two columns. */
+.play-main,
+.play-side,
 .dock {
   display: contents;
-}
-
-@media (orientation: landscape) and (min-width: 640px) {
-  .play-shell {
-    --shell-max-w: 1100px;
-    --board-size: min(
-      calc(var(--shell-w) * 0.52),
-      calc(var(--app-h) - (2 * var(--shell-pad-y)) - var(--safe-top) - var(--safe-bottom) - 2px)
-    );
-
-    max-width: var(--shell-max-w);
-    grid-template-columns: var(--board-size) minmax(0, 1fr);
-    grid-template-rows:
-      var(--header-h)
-      var(--scores-h)
-      var(--market-h)
-      var(--rack-h)
-      var(--status-h)
-      minmax(0, 1fr);
-    grid-template-areas:
-      'stage header'
-      'stage scores'
-      'stage market'
-      'stage rack'
-      'stage status'
-      'stage .';
-    align-content: start;
-  }
-
-  .play-shell .stage {
-    grid-row: 1 / -1;
-  }
-
-  .play-shell .play-header {
-    grid-column: 2;
-  }
-
-  .play-header,
-  .scores-row,
-  .market-row,
-  .status-row,
-  .rack-row {
-    width: auto;
-    max-width: none;
-    justify-self: stretch;
-  }
 }
 
 .play-header {
@@ -124,6 +113,7 @@
   justify-content: center;
   min-width: 0;
   min-height: 0;
+  /* The wordmark is drawn to its own bounds; never crop it to the row. */
   overflow: visible;
   width: var(--board-size);
   justify-self: center;
@@ -134,7 +124,7 @@
   grid-area: scores;
   display: flex;
   align-items: stretch;
-  gap: 8px;
+  gap: var(--tile-gap);
   min-width: 0;
   width: var(--board-size);
   justify-self: center;
@@ -144,9 +134,8 @@
   grid-area: stage;
   min-height: 0;
   min-width: 0;
-  overflow: hidden;
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: center;
   width: var(--board-size);
   justify-self: center;
@@ -159,7 +148,6 @@
   justify-self: center;
   display: flex;
   align-items: stretch;
-  gap: 6px;
 }
 
 .market-row .market-row-inner {
@@ -174,7 +162,6 @@
   justify-self: center;
   display: flex;
   align-items: stretch;
-  gap: 6px;
 }
 
 .rack-row .rack-row-inner {
@@ -182,96 +169,45 @@
   min-width: 0;
 }
 
+/* Every button, on one baseline: secondary on the left, the two moves that
+   end a turn on the right. */
+.actions-row {
+  grid-area: actions;
+  width: var(--board-size);
+  justify-self: center;
+  display: flex;
+  align-items: center;
+  gap: var(--tile-gap);
+  min-width: 0;
+}
+
+.actions-spacer {
+  flex: 1 1 auto;
+}
+
 .status-row {
   grid-area: status;
   width: var(--board-size);
   justify-self: center;
   display: flex;
-  flex-direction: row;
   align-items: center;
   justify-content: center;
-  gap: 0;
   min-height: 0;
   overflow: hidden;
   pointer-events: none;
 }
 
-.status-row .toast {
-  max-width: 100%;
-}
+/* ---- Controls ----------------------------------------------------------
+   The family itself lives in App.css so every screen shares it; the play
+   shell only sizes it against the actions row. Solid for the moves that end
+   a turn, ghost for the ones that only rearrange your hand. */
 
-.action-button {
-  height: 100%;
-  border-radius: 999px;
-  font-size: clamp(0.72rem, calc(var(--app-h) * 0.02), 0.88rem);
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  background-color: var(--color-chrome);
-  color: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: transform 0.08s ease, opacity 0.12s ease, filter 0.12s ease;
-  padding: 0 10px;
-  text-align: center;
-  line-height: 1.15;
-  flex: 0 0 auto;
-}
-
-.action-button:active:not(:disabled) {
-  transform: scale(0.96);
-}
-
-.action-button:disabled {
-  opacity: 0.42;
-  background-color: var(--color-chrome);
-  color: #fff;
-}
-
-.action-draw {
-  min-width: 4.8rem;
-}
-
-.action-pass {
-  min-width: 4.2rem;
+.actions-row .control {
+  --ctl-h: calc(var(--actions-h) * 0.86);
 }
 
 .action-draw.is-swap-warning:not(:disabled) {
-  box-shadow: inset 0 0 0 2px var(--color-ink);
-}
-
-.action-play {
-  min-width: 4.2rem;
-}
-
-.icon-button {
-  height: 100%;
-  width: calc(var(--rack-h) * 0.78);
-  max-width: 48px;
-  padding: 0;
-  border-radius: 10px;
-  background-color: var(--color-chrome);
-  color: #fff;
-  flex: 0 0 auto;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.icon-button:disabled {
-  opacity: 0.42;
-  background-color: var(--color-chrome);
-  color: #fff;
-}
-
-.icon-button:active:not(:disabled) {
-  transform: scale(0.94);
-}
-
-.shuffle-icon {
-  width: 58%;
-  height: 58%;
-  display: block;
+  box-shadow: var(--control-shadow), inset 0 0 0 2px var(--color-ink);
 }
 
 .sr-only {
@@ -286,6 +222,30 @@
   border: 0;
 }
 
+/* ---- Dragged tile ------------------------------------------------------
+   Fixed to the viewport and inert, so hit-testing sees the board underneath
+   rather than the tile the pointer is carrying. */
+
+.drag-ghost {
+  position: fixed;
+  z-index: 60;
+  pointer-events: none;
+  transform: scale(1.08);
+  filter: drop-shadow(0 8px 14px rgba(44, 58, 61, 0.3));
+}
+
+.drag-ghost .tray-tile {
+  width: 100%;
+  height: 100%;
+  border-radius: calc(var(--tile-size) * 0.16);
+}
+
+.play-shell.is-dragging {
+  cursor: grabbing;
+}
+
+/* ---- Toasts ------------------------------------------------------------ */
+
 .toast-layer {
   position: absolute;
   left: 0;
@@ -298,14 +258,26 @@
 
 .toast {
   max-width: 100%;
-  padding: 4px 12px;
+  padding: 4px 14px;
   border-radius: 999px;
-  font-size: 0.74rem;
+  font-size: clamp(0.78rem, calc(var(--status-h) * 0.46), 1.02rem);
   font-weight: 600;
   text-align: center;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  animation: toast-enter var(--dur-settle) var(--ease-settle) both;
+}
+
+@keyframes toast-enter {
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 
 .toast-error {
@@ -323,64 +295,162 @@
   color: #fff;
 }
 
+/* Light ground so the score reads in the score colour, same as everywhere. */
+.toast-score {
+  background-color: color-mix(in srgb, var(--color-chrome) 14%, var(--color-cream));
+  color: var(--color-ink);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-chrome) 25%, transparent);
+}
+
+.toast-prefix,
+.toast-for {
+  color: var(--color-text-dim);
+  font-weight: 600;
+}
+
+.toast-words {
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+/* ---- Tablet landscape --------------------------------------------------
+   Board on the left, the whole player area stacked beside it. */
+
+@media (orientation: landscape) and (min-width: 640px) and (pointer: coarse) {
+  .play-shell {
+    --shell-max-w: 1200px;
+    --side-w: min(460px, 42vw);
+    --board-size: min(
+      calc(var(--shell-w) - var(--side-w) - (2 * var(--shell-pad-x)) - 16px),
+      calc(var(--app-h) - (2 * var(--shell-pad-y)) - var(--safe-top) - var(--safe-bottom) - 2px)
+    );
+    /* The rows beside the board budget their tiles against the side column. */
+    --rack-fit: calc((var(--side-w) - (2 * var(--tray-pad)) - (6 * var(--tile-gap))) / 7);
+    --market-fit: calc((var(--side-w) - var(--bag-block) - (6 * var(--tile-gap))) / 6);
+
+    max-width: var(--shell-max-w);
+    grid-template-columns: var(--board-size) minmax(0, 1fr);
+    grid-template-rows:
+      var(--header-h)
+      var(--scores-h)
+      var(--market-h)
+      var(--rack-h)
+      var(--actions-h)
+      var(--status-h)
+      minmax(0, 1fr);
+    grid-template-areas:
+      'stage header'
+      'stage scores'
+      'stage market'
+      'stage rack'
+      'stage actions'
+      'stage status'
+      'stage log';
+    column-gap: 16px;
+    align-content: start;
+  }
+
+  /* A wide landscape tablet has room to spare beside the board, so the move
+     log fills it rather than leaving the column half empty. */
+  .play-shell .side-panel {
+    display: flex;
+    grid-area: log;
+    min-height: 0;
+    min-width: 0;
+    width: 100%;
+    padding-top: var(--shell-gap);
+  }
+
+  .play-shell .stage {
+    grid-row: 1 / -1;
+    align-items: flex-start;
+  }
+
+  .play-shell .play-header {
+    grid-column: 2;
+  }
+
+  .play-header,
+  .scores-row,
+  .market-row,
+  .status-row,
+  .actions-row,
+  .rack-row {
+    width: auto;
+    max-width: none;
+    justify-self: stretch;
+  }
+}
+
+/* ---- Desktop -----------------------------------------------------------
+   Wide fine-pointer windows only. The score cards and the move log move into
+   a right-hand column, which buys the board back the height they were using
+   and gives the log somewhere to live that is not a floating button. */
+
 @media (min-width: 900px) and (pointer: fine) {
   .play-shell {
-    --header-h: 52px;
-    --scores-h: 48px;
-    --market-h: 48px;
-    --status-h: 28px;
-    --rack-h: 48px;
-    --dock-h: 48px;
-    --shell-gap: 8px;
-    --shell-pad-x: 16px;
-    --shell-pad-y: 10px;
-    --tile: 38px;
-    --log-w: 220px;
+    --header-h: 48px;
+    --scores-h: clamp(56px, calc(var(--app-h) * 0.078), 76px);
+    --market-h: clamp(56px, calc(var(--app-h) * 0.082), 84px);
+    --rack-h: clamp(58px, calc(var(--app-h) * 0.085), 88px);
+    --actions-h: 48px;
+    --status-h: 34px;
+    --shell-gap: 10px;
+    --shell-pad-x: 20px;
+    --shell-pad-y: 12px;
+    /* Hard cap: tiles stop growing once the window is big enough. */
+    --tile: 68px;
+    --log-w: 300px;
 
+    /* Scores live in the side column, so they cost the board nothing. */
     --chrome-h: calc(
-      var(--header-h) + var(--scores-h) + var(--market-h) + var(--rack-h) + var(--status-h) +
+      var(--header-h) + var(--market-h) + var(--rack-h) + var(--actions-h) + var(--status-h) +
         (5 * var(--shell-gap)) + (2 * var(--shell-pad-y)) + var(--safe-top) +
         var(--safe-bottom) + 2px
     );
 
-    --shell-max-w: 1100px;
-    --board-max: 440px;
-    --board-size: min(
-      var(--board-max),
-      calc(var(--app-h) - var(--chrome-h))
+    --shell-max-w: none;
+    --board-max: 660px;
+    --board-size: min(var(--board-max), calc(var(--app-h) - var(--chrome-h)));
+    --tile-size: min(
+      var(--rack-fit),
+      var(--market-fit),
+      calc(var(--rack-h) * 0.82),
+      calc(var(--market-h) * 0.9),
+      calc(var(--cell) * 1.4),
+      var(--tile)
     );
 
     max-width: none;
     width: 100%;
     margin: 0;
-    display: grid;
-    grid-template-columns: 1fr auto 1fr;
-    grid-template-rows: auto;
+    grid-template-columns: 1fr auto var(--log-w) 1fr;
+    grid-template-rows: minmax(0, 1fr);
     grid-template-areas: none;
     align-content: start;
-    justify-content: stretch;
-    column-gap: 0;
-    row-gap: var(--shell-gap);
+    justify-content: center;
+    column-gap: 24px;
+    row-gap: 0;
   }
 
+  /* Centre column: wordmark, board, market, rack, actions, status. */
   .play-main {
     display: grid;
     grid-column: 2;
+    grid-row: 1;
     width: var(--board-size);
     grid-template-columns: var(--board-size);
     grid-template-rows:
-      var(--header-h)
-      var(--scores-h)
       var(--board-size)
       var(--market-h)
-      var(--dock-h)
+      var(--rack-h)
+      var(--actions-h)
       var(--status-h);
     grid-template-areas:
-      'header'
-      'scores'
       'stage'
       'market'
       'rack'
+      'actions'
       'status';
     gap: var(--shell-gap);
     align-content: start;
@@ -390,89 +460,97 @@
     display: contents;
   }
 
-  .play-shell .stage,
-  .play-shell .play-header,
-  .play-header,
-  .scores-row,
-  .stage,
-  .market-row,
-  .status-row,
-  .rack-row {
-    grid-column: auto;
-    grid-row: auto;
-    width: 100%;
-    max-width: none;
-    justify-self: stretch;
+  .play-shell .play-header {
+    grid-column: 2;
+    grid-row: 1;
+    align-self: start;
+    height: var(--header-h);
+    width: var(--board-size);
+    justify-self: center;
+    /* Sits above the play column, which starts below it. */
+    margin-bottom: 0;
   }
 
-  .play-shell .play-header {
-    overflow: visible;
-    width: auto;
-    max-width: none;
+  .play-main {
+    margin-top: calc(var(--header-h) + var(--shell-gap));
+  }
+
+  .play-shell .side-panel {
+    display: flex;
+    flex: 1 1 auto;
+  }
+
+  /* Right column: both score cards, then the move log. */
+  .play-side {
+    display: flex;
+    flex-direction: column;
+    grid-column: 3;
+    grid-row: 1;
+    min-height: 0;
+    min-width: 0;
+    gap: var(--shell-gap);
+    align-self: stretch;
+    margin-top: calc(var(--header-h) + var(--shell-gap));
+    max-height: calc(var(--app-h) - var(--header-h) - (3 * var(--shell-gap)) - (2 * var(--shell-pad-y)));
   }
 
   .play-shell .scores-row {
-    width: auto;
-    max-width: none;
+    flex: 0 0 auto;
+    flex-direction: column;
+    width: 100%;
+    height: auto;
+    gap: var(--shell-gap);
+    justify-self: stretch;
+  }
+
+  .play-shell .scores-row .score-card {
+    width: 100%;
+    height: var(--scores-h);
+    flex: 0 0 var(--scores-h);
+  }
+
+  .play-shell .stage,
+  .play-shell .market-row,
+  .play-shell .rack-row,
+  .play-shell .actions-row,
+  .play-shell .status-row {
+    width: var(--board-size);
+    max-width: var(--board-size);
     justify-self: stretch;
   }
 
   .play-shell .stage {
     grid-area: stage;
-    width: var(--board-size);
-    max-width: var(--board-size);
-    justify-self: stretch;
     align-self: start;
-    overflow: visible;
   }
 
   .play-shell .market-row {
-    width: var(--board-size);
-    max-width: var(--board-size);
+    grid-area: market;
     height: var(--market-h);
-    flex: 0 0 var(--market-h);
-    justify-self: stretch;
-  }
-
-  .play-shell .status-row {
-    width: var(--board-size);
-    max-width: var(--board-size);
-    height: var(--status-h);
-    flex: 0 0 var(--status-h);
-    justify-self: stretch;
   }
 
   .play-shell .rack-row {
-    width: var(--board-size);
-    max-width: var(--board-size);
-    min-width: 0;
-    height: var(--dock-h);
-    max-height: var(--dock-h);
-    flex: 0 0 var(--dock-h);
-    justify-self: stretch;
+    grid-area: rack;
+    height: var(--rack-h);
   }
 
-  .action-play {
-    width: 76px;
-    min-width: 76px;
-    flex: 0 0 76px;
+  .play-shell .actions-row {
+    grid-area: actions;
+    height: var(--actions-h);
   }
 
-  .action-draw,
-  .action-pass {
-    width: 88px;
-    min-width: 88px;
-    flex: 0 0 88px;
+  .play-shell .status-row {
+    grid-area: status;
+    height: var(--status-h);
   }
 
-  .icon-button {
-    width: 40px;
-    min-width: 40px;
-    max-width: 40px;
-    flex: 0 0 40px;
+  .control-solid:hover:not(:disabled) {
+    background-color: color-mix(in srgb, var(--color-chrome) 88%, black);
+    box-shadow: var(--control-shadow-hover);
   }
 
-  .action-button:hover:not(:disabled) {
-    filter: brightness(1.08);
+  .control-outline:hover:not(:disabled) {
+    background-color: color-mix(in srgb, var(--color-chrome) 10%, transparent);
+    box-shadow: inset 0 0 0 1.5px var(--color-chrome);
   }
 }

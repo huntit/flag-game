@@ -111,6 +111,25 @@ export function shuffleRack(rack: Tile[]): Tile[] {
   return [...rack.slice(1), rack[0]];
 }
 
+/**
+ * Move one rack tile so it sits immediately before whatever is at toIndex in
+ * the rack as it stands now (toIndex === rack.length puts it last). Like
+ * shuffleRack this is a display convenience — the tiles you hold never change,
+ * only the order they sit in.
+ */
+export function reorderRack(rack: Tile[], tileId: TileId, toIndex: number): Tile[] {
+  const from = rack.findIndex(t => t.id === tileId);
+  if (from === -1) return [...rack];
+
+  const clamped = Math.max(0, Math.min(rack.length, toIndex));
+  const next = [...rack];
+  const [moved] = next.splice(from, 1);
+  // Pulling the tile out shifts everything after it down one, so a rightward
+  // move lands one short of the slot the player aimed at without this.
+  next.splice(clamped > from ? clamped - 1 : clamped, 0, moved);
+  return next;
+}
+
 export function drawFromBag(bag: Tile[], count: number): Tile[] {
   return bag.splice(0, Math.min(count, bag.length));
 }
@@ -143,15 +162,23 @@ function randomCorner(): FlagPost {
   return ALL_CORNERS[Math.floor(random() * ALL_CORNERS.length)];
 }
 
+/**
+ * Face-down slots sit at random positions in the row, not always on the end.
+ * A slot keeps its face-up/face-down identity for the whole game: refilling
+ * writes the replacement into the same slot (see refillMarketSlot), so a
+ * face-down position stays face-down and the row never reshuffles under the
+ * player's eye.
+ */
 function dealMarket(bag: Tile[]): MarketSlot[] {
-  const slots: MarketSlot[] = [];
-  for (let i = 0; i < MARKET_FACE_UP; i++) {
-    slots.push({ tile: bag.shift() ?? null, faceUp: true });
+  const faces = [
+    ...Array<boolean>(MARKET_FACE_UP).fill(true),
+    ...Array<boolean>(MARKET_FACE_DOWN).fill(false),
+  ];
+  for (let i = faces.length - 1; i > 0; i--) {
+    const j = Math.floor(random() * (i + 1));
+    [faces[i], faces[j]] = [faces[j], faces[i]];
   }
-  for (let i = 0; i < MARKET_FACE_DOWN; i++) {
-    slots.push({ tile: bag.shift() ?? null, faceUp: false });
-  }
-  return slots;
+  return faces.map(faceUp => ({ tile: bag.shift() ?? null, faceUp }));
 }
 
 export function marketShowingCount(market: MarketSlot[]): number {

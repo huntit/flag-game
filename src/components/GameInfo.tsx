@@ -1,8 +1,9 @@
 // Score cards: FIRST player left, SECOND player right (true P1/P2 seat order).
-// Mini-rack pips: filled backs + dotted empty slots. Avatar sits with the name.
+// A player is identified by their name in their own colour — no avatars.
+// The mini-rack below is a scale model of their real rack: seven slots, filled
+// with tile backs for the tiles they hold.
 
 import { RACK_MAX } from '../engine/types';
-import { PlayerAvatar, type AvatarKind } from './PlayerAvatar';
 import './GameInfo.css';
 
 interface ScoreCardProps {
@@ -11,7 +12,6 @@ interface ScoreCardProps {
   rackCount: number;
   isActive: boolean;
   playerColor: 'P1' | 'P2';
-  kind: AvatarKind;
   variant?: 'you' | 'opponent';
 }
 
@@ -21,7 +21,6 @@ export function ScoreCard({
   rackCount,
   isActive,
   playerColor,
-  kind,
   variant = 'you',
 }: ScoreCardProps) {
   const shown = Math.max(0, Math.min(RACK_MAX, rackCount));
@@ -31,12 +30,17 @@ export function ScoreCard({
       className={`score-card ${variant === 'you' ? 'hud-you' : 'opponent-inner'} is-${playerColor.toLowerCase()} ${isActive ? 'is-active' : ''}`}
       data-seat={playerColor}
     >
-      <div className="score-card-id">
-        <PlayerAvatar kind={kind} playerColor={playerColor} name={name} />
+      <div className="score-card-head">
+        <span
+          className="score-card-turn"
+          aria-label={isActive ? `${name} to play` : undefined}
+        />
         <span className={`score-card-name ${variant === 'you' ? 'hud-key' : 'opponent-name'}`}>
           {name}
         </span>
-        <span className={`score-card-score ${variant === 'you' ? 'hud-value' : 'opponent-score'}`}>
+        <span
+          className={`score-card-score score-value ${variant === 'you' ? 'hud-value' : 'opponent-score'}`}
+        >
           {score}
         </span>
       </div>
@@ -62,10 +66,9 @@ interface GameInfoProps {
   rackCount: number;
   isYourTurn: boolean;
   playerColor: 'P1' | 'P2';
-  kind: AvatarKind;
 }
 
-function GameInfo({ youLabel, yourScore, rackCount, isYourTurn, playerColor, kind }: GameInfoProps) {
+function GameInfo({ youLabel, yourScore, rackCount, isYourTurn, playerColor }: GameInfoProps) {
   return (
     <ScoreCard
       name={youLabel}
@@ -73,7 +76,6 @@ function GameInfo({ youLabel, yourScore, rackCount, isYourTurn, playerColor, kin
       rackCount={rackCount}
       isActive={isYourTurn}
       playerColor={playerColor}
-      kind={kind}
       variant="you"
     />
   );

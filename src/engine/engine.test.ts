@@ -14,6 +14,8 @@ import {
   marketShowingCount,
   getMarketTiles,
   emptySpareCorners,
+  reorderRack,
+  refillMarketSlot,
 } from './game';
 import {
   executeAction,
@@ -534,6 +536,67 @@ describe('rack shuffle', () => {
     const turnCount = state.turnCount;
     shuffleRack(state.players[0].rack);
     expect(state.turnCount).toBe(turnCount);
+  });
+});
+
+describe('rack reorder', () => {
+  const rack = () => [
+    tile('a', 'A'),
+    tile('b', 'E'),
+    tile('c', 'T'),
+    tile('d', 'A'),
+  ];
+
+  it('drops a tile immediately before whatever sits at the target slot', () => {
+    // Rightward moves are the ones that go wrong if you forget that pulling
+    // the tile out shifts everything after it down one.
+    expect(reorderRack(rack(), 'a', 2).map(t => t.id)).toEqual(['b', 'a', 'c', 'd']);
+    expect(reorderRack(rack(), 'a', 4).map(t => t.id)).toEqual(['b', 'c', 'd', 'a']);
+    expect(reorderRack(rack(), 'd', 0).map(t => t.id)).toEqual(['d', 'a', 'b', 'c']);
+    expect(reorderRack(rack(), 'c', 1).map(t => t.id)).toEqual(['a', 'c', 'b', 'd']);
+  });
+
+  it('clamps out-of-range slots and leaves an unknown tile alone', () => {
+    expect(reorderRack(rack(), 'b', 99).map(t => t.id)).toEqual(['a', 'c', 'd', 'b']);
+    expect(reorderRack(rack(), 'b', -3).map(t => t.id)).toEqual(['b', 'a', 'c', 'd']);
+    expect(reorderRack(rack(), 'nope', 0).map(t => t.id)).toEqual(['a', 'b', 'c', 'd']);
+  });
+
+  it('never changes which tiles you hold, only their order', () => {
+    const before = rack();
+    const after = reorderRack(before, 'c', 0);
+    expect([...after].map(t => t.id).sort()).toEqual([...before].map(t => t.id).sort());
+    expect(before.map(t => t.id)).toEqual(['a', 'b', 'c', 'd']); // input untouched
+  });
+});
+
+describe('market face-down slots', () => {
+  it('scatters the face-down slots rather than parking them on the end', () => {
+    // Across many deals the face-down slots must land in every position; a
+    // fixed layout would only ever produce one pattern.
+    const seen = new Set<string>();
+    for (let seed = 1; seed <= 60; seed++) {
+      setRandomSource(mulberry32(seed));
+      const state = initializeGame(mockTileData);
+      expect(state.market.filter(s => !s.faceUp)).toHaveLength(MARKET_FACE_DOWN);
+      seen.add(state.market.map(s => (s.faceUp ? 'u' : 'd')).join(''));
+    }
+    expect(seen.size).toBeGreaterThan(1);
+    expect(seen.has('uuuudd')).toBe(true);
+    // At least one deal must put a face-down slot in the first half.
+    expect([...seen].some(pattern => pattern.slice(0, 3).includes('d'))).toBe(true);
+  });
+
+  it('refills a slot in place, keeping its face-up or face-down identity', () => {
+    setRandomSource(mulberry32(9));
+    const state = initializeGame(mockTileData);
+    const before = state.market.map(s => s.faceUp);
+
+    for (const slot of state.market) slot.tile = null;
+    for (const slot of state.market) refillMarketSlot(state.bag, slot);
+
+    expect(state.market.map(s => s.faceUp)).toEqual(before);
+    expect(state.market.every(s => s.tile !== null)).toBe(true);
   });
 });
 

@@ -11,6 +11,7 @@
     "sim": "tsx src/cli/flag-sim.ts",
     "verify:layout": "node scripts/verify-layout.mjs",
     "verify:play": "node scripts/verify-play.mjs",
+    "verify:drag": "node scripts/verify-drag.mjs",
     "verify:hotseat": "node scripts/verify-hotseat.mjs",
     "verify:modes": "node scripts/verify-modes.mjs",
     "shots:live": "node scripts/shots-live.mjs"

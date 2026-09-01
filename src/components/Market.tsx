@@ -1,4 +1,6 @@
-// Market: 4 face-up + 2 face-down tiles. Bag art + remaining count (no MARKET word).
+// Market: six slots — four face up, two face down, scattered through the row.
+// The bag sits immediately to the left of the row it refills, with its
+// remaining count as plain text rather than a badge stamped on the art.
 
 import type { MarketSlot, Tile } from '../engine/types';
 import { MARKET_SLOTS } from '../engine/types';
@@ -20,9 +22,11 @@ function Market({ market, selectedTileIds, bagCount, disabled, onTileClick }: Ma
 
   return (
     <div className="market-row-inner" data-market-count={market.length}>
-      <div className="market-bag" aria-label={`${bagCount} tiles in bag`}>
+      <div className="market-bag" aria-label={`${bagCount} tiles left in the bag`}>
         <img className="market-bag-art" src={`${base}market-bag.svg`} alt="" />
-        <span className="market-bag-count">{bagCount}</span>
+        <span className="market-bag-count" aria-hidden="true">
+          {bagCount}
+        </span>
       </div>
       <div className="tray market-tray" aria-label="Market">
         {market.map((slot, index) => {
@@ -31,31 +35,19 @@ function Market({ market, selectedTileIds, bagCount, disabled, onTileClick }: Ma
             return (
               <span
                 key={`market-empty-${index}`}
-                className={`tray-slot-empty ${slot.faceUp ? 'is-face-up' : 'is-face-down'}`}
+                className={`tray-slot-empty market-slot-empty ${slot.faceUp ? 'is-face-up' : 'is-face-down'}`}
                 aria-hidden="true"
               />
             );
           }
 
-          if (!slot.faceUp) {
-            const selected = selectedTileIds.includes(tile.id);
-            return (
-              <button
-                type="button"
-                key={tile.id}
-                className={`tray-tile market-tile is-facedown ${selected ? 'is-selected' : ''}`}
-                disabled={disabled}
-                onClick={() => onTileClick(tile)}
-                aria-label="Face-down market tile"
-              />
-            );
-          }
-
+          const selected = selectedTileIds.includes(tile.id);
           const classes = [
             'tray-tile',
             'market-tile',
-            selectedTileIds.includes(tile.id) && 'is-selected',
-            tile.isBlank && 'is-blank',
+            selected && 'is-selected',
+            slot.faceUp ? 'is-faceup' : 'is-facedown',
+            slot.faceUp && tile.isBlank && 'is-blank',
           ]
             .filter(Boolean)
             .join(' ');
@@ -67,14 +59,22 @@ function Market({ market, selectedTileIds, bagCount, disabled, onTileClick }: Ma
               className={classes}
               disabled={disabled}
               onClick={() => onTileClick(tile)}
-              aria-label={tile.isBlank ? 'Blank tile' : `${tile.letter}, ${tile.value} points`}
+              aria-label={
+                !slot.faceUp
+                  ? 'Face-down market tile'
+                  : tile.isBlank
+                    ? 'Blank tile'
+                    : `${tile.letter}, ${tile.value} points`
+              }
             >
-              <TileFace letter={tile.letter} value={tile.value} isBlank={tile.isBlank} />
+              {slot.faceUp ? (
+                <TileFace letter={tile.letter} value={tile.value} isBlank={tile.isBlank} />
+              ) : null}
             </button>
           );
         })}
         {Array.from({ length: emptySlots }, (_, i) => (
-          <span key={`market-pad-${i}`} className="tray-slot-empty" aria-hidden="true" />
+          <span key={`market-pad-${i}`} className="tray-slot-empty market-slot-empty" aria-hidden="true" />
         ))}
       </div>
     </div>

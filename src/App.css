@@ -23,6 +23,43 @@
   --color-tile-blank: #dce8e4;
   /* Neutral slate-blue chrome: cream/ink family, not P1 teal or P2 terracotta. */
   --color-chrome: #5b7a92;
+  /* One colour for every number that is a score: score cards, the play
+     preview, the move log, the final result. Never a player colour — a score
+     belongs to the game, not to a seat. */
+  --color-score: #24363a;
+
+  /* Interactive family. Every button in the game — pill or icon — is built
+     from these, so nothing looks like it wandered in from another app. */
+  --control-radius: 999px;
+  --control-bg: var(--color-chrome);
+  --control-fg: #fff;
+  --control-shadow: 0 1px 2px rgba(44, 58, 61, 0.18);
+  --control-shadow-hover: 0 2px 6px rgba(44, 58, 61, 0.22);
+
+  /* Tile stock. Rack and market tiles are the same object; only their
+     resting shadow differs (held vs lying on the table). */
+  --tile-radius: 0.18em;
+  --tile-edge: color-mix(in srgb, var(--color-ink) 14%, transparent);
+  --tile-sheen: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.72) 0%,
+    rgba(255, 255, 255, 0.12) 38%,
+    rgba(44, 58, 61, 0.08) 100%
+  );
+  /* Held in your hand: lifted, casting down onto the rail. */
+  --tile-shadow-held: 0 2px 3px rgba(44, 58, 61, 0.22), 0 5px 10px rgba(44, 58, 61, 0.12);
+  /* Lying on the table: barely off the surface. */
+  --tile-shadow-table: 0 1px 1px rgba(44, 58, 61, 0.14);
+
+  /* One fill per seat, shared by that player's score card and their rack, so
+     the rack reads as an extension of their card rather than a separate slab. */
+  --seat-card-bg-p1: color-mix(in srgb, var(--color-p1) 13%, white);
+  --seat-card-bg-p2: color-mix(in srgb, var(--color-p2) 13%, white);
+
+  /* Motion. Calm and short — this is a thinking game, not an arcade. */
+  --ease-settle: cubic-bezier(0.2, 0.8, 0.3, 1.05);
+  --dur-quick: 130ms;
+  --dur-settle: 220ms;
 
   --app-h: 100vh;
 
@@ -141,7 +178,7 @@ button:disabled {
 
 .tile-face .tile-letter {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  font-size: 52px;
+  font-size: 56px;
   font-weight: 800;
   fill: currentColor;
   pointer-events: none;
@@ -149,9 +186,96 @@ button:disabled {
 
 .tile-face .tile-value {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  font-size: 20px;
+  font-size: 21px;
   font-weight: 800;
   fill: currentColor;
   opacity: 0.72;
   pointer-events: none;
+}
+
+/* ---- The button family --------------------------------------------------
+   Every action button in the game is built from these, so nothing looks like
+   it wandered in from another app. Solid carries the action; ghost is the
+   same shape and hue at a quieter weight. Screens that need a different size
+   override --ctl-h. */
+
+/* --ctl-h is a fallback, not a set value: a consumer that declares its own
+   --ctl-h wins regardless of stylesheet order. */
+.control {
+  height: var(--ctl-h, 46px);
+  min-width: var(--ctl-h, 46px);
+  border-radius: var(--control-radius);
+  font-size: clamp(0.74rem, calc(var(--ctl-h, 46px) * 0.34), 1rem);
+  font-weight: 700;
+  letter-spacing: 0.015em;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 clamp(12px, calc(var(--ctl-h, 46px) * 0.5), 26px);
+  text-align: center;
+  line-height: 1.15;
+  flex: 0 0 auto;
+  transition:
+    transform var(--dur-quick) var(--ease-settle),
+    box-shadow var(--dur-quick) ease,
+    opacity var(--dur-quick) ease,
+    background-color var(--dur-quick) ease;
+}
+
+.control-solid {
+  background-color: var(--control-bg);
+  color: var(--control-fg);
+  box-shadow: var(--control-shadow);
+}
+
+/* Same pill and hue at a quieter weight, for actions that only rearrange
+   things rather than commit to them. */
+.control-outline {
+  background-color: transparent;
+  color: var(--color-chrome);
+  box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--color-chrome) 45%, transparent);
+}
+
+/* Icon-only: the pill closes up into a circle of the same height. */
+.control-round {
+  padding: 0;
+  width: var(--ctl-h, 46px);
+}
+
+.control:active:not(:disabled) {
+  transform: scale(0.96);
+}
+
+.control:disabled {
+  opacity: 0.38;
+}
+
+.control:focus-visible {
+  outline: 2px solid var(--color-ink);
+  outline-offset: 2px;
+}
+
+.control-icon {
+  width: 52%;
+  height: 52%;
+  display: block;
+}
+
+/* A score, wherever it appears: one colour, one weight, lining figures so a
+   two-digit total does not jitter against a one-digit one. */
+.score-value {
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-score);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
 }

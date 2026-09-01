@@ -23,7 +23,7 @@ function BlankPicker({ onPick, onCancel }: BlankPickerProps) {
             </button>
           ))}
         </div>
-        <button type="button" className="blank-picker-cancel" onClick={onCancel}>
+        <button type="button" className="control control-outline blank-picker-cancel" onClick={onCancel}>
           Cancel
         </button>
       </div>

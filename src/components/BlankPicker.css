@@ -37,23 +37,36 @@
   gap: 5px;
 }
 
+/* You are choosing what the tile becomes, so the keys are drawn as tiles —
+   same stock, sheen and edge as the ones on your rack. */
 .blank-picker-key {
   aspect-ratio: 1;
   border-radius: 7px;
   background-color: var(--color-tile);
+  background-image: var(--tile-sheen);
   color: var(--color-tile-text);
   font-size: clamp(0.8rem, 3.6vw, 1.05rem);
   font-weight: 800;
+  box-shadow:
+    inset 0 0 0 1px var(--tile-edge),
+    var(--tile-shadow-table);
+  transition: transform var(--dur-quick) var(--ease-settle), box-shadow var(--dur-quick) ease;
+}
+
+.blank-picker-key:hover {
+  box-shadow:
+    inset 0 0 0 1px var(--tile-edge),
+    var(--tile-shadow-held);
+  transform: translateY(-2px);
 }
 
 .blank-picker-key:active {
   transform: scale(0.94);
 }
 
+/* Same pill family as the in-game controls. */
 .blank-picker-cancel {
-  height: 40px;
-  border-radius: 9px;
-  background-color: var(--color-bg-lift);
+  --ctl-h: 42px;
+  width: 100%;
   font-size: 0.9rem;
-  font-weight: 700;
 }
