@@ -27,8 +27,12 @@ export function ScoreCard({
       className={`score-card ${variant === 'you' ? 'hud-you' : 'opponent-inner'} is-${playerColor.toLowerCase()} ${isActive ? 'is-active' : ''}`}
     >
       <div className="score-card-id">
-        <span className="score-card-name">{name}</span>
-        <span className="score-card-score">{score}</span>
+        <span className={`score-card-name ${variant === 'you' ? 'hud-key' : 'opponent-name'}`}>
+          {name}
+        </span>
+        <span className={`score-card-score ${variant === 'you' ? 'hud-value' : 'opponent-score'}`}>
+          {score}
+        </span>
       </div>
       <div className="score-backs" aria-label={`${name} holds ${rackCount} tiles`}>
         {Array.from({ length: shown }, (_, i) => (
