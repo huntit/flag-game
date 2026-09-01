@@ -1,40 +1,27 @@
-/* Global styles and the no-scroll phone shell.
- *
- * LAYOUT CONSTRAINT (do not regress): the play screen must fit the visual
- * viewport on iPhone and iPad with no vertical scrolling. The player must never
- * have to scroll to reach Draw / Play / Shuffle / Pass. That is enforced here:
- *
- *   - --app-h resolves to 100svh (the *small* viewport height, i.e. the height
- *     with the browser toolbars showing) so the shell always fits, falling back
- *     to 100dvh then 100vh on older engines.
- *   - .play-shell is exactly --app-h tall with `overflow: hidden`, and lays its
- *     rows out on a grid whose chrome rows have known heights.
- *   - --board-size is derived from what is left over, so the board shrinks to
- *     fit rather than pushing the action bar off-screen.
- *   - Chrome row heights clamp against --app-h, so short devices lose chrome
- *     height, never the buttons.
- */
+/* Global styles — Skye cream/teal/terracotta theme. */
 
 :root {
-  --color-bg: #14161c;
-  --color-bg-light: #1e222c;
-  --color-bg-lift: #272d3a;
-  --color-text: #f4f6fb;
-  --color-text-dim: #99a2b8;
-  --color-primary: #4a9eff;
-  --color-secondary: #ff6b6b;
-  --color-success: #46c26a;
-  --color-warning: #ffd43b;
-  --color-board: #2b3140;
-  --color-cell: #1b1f28;
-  --color-tile: #f2ead6;
-  --color-tile-text: #23201a;
-  --color-tile-blank: #cfe4ff;
-  --color-live-post: #ffd43b;
-  --color-dark-post: #5a6377;
+  --color-p1: #56867c;
+  --color-p2: #cb6b49;
+  --color-cream: #f7f1e8;
+  --color-ink: #2c3a3d;
+  --color-sand: #e8dfd0;
 
-  /* Smallest viewport height wins: content then fits whether or not the
-     iOS Safari toolbars are showing. */
+  --color-bg: var(--color-cream);
+  --color-bg-light: #f0e9df;
+  --color-bg-lift: #ebe3d8;
+  --color-text: var(--color-ink);
+  --color-text-dim: #5c6b6e;
+  --color-primary: var(--color-p1);
+  --color-secondary: var(--color-p2);
+  --color-success: var(--color-p1);
+  --color-warning: var(--color-p2);
+  --color-board: #d9d0c4;
+  --color-cell: #f7f1e8;
+  --color-tile: #fdf9f2;
+  --color-tile-text: var(--color-ink);
+  --color-tile-blank: #dce8e4;
+
   --app-h: 100vh;
 
   --safe-top: env(safe-area-inset-top, 0px);
@@ -64,7 +51,6 @@
 html,
 body {
   height: 100%;
-  /* Belt and braces: nothing in this app scrolls the document. */
   overflow: hidden;
   overscroll-behavior: none;
 }
@@ -102,9 +88,6 @@ button:disabled {
   cursor: not-allowed;
 }
 
-/* Screens that are a single centred panel (loading, menu, remote, errors).
-   They fit the viewport too; long copy scrolls inside its own panel, never the
-   page. */
 .screen {
   height: var(--app-h);
   overflow: hidden;
@@ -134,4 +117,19 @@ button:disabled {
 .screen p {
   color: var(--color-text-dim);
   font-size: 0.95rem;
+}
+
+/* Tile score placement — top-right everywhere (WWF / wordmark style). */
+.tile-value {
+  position: absolute;
+  top: 6%;
+  right: 8%;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--color-ink);
+  opacity: 0.72;
+}
+
+.tile-letter {
+  transform: translate(-4%, 4%);
 }

@@ -1,4 +1,4 @@
-// Main menu. Fits the viewport with no scrolling, like every other screen.
+// Main menu. Logo is the title; fits the viewport with no scrolling.
 
 import type { GameMode, AIOpponent } from '../App';
 import './Menu.css';
@@ -12,14 +12,16 @@ function Menu({ onSelectMode }: MenuProps) {
     <div className="screen menu">
       <div className="screen-panel menu-panel">
         <div className="menu-head">
-          <h1 className="menu-title">Flag</h1>
-          <p className="menu-subtitle">11×11 · cover the live post to end it</p>
+          <a className="menu-logo" href="/flag-game/" aria-label="Flag home">
+            <img src={`${import.meta.env.BASE_URL}logo-header.png`} alt="Flag" className="menu-logo-img" />
+          </a>
+          <p className="menu-subtitle">11×11 · steal flags or self-capture to end</p>
         </div>
 
         <div className="menu-buttons">
           <button type="button" className="menu-button is-primary" onClick={() => onSelectMode('vs-ai', 'hunter')}>
             vs Hunter
-            <small>Hunts the flag</small>
+            <small>Hunts your flag</small>
           </button>
           <button type="button" className="menu-button" onClick={() => onSelectMode('hotseat')}>
             Hotseat
@@ -39,8 +41,7 @@ function Menu({ onSelectMode }: MenuProps) {
         </div>
 
         <p className="menu-note">
-          Draw from the market <strong>or</strong> play tiles — never both. Pass only exists when
-          you are stuck.
+          Draw exactly 2 from the market <strong>or</strong> play tiles — never both. Pass only when stuck.
         </p>
       </div>
     </div>

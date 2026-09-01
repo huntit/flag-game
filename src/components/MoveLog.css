@@ -1,0 +1,69 @@
+.move-log {
+  display: none;
+}
+
+@media (min-width: 900px) and (pointer: fine) {
+  .move-log {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-height: 0;
+    max-height: 100%;
+    padding: 8px 10px;
+    border-radius: 10px;
+    background-color: var(--color-bg-light);
+    border: 1px solid var(--color-sand);
+  }
+
+  .move-log-label {
+    flex: 0 0 auto;
+    font-size: 0.58rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-text-dim);
+  }
+
+  .move-log-list {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding-right: 2px;
+  }
+
+  .move-log-entry {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    font-size: 0.72rem;
+    line-height: 1.35;
+    padding: 4px 6px;
+    border-radius: 6px;
+    background-color: rgba(255, 255, 255, 0.45);
+  }
+
+  .move-log-seat {
+    flex: 0 0 auto;
+    font-size: 0.58rem;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  .move-log-entry.is-p1 .move-log-seat {
+    color: var(--color-p1);
+  }
+
+  .move-log-entry.is-p2 .move-log-seat {
+    color: var(--color-p2);
+  }
+
+  .move-log-text {
+    min-width: 0;
+    color: var(--color-ink);
+  }
+}

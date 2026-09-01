@@ -5,14 +5,19 @@
 import './OnlineMode.css';
 
 interface OnlineModeProps {
-  onBackToMenu: () => void;
+  onHome: () => void;
 }
 
-function OnlineMode({ onBackToMenu }: OnlineModeProps) {
+function OnlineMode({ onHome }: OnlineModeProps) {
   return (
     <div className="screen">
       <div className="screen-panel online-panel">
-        <h1>Remote 2-player</h1>
+        <div className="online-head">
+          <a className="online-logo" href="/flag-game/" onClick={e => { e.preventDefault(); onHome(); }} aria-label="Flag home">
+            <img src={`${import.meta.env.BASE_URL}logo-header.png`} alt="Flag" className="online-logo-img" />
+          </a>
+          <h1>Remote 2-player</h1>
+        </div>
 
         <div className="online-body">
           <p>
@@ -29,9 +34,6 @@ function OnlineMode({ onBackToMenu }: OnlineModeProps) {
           </p>
         </div>
 
-        <button type="button" className="online-back" onClick={onBackToMenu}>
-          Back to menu
-        </button>
       </div>
     </div>
   );

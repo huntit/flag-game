@@ -75,7 +75,7 @@ function App() {
   }
 
   if (gameMode === 'online') {
-    return <OnlineMode onBackToMenu={() => setGameMode('menu')} />;
+    return <OnlineMode onHome={() => setGameMode('menu')} />;
   }
 
   return (

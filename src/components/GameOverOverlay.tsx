@@ -13,10 +13,11 @@ interface GameOverOverlayProps {
 }
 
 const END_REASONS: Record<string, string> = {
-  capture: 'Flag captured',
-  bag: 'Bag ran out',
-  posts_full: 'All four posts occupied',
+  self_capture: 'Own flag captured (triple-word)',
+  second_steal: 'Second flag stolen',
+  no_spare: 'Flag stolen — no spare corner',
   double_pass: 'Both players passed',
+  stuck_out: 'Both players stuck',
 };
 
 function GameOverOverlay({
@@ -44,11 +45,11 @@ function GameOverOverlay({
         <h2 className="game-over-winner">{winnerText}</h2>
 
         <div className="game-over-scores">
-          <div className="game-over-score">
+          <div className={`game-over-score is-${viewer.id.toLowerCase()}`}>
             <span>{youLabel}</span>
             <strong>{viewer.score}</strong>
           </div>
-          <div className="game-over-score">
+          <div className={`game-over-score is-${other.id.toLowerCase()}`}>
             <span>{otherLabel}</span>
             <strong>{other.score}</strong>
           </div>

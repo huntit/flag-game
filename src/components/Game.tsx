@@ -1,23 +1,19 @@
 // Play screen. Tap a rack tile, then tap a square. No drag anywhere.
-//
-// Every action button is enabled only when that action is actually legal, which
-// is decided by the engine rather than by UI guesswork: Draw runs validateDraw
-// on the current market selection, Play runs validatePlay on the pending
-// placement, and Pass asks canPass (no legal Draw and no legal Play).
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { TileData, GameState, GameAction, Tile, Position, Letter } from '../engine/types';
-import { RACK_MAX } from '../engine/types';
+import { DRAW_COUNT, RACK_MAX } from '../engine/types';
 import type { Dictionary } from '../engine/dictionary';
-import { getBoardTile, initializeGame, shuffleRack } from '../engine/game';
+import { getBoardTile, initializeGame, shuffleRack, emptySpareCorners } from '../engine/game';
 import { executeAction, canPass, validateDraw } from '../engine/actions';
-import { validatePlay } from '../engine/validator';
+import { validatePlay, type FlagContext } from '../engine/validator';
 import { selectAIAction } from '../engine/ai';
 import type { GameMode, AIOpponent } from '../App';
 import Board, { type PendingPlacement } from './Board';
 import { Rack, OpponentRack } from './Rack';
 import Market from './Market';
 import GameInfo from './GameInfo';
+import MoveLog, { type MoveLogEntry } from './MoveLog';
 import GameOverOverlay from './GameOverOverlay';
 import PassThePhone from './PassThePhone';
 import BlankPicker from './BlankPicker';
@@ -43,12 +39,42 @@ const AI_NAMES: Record<AIOpponent, string> = {
   sleeper: 'Sleeper',
 };
 
+function buildFlagContext(state: GameState, playerId: 'P1' | 'P2'): FlagContext {
+  return {
+    flags: state.flags,
+    playerId,
+    flagsLost: { P1: state.players[0].flagsLost, P2: state.players[1].flagsLost },
+    emptySpareCount: emptySpareCorners(state).length,
+  };
+}
+
+function describeMove(state: GameState): MoveLogEntry | null {
+  const last = state.moveHistory[state.moveHistory.length - 1];
+  if (!last) return null;
+
+  if (last.action.type === 'pass') {
+    return { player: last.player, text: 'Pass' };
+  }
+  if (last.action.type === 'draw') {
+    const discards = last.action.discardTiles?.length ?? 0;
+    return {
+      player: last.player,
+      text: discards > 0 ? `Draw 2, discard ${discards}` : 'Draw 2',
+    };
+  }
+  if (last.action.type === 'play' && state.lastPlay) {
+    const words = state.lastPlay.words.map(w => w.word).join(' + ');
+    return { player: last.player, text: `${words} +${state.lastPlay.totalScore}` };
+  }
+  return null;
+}
+
 function Game({ tileData, dictionary, mode, aiOpponent, onBackToMenu }: GameProps) {
   const [gameState, setGameState] = useState<GameState>(() => initializeGame(tileData));
+  const [moveLog, setMoveLog] = useState<MoveLogEntry[]>([]);
   const [selectedRackTileId, setSelectedRackTileId] = useState<string | null>(null);
   const [selectedMarketIds, setSelectedMarketIds] = useState<string[]>([]);
   const [discardIds, setDiscardIds] = useState<string[]>([]);
-  const [takeBagTile, setTakeBagTile] = useState(false);
   const [pending, setPending] = useState<Pending[]>([]);
   const [blankPrompt, setBlankPrompt] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -62,11 +88,10 @@ function Game({ tileData, dictionary, mode, aiOpponent, onBackToMenu }: GameProp
 
   const activeIndex = gameState.currentPlayer;
   const active = gameState.players[activeIndex];
-  // Against the AI the human always sits at P1, so their own letters stay on
-  // screen even while the AI moves. In hotseat only the active seat is shown.
   const viewerIndex = isVsAI ? 0 : activeIndex;
   const viewer = gameState.players[viewerIndex];
   const other = gameState.players[viewerIndex === 0 ? 1 : 0];
+  const viewerColor = viewer.id;
 
   const isAITurn = isVsAI && activeIndex === 1;
   const interactive = !isAITurn && !gameState.gameOver && !awaitingHandover;
@@ -75,7 +100,6 @@ function Game({ tileData, dictionary, mode, aiOpponent, onBackToMenu }: GameProp
     setSelectedRackTileId(null);
     setSelectedMarketIds([]);
     setDiscardIds([]);
-    setTakeBagTile(false);
     setPending([]);
     setBlankPrompt(null);
     setError(null);
@@ -84,13 +108,14 @@ function Game({ tileData, dictionary, mode, aiOpponent, onBackToMenu }: GameProp
 
   const commit = useCallback(
     (next: GameState) => {
+      const entry = describeMove(next);
+      if (entry) setMoveLog(current => [...current, entry]);
       setGameState({ ...next });
       resetSelection();
     },
     [resetSelection]
   );
 
-  // --- AI turns -------------------------------------------------------------
   const aiFailures = useRef(0);
   useEffect(() => {
     if (!isVsAI || !aiOpponent || gameState.gameOver) return;
@@ -106,18 +131,20 @@ function Game({ tileData, dictionary, mode, aiOpponent, onBackToMenu }: GameProp
         setError(`${AI_NAMES[aiOpponent]} could not move: ${result.error}`);
       } else {
         aiFailures.current = 0;
+        const entry = describeMove(gameState);
+        if (entry) setMoveLog(current => [...current, entry]);
       }
       setIsAIThinking(false);
       setGameState({ ...gameState });
+      resetSelection();
     }, 420);
 
     return () => {
       window.clearTimeout(timer);
       setIsAIThinking(false);
     };
-  }, [gameState, isVsAI, aiOpponent, dictionary]);
+  }, [gameState, isVsAI, aiOpponent, dictionary, resetSelection]);
 
-  // --- Hotseat handover ----------------------------------------------------
   const lastSeat = useRef(gameState.currentPlayer);
   useEffect(() => {
     if (!isHotseat || gameState.gameOver) return;
@@ -127,20 +154,20 @@ function Game({ tileData, dictionary, mode, aiOpponent, onBackToMenu }: GameProp
     resetSelection();
   }, [gameState.currentPlayer, gameState.gameOver, isHotseat, resetSelection]);
 
-  // --- Derived legality ----------------------------------------------------
   const placedTileIds = useMemo(() => pending.map(p => p.tileId), [pending]);
 
-  const room = RACK_MAX - viewer.rack.length;
-  const requiredDiscards = Math.max(0, selectedMarketIds.length - room);
+  const requiredDiscards =
+    selectedMarketIds.length === DRAW_COUNT
+      ? Math.max(0, viewer.rack.length + DRAW_COUNT - RACK_MAX)
+      : 0;
 
   const drawAction: GameAction = useMemo(
     () => ({
       type: 'draw',
       marketTiles: selectedMarketIds,
       discardTiles: discardIds.length > 0 ? discardIds : undefined,
-      takeBagTile,
     }),
-    [selectedMarketIds, discardIds, takeBagTile]
+    [selectedMarketIds, discardIds]
   );
 
   const drawCheck = useMemo(
@@ -156,33 +183,16 @@ function Game({ tileData, dictionary, mode, aiOpponent, onBackToMenu }: GameProp
       return { tile, position: p.position, assignedLetter: p.assignedLetter };
     });
     if (placements.some(p => !p.tile)) return null;
-    return validatePlay(gameState.board, placements, dictionary, gameState.livePost);
-  }, [interactive, pending, active.rack, gameState.board, gameState.livePost, dictionary]);
+    return validatePlay(gameState.board, placements, dictionary, buildFlagContext(gameState, active.id));
+  }, [interactive, pending, active.rack, active.id, gameState, dictionary]);
 
   const canPlayNow = Boolean(playEvaluation?.valid);
-
-  // Pass short-circuits on Draw, so the move generator only runs when the
-  // market and bag are both empty.
   const canPassNow = interactive && canPass(gameState, dictionary);
-
   const canShuffleNow = interactive && pending.length === 0 && viewer.rack.length > 1;
   const canClearNow =
     interactive &&
-    (pending.length > 0 || selectedMarketIds.length > 0 || discardIds.length > 0 || takeBagTile);
+    (pending.length > 0 || selectedMarketIds.length > 0 || discardIds.length > 0);
 
-  const bagTileAvailable =
-    interactive &&
-    pending.length === 0 &&
-    requiredDiscards === 0 &&
-    gameState.bag.length > 0 &&
-    viewer.rack.length + selectedMarketIds.length < RACK_MAX;
-
-  useEffect(() => {
-    if (!bagTileAvailable && takeBagTile) setTakeBagTile(false);
-  }, [bagTileAvailable, takeBagTile]);
-
-  // Transient messages clear themselves so the toast returns to the last-play
-  // readout instead of pinning a stale nudge on screen.
   useEffect(() => {
     if (!hint) return;
     const timer = window.setTimeout(() => setHint(null), 1900);
@@ -195,7 +205,6 @@ function Game({ tileData, dictionary, mode, aiOpponent, onBackToMenu }: GameProp
     return () => window.clearTimeout(timer);
   }, [error]);
 
-  // --- Interactions --------------------------------------------------------
   const handleRackTileClick = (tile: Tile) => {
     if (!interactive) return;
     setError(null);
@@ -223,11 +232,8 @@ function Game({ tileData, dictionary, mode, aiOpponent, onBackToMenu }: GameProp
 
     setSelectedMarketIds(current => {
       if (current.includes(tile.id)) return current.filter(id => id !== tile.id);
-      // A blank is the whole market take.
-      if (tile.isBlank) return [tile.id];
-      const withoutBlanks = current.filter(id => !gameState.market.find(t => t.id === id)?.isBlank);
-      if (withoutBlanks.length >= 2) return [withoutBlanks[1], tile.id];
-      return [...withoutBlanks, tile.id];
+      if (current.length >= DRAW_COUNT) return [current[1], tile.id];
+      return [...current, tile.id];
     });
   };
 
@@ -244,9 +250,6 @@ function Game({ tileData, dictionary, mode, aiOpponent, onBackToMenu }: GameProp
       return;
     }
 
-    // Never let a pending tile cover a tile already on the board: the engine
-    // would reject the play anyway, and the placed tile would hide the letter
-    // underneath it.
     if (getBoardTile(gameState.board, position)) {
       setHint('That square is taken');
       return;
@@ -310,7 +313,6 @@ function Game({ tileData, dictionary, mode, aiOpponent, onBackToMenu }: GameProp
     run({ type: 'pass' });
   };
 
-  // Shuffling is not a turn: it reorders your own rack and nothing else.
   const handleShuffle = () => {
     if (!canShuffleNow) return;
     gameState.players[viewerIndex].rack = shuffleRack(viewer.rack);
@@ -324,11 +326,9 @@ function Game({ tileData, dictionary, mode, aiOpponent, onBackToMenu }: GameProp
     setSelectedRackTileId(null);
     setSelectedMarketIds([]);
     setDiscardIds([]);
-    setTakeBagTile(false);
     setError(null);
   };
 
-  // --- Presentation --------------------------------------------------------
   const pendingForBoard: PendingPlacement[] = pending.map(p => {
     const tile = viewer.rack.find(t => t.id === p.tileId);
     return {
@@ -337,6 +337,7 @@ function Game({ tileData, dictionary, mode, aiOpponent, onBackToMenu }: GameProp
       letter: p.assignedLetter ?? (tile?.isBlank ? '?' : tile?.letter ?? ''),
       value: tile ? (tile.isBlank ? 0 : tile.value) : 0,
       isBlank: Boolean(tile?.isBlank),
+      playerId: viewerColor,
     };
   });
 
@@ -347,6 +348,7 @@ function Game({ tileData, dictionary, mode, aiOpponent, onBackToMenu }: GameProp
 
   const youLabel = isHotseat ? viewer.id : 'You';
   const otherLabel = opponentName ?? other.id;
+  const otherColor = other.id;
 
   const statusToast = useMemo(() => {
     if (error) return { kind: 'toast-error', text: error };
@@ -358,18 +360,19 @@ function Game({ tileData, dictionary, mode, aiOpponent, onBackToMenu }: GameProp
       const words = playEvaluation.words?.map(w => w.word).join(' + ') ?? '';
       return { kind: 'toast-hint', text: `${words} for ${playEvaluation.totalScore}` };
     }
+    if (selectedMarketIds.length > 0 && selectedMarketIds.length < DRAW_COUNT) {
+      return { kind: 'toast-hint', text: `Select ${DRAW_COUNT - selectedMarketIds.length} more market tile${DRAW_COUNT - selectedMarketIds.length === 1 ? '' : 's'}` };
+    }
     if (requiredDiscards > 0) {
       const left = requiredDiscards - discardIds.length;
       return {
         kind: 'toast-hint',
         text:
           left > 0
-            ? `Tap ${left} rack tile${left === 1 ? '' : 's'} to put back`
+            ? `Tap ${left} rack tile${left === 1 ? '' : 's'} to discard`
             : 'Ready — tap Draw',
       };
     }
-    // A hint is a response to something the player just did, so it outranks the
-    // standing last-play readout.
     if (hint) return { kind: 'toast-hint', text: hint };
     if (gameState.lastPlay) {
       const words = gameState.lastPlay.words.map(w => w.word).join(' + ');
@@ -385,6 +388,7 @@ function Game({ tileData, dictionary, mode, aiOpponent, onBackToMenu }: GameProp
     playEvaluation,
     requiredDiscards,
     discardIds.length,
+    selectedMarketIds.length,
     gameState.lastPlay,
     viewer.id,
     youLabel,
@@ -410,15 +414,15 @@ function Game({ tileData, dictionary, mode, aiOpponent, onBackToMenu }: GameProp
           youLabel={youLabel}
           yourScore={viewer.score}
           isYourTurn={activeIndex === viewerIndex}
-          livePost={gameState.livePost}
-          bagCount={gameState.bag.length}
-          onBackToMenu={onBackToMenu}
+          playerColor={viewerColor}
+          onHome={onBackToMenu}
         />
       </div>
 
       <div className="opponent-bar">
         <OpponentRack
           name={otherLabel}
+          playerColor={otherColor}
           count={other.rack.length}
           score={other.score}
           isTheirTurn={activeIndex !== viewerIndex}
@@ -428,7 +432,7 @@ function Game({ tileData, dictionary, mode, aiOpponent, onBackToMenu }: GameProp
       <div className="stage">
         <Board
           board={gameState.board}
-          livePost={gameState.livePost}
+          flags={gameState.flags}
           pendingPlacements={pendingForBoard}
           highlight={pending.length === 0 ? lastPlayHighlight : []}
           onCellClick={handleCellClick}
@@ -439,11 +443,9 @@ function Game({ tileData, dictionary, mode, aiOpponent, onBackToMenu }: GameProp
         <Market
           market={gameState.market}
           selectedTileIds={selectedMarketIds}
+          bagCount={gameState.bag.length}
           disabled={!interactive}
-          bagTileAvailable={bagTileAvailable}
-          bagTileSelected={takeBagTile}
           onTileClick={handleMarketTileClick}
-          onToggleBagTile={() => setTakeBagTile(v => !v)}
         />
       </div>
 
@@ -451,6 +453,7 @@ function Game({ tileData, dictionary, mode, aiOpponent, onBackToMenu }: GameProp
         <Rack
           tiles={viewer.rack}
           label={youLabel}
+          playerColor={viewerColor}
           selectedTileId={selectedRackTileId}
           discardTileIds={discardIds}
           placedTileIds={placedTileIds}
@@ -459,21 +462,15 @@ function Game({ tileData, dictionary, mode, aiOpponent, onBackToMenu }: GameProp
         />
       </div>
 
+      <div className="log-row">
+        <MoveLog entries={moveLog} />
+      </div>
+
       <div className="actions">
-        <button
-          type="button"
-          className="action-button action-draw"
-          onClick={handleDraw}
-          disabled={!canDrawNow}
-        >
+        <button type="button" className="action-button action-draw" onClick={handleDraw} disabled={!canDrawNow}>
           Draw
         </button>
-        <button
-          type="button"
-          className="action-button action-play"
-          onClick={handlePlay}
-          disabled={!canPlayNow}
-        >
+        <button type="button" className="action-button action-play" onClick={handlePlay} disabled={!canPlayNow}>
           Play
         </button>
         <button
@@ -512,6 +509,7 @@ function Game({ tileData, dictionary, mode, aiOpponent, onBackToMenu }: GameProp
           onNewGame={() => {
             aiFailures.current = 0;
             lastSeat.current = 0;
+            setMoveLog([]);
             commit(initializeGame(tileData));
           }}
           onBackToMenu={onBackToMenu}

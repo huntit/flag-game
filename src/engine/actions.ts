@@ -1,9 +1,17 @@
 // Action executor - validates then applies game actions
 
 import type { GameState, GameAction, DrawAction, PlayAction, Tile, Letter, Position } from './types';
-import { MARKET_SIZE, RACK_MAX, MAX_MARKET_TAKE } from './types';
-import { drawFromBag, returnToBag, shuffleBag, setBoardTile, getNextFlagPost } from './game';
-import { validatePlay } from './validator';
+import { DRAW_COUNT, RACK_MAX } from './types';
+import {
+  returnToBag,
+  shuffleBag,
+  setBoardTile,
+  marketShowingCount,
+  refillMarketSlot,
+  randomEmptySpareCorner,
+  emptySpareCorners,
+} from './game';
+import { validatePlay, type FlagContext } from './validator';
 import { hasLegalPlay } from './moveGenerator';
 import type { Dictionary } from './dictionary';
 
@@ -12,42 +20,28 @@ export interface ActionResult {
   error?: string;
 }
 
-/**
- * Draw is available whenever there is anything to take. Taking zero market tiles
- * is only legal as the stuck case where the market is empty.
- */
+/** Draw is legal when at least 2 tiles are showing in the market. */
 export function canDraw(state: GameState): boolean {
-  return state.market.length > 0 || state.bag.length > 0;
+  return marketShowingCount(state.market) >= DRAW_COUNT;
 }
 
 /**
- * Can a draw actually add tiles to the active player's rack?
- *
- * Locked (Finch, 31 August 2026; spec §7.3). A Draw counts as "legal" for Pass
- * purposes only if it would ADD at least one tile: an empty slot exists AND at
- * least one takeable tile from market/bag. A full rack is therefore no legal
- * Draw for Pass purposes. Full-rack exchange remains a legal Draw ACTION
- * (discard into the bag, then take 1–2 from the market; no facedown on a
- * full-rack refresh) and does not make Pass illegal. Otherwise two full
- * unplayable racks can exchange forever (tile-neutral) and never hit
- * bag-empty, capture, or double-pass.
- */
-export function canGrowRack(state: GameState): boolean {
-  const player = state.players[state.currentPlayer];
-  if (player.rack.length >= RACK_MAX) return false;
-  return canDraw(state);
-}
-
-/**
- * Pass is a stuck-only escape valve: legal only when no draw can grow the rack
- * and no play is legal. Never triggered by silence or elapsed time — the player
- * must tap the button. Omitting `dictionary` checks the Draw half only.
+ * Pass is legal only when no legal Play AND Draw is illegal (market showing < 2).
  */
 export function canPass(state: GameState, dictionary?: Dictionary): boolean {
-  if (canGrowRack(state)) return false;
+  if (canDraw(state)) return false;
   if (!dictionary) return true;
   const player = state.players[state.currentPlayer];
-  return !hasLegalPlay(state.board, player.rack, dictionary, state.livePost);
+  return !hasLegalPlay(state, player.rack, dictionary, player.id);
+}
+
+function buildFlagContext(state: GameState, playerId: 'P1' | 'P2'): FlagContext {
+  return {
+    flags: state.flags,
+    playerId,
+    flagsLost: { P1: state.players[0].flagsLost, P2: state.players[1].flagsLost },
+    emptySpareCount: emptySpareCorners(state).length,
+  };
 }
 
 export function executeAction(
@@ -74,58 +68,52 @@ export function executeAction(
 interface DrawPlan {
   take: Tile[];
   discard: Tile[];
-  isRefresh: boolean;
-  takeBagTile: boolean;
 }
 
-/**
- * Check a draw in full before touching any state, so a rejected draw cannot
- * leave the market or rack half-updated.
- */
 export function validateDraw(
   state: GameState,
   action: DrawAction
 ): { valid: false; reason: string } | { valid: true; plan: DrawPlan } {
-  const player = state.players[state.currentPlayer];
+  if (marketShowingCount(state.market) < DRAW_COUNT) {
+    return { valid: false, reason: 'Need at least 2 tiles in the market to draw' };
+  }
 
+  const player = state.players[state.currentPlayer];
   const requested = action.marketTiles ?? [];
+
+  if (requested.length !== DRAW_COUNT) {
+    return { valid: false, reason: `Take exactly ${DRAW_COUNT} tiles from the market` };
+  }
+
   if (new Set(requested).size !== requested.length) {
     return { valid: false, reason: 'Cannot take the same market tile twice' };
   }
 
-  if (requested.length === 0 && state.market.length > 0) {
-    return { valid: false, reason: 'Pick a market tile to draw' };
-  }
-
-  if (requested.length > MAX_MARKET_TAKE) {
-    return { valid: false, reason: `Take at most ${MAX_MARKET_TAKE} market tiles` };
-  }
-
   const take: Tile[] = [];
   for (const tileId of requested) {
-    const tile = state.market.find(t => t.id === tileId);
-    if (!tile) return { valid: false, reason: 'That tile is not in the market' };
-    take.push(tile);
+    const slot = state.market.find(s => s.tile?.id === tileId);
+    if (!slot?.tile) return { valid: false, reason: 'That tile is not in the market' };
+    take.push(slot.tile);
   }
 
-  if (take.some(t => t.isBlank) && take.length > 1) {
-    return { valid: false, reason: 'A blank is your whole market take' };
-  }
-
-  const room = RACK_MAX - player.rack.length;
-  const isRefresh = take.length > room;
   const discardIds = action.discardTiles ?? [];
+  const rackAfterTake = player.rack.length + take.length - discardIds.length;
+  const wouldOverfill = player.rack.length + take.length > RACK_MAX;
 
-  if (isRefresh) {
-    const required = take.length - room;
+  if (wouldOverfill) {
+    const required = player.rack.length + take.length - RACK_MAX;
     if (discardIds.length !== required) {
       return {
         valid: false,
-        reason: `Discard ${required} tile${required === 1 ? '' : 's'} to make room`,
+        reason: `Discard ${required} tile${required === 1 ? '' : 's'} down to ${RACK_MAX}`,
       };
     }
   } else if (discardIds.length > 0) {
     return { valid: false, reason: 'No need to discard' };
+  }
+
+  if (rackAfterTake > RACK_MAX) {
+    return { valid: false, reason: `Rack cannot exceed ${RACK_MAX} tiles` };
   }
 
   if (new Set(discardIds).size !== discardIds.length) {
@@ -139,26 +127,7 @@ export function validateDraw(
     discard.push(tile);
   }
 
-  if (action.takeBagTile) {
-    if (isRefresh) {
-      return { valid: false, reason: 'No bag tile on a refresh turn' };
-    }
-    if (player.rack.length - discard.length + take.length >= RACK_MAX) {
-      return { valid: false, reason: 'Rack would be full' };
-    }
-    if (state.bag.length === 0) {
-      return { valid: false, reason: 'The bag is empty' };
-    }
-  }
-
-  if (take.length === 0 && !action.takeBagTile && state.bag.length === 0) {
-    return { valid: false, reason: 'Nothing left to draw' };
-  }
-
-  return {
-    valid: true,
-    plan: { take, discard, isRefresh, takeBagTile: Boolean(action.takeBagTile) },
-  };
+  return { valid: true, plan: { take, discard } };
 }
 
 function executeDraw(state: GameState, action: DrawAction): ActionResult {
@@ -167,10 +136,10 @@ function executeDraw(state: GameState, action: DrawAction): ActionResult {
     return { success: false, error: check.reason };
   }
 
-  const { take, discard, isRefresh, takeBagTile } = check.plan;
+  const { take, discard } = check.plan;
   const player = state.players[state.currentPlayer];
 
-  if (isRefresh) {
+  if (discard.length > 0) {
     const discardIds = new Set(discard.map(t => t.id));
     player.rack = player.rack.filter(t => !discardIds.has(t.id));
     returnToBag(state.bag, discard);
@@ -178,25 +147,21 @@ function executeDraw(state: GameState, action: DrawAction): ActionResult {
   }
 
   const takenIds = new Set(take.map(t => t.id));
-  state.market = state.market.filter(t => !takenIds.has(t.id));
+  for (const slot of state.market) {
+    if (slot.tile && takenIds.has(slot.tile.id)) {
+      slot.tile = null;
+    }
+  }
   player.rack.push(...take);
 
-  if (takeBagTile) {
-    player.rack.push(...drawFromBag(state.bag, 1));
-  }
-
-  state.market.push(...drawFromBag(state.bag, MARKET_SIZE - state.market.length));
-
-  // The bag running dry during the market refill ends the game after rotation.
-  if (state.market.length < MARKET_SIZE && state.bag.length === 0) {
-    state.bagDepleted = true;
+  for (const slot of state.market) {
+    refillMarketSlot(state.bag, slot);
   }
 
   state.consecutivePasses = 0;
   state.lastPlay = undefined;
   state.moveHistory.push({ player: player.id, action });
 
-  rotateFlagAndCheckEnd(state);
   advanceTurn(state);
 
   return { success: true };
@@ -227,7 +192,8 @@ function executePlay(state: GameState, action: PlayAction, dictionary: Dictionar
     });
   }
 
-  const result = validatePlay(state.board, placements, dictionary, state.livePost);
+  const ctx = buildFlagContext(state, player.id);
+  const result = validatePlay(state.board, placements, dictionary, ctx);
   if (!result.valid) {
     return { success: false, error: result.reason };
   }
@@ -236,13 +202,13 @@ function executePlay(state: GameState, action: PlayAction, dictionary: Dictionar
     setBoardTile(state.board, placement.position, {
       ...placement.tile,
       assignedLetter: placement.assignedLetter,
+      playerId: player.id,
     });
   }
 
   const playedIds = new Set(usedIds);
   player.rack = player.rack.filter(t => !playedIds.has(t.id));
 
-  // Rack is not refilled after a play — that is the take-or-spend tension.
   player.score += result.totalScore ?? 0;
 
   state.consecutivePasses = 0;
@@ -251,24 +217,56 @@ function executePlay(state: GameState, action: PlayAction, dictionary: Dictionar
     words: result.words ?? [],
     totalScore: result.totalScore ?? 0,
     captures: result.captures ?? false,
+    capturesOwnFlag: result.capturesOwnFlag ?? false,
+    capturesOpponentFlag: result.capturesOpponentFlag ?? false,
   };
   state.moveHistory.push({ player: player.id, action });
 
-  if (result.captures) {
+  if (result.capturesOwnFlag) {
+    state.flags[player.id] = null;
     state.gameOver = true;
-    state.endReason = 'capture';
+    state.endReason = 'self_capture';
     determineWinner(state);
     return { success: true };
   }
 
-  rotateFlagAndCheckEnd(state);
+  if (result.capturesOpponentFlag) {
+    const opponentIndex = state.currentPlayer === 0 ? 1 : 0;
+    const opponent = state.players[opponentIndex];
+    state.flags[opponent.id] = null;
+    opponent.flagsLost++;
+
+    if (opponent.flagsLost >= 2) {
+      state.gameOver = true;
+      state.endReason = 'second_steal';
+      determineWinner(state);
+      return { success: true };
+    }
+
+    const spare = randomEmptySpareCorner(state);
+    if (spare) {
+      state.flags[opponent.id] = spare;
+    } else {
+      state.gameOver = true;
+      state.endReason = 'no_spare';
+      determineWinner(state);
+      return { success: true };
+    }
+  }
+
+  if (result.endsGame) {
+    state.gameOver = true;
+    determineWinner(state);
+    return { success: true };
+  }
+
   advanceTurn(state);
 
   return { success: true };
 }
 
 function executePass(state: GameState, dictionary: Dictionary): ActionResult {
-  if (canGrowRack(state)) {
+  if (canDraw(state)) {
     return { success: false, error: 'Pass is only for when Draw and Play are both impossible' };
   }
   if (!canPass(state, dictionary)) {
@@ -281,7 +279,6 @@ function executePass(state: GameState, dictionary: Dictionary): ActionResult {
   state.lastPlay = undefined;
   state.moveHistory.push({ player: player.id, action: { type: 'pass' } });
 
-  // Only two explicit passes in a row end the game.
   if (state.consecutivePasses >= 2) {
     state.gameOver = true;
     state.endReason = 'double_pass';
@@ -289,7 +286,6 @@ function executePass(state: GameState, dictionary: Dictionary): ActionResult {
     return { success: true };
   }
 
-  rotateFlagAndCheckEnd(state);
   advanceTurn(state);
 
   return { success: true };
@@ -299,25 +295,6 @@ function advanceTurn(state: GameState): void {
   if (state.gameOver) return;
   state.currentPlayer = state.currentPlayer === 0 ? 1 : 0;
   state.turnCount++;
-}
-
-function rotateFlagAndCheckEnd(state: GameState): void {
-  if (state.bagDepleted) {
-    state.gameOver = true;
-    state.endReason = 'bag';
-    determineWinner(state);
-    return;
-  }
-
-  const nextPost = getNextFlagPost(state.livePost, state.board);
-  if (nextPost === null) {
-    state.gameOver = true;
-    state.endReason = 'posts_full';
-    determineWinner(state);
-    return;
-  }
-
-  state.livePost = nextPost;
 }
 
 function determineWinner(state: GameState): void {

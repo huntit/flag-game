@@ -1,7 +1,5 @@
 #!/usr/bin/env node
 // flag-sim - headless AI-vs-AI simulation for balance analysis.
-//
-//   npm run sim -- --games 200 --p1 greedy --p2 hunter --threshold 8 --seed 1 --out ./out/
 
 import * as fs from 'fs';
 import * as path from 'path';
@@ -30,10 +28,12 @@ interface GameResult {
   first: AIPersonality;
   winner: 'P1' | 'P2' | 'draw';
   endReason: string;
-  capturer: 'P1' | 'P2' | null;
-  capturerWon: boolean | null;
+  selfCapturer: 'P1' | 'P2' | null;
+  selfCapturerWon: boolean | null;
   scoreP1: number;
   scoreP2: number;
+  flagsLostP1: number;
+  flagsLostP2: number;
   turns: number;
   playsP1: number;
   drawsP1: number;
@@ -46,28 +46,35 @@ interface GameResult {
   twoLetterPlays: number;
   captureWordLength: number | null;
   captureWordScore: number | null;
-  capturePost: FlagPost | null;
+  captureCorner: FlagPost | null;
+  captureType: 'self_triple' | 'opponent_first' | 'opponent_second' | null;
   captureTurn: number | null;
-  captureWasRefused: boolean | null;
-  legalCapturesRefused: number;
-  /** Which seat each personality occupied, so swapped runs can be unwound. */
   seatOfP1Personality: 'P1' | 'P2';
 }
 
 function loadData() {
   const tilesPath = path.join(process.cwd(), 'data/tiles.json');
   const tilesData: TileData = JSON.parse(fs.readFileSync(tilesPath, 'utf-8'));
-
   const wordsPath = path.join(process.cwd(), 'data/words.txt');
   const dictionary = Dictionary.fromText(fs.readFileSync(wordsPath, 'utf-8'));
-
   return { tilesData, dictionary };
 }
 
-/**
- * Play one game to completion. `seatPersonalities[0]` sits at P1.
- * The whole game is driven from `seed`, so a run is reproducible.
- */
+function cornerFromPlay(state: ReturnType<typeof initializeGame>, _seat: 0 | 1): FlagPost | null {
+  const lp = state.lastPlay;
+  if (!lp) return null;
+  for (const word of lp.words) {
+    for (const pos of word.positions) {
+      for (const corner of ['NW', 'NE', 'SE', 'SW'] as FlagPost[]) {
+        const p = { row: pos.row, col: pos.col };
+        const flagPos = { NW: { row: 1, col: 1 }, NE: { row: 1, col: 11 }, SE: { row: 11, col: 11 }, SW: { row: 11, col: 1 } }[corner];
+        if (p.row === flagPos.row && p.col === flagPos.col) return corner;
+      }
+    }
+  }
+  return null;
+}
+
 function runGame(
   tilesData: TileData,
   dictionary: Dictionary,
@@ -86,25 +93,20 @@ function runGame(
   const wordLengths: number[] = [];
   const wordScores: number[] = [];
   let twoLetterPlays = 0;
-  const capturesRefused = [0, 0];
 
-  let capturer: 'P1' | 'P2' | null = null;
+  let selfCapturer: 'P1' | 'P2' | null = null;
   let captureWordLength: number | null = null;
   let captureWordScore: number | null = null;
-  let capturePost: FlagPost | null = null;
+  let captureCorner: FlagPost | null = null;
+  let captureType: GameResult['captureType'] = null;
   let captureTurn: number | null = null;
 
-  // Safety net: a stalled game is reported as turn_cap rather than silently
-  // skewing the summary. See drawWouldHelp() in engine/ai.ts.
   const maxTurns = 1000;
   let hitTurnCap = false;
 
   while (!state.gameOver && state.turnCount < maxTurns) {
     const seat = state.currentPlayer;
-    const livePostBefore = state.livePost;
-    const { action, legalPlays } = planAIAction(state, seatPersonalities[seat], dictionary, threshold);
-
-    const captureWasAvailable = legalPlays.some(p => p.captures);
+    const { action } = planAIAction(state, seatPersonalities[seat], dictionary, threshold);
 
     if (action.type === 'draw') {
       draws[seat]++;
@@ -120,11 +122,6 @@ function runGame(
     }
 
     const played = state.lastPlay;
-    const tookCapture = played?.captures ?? false;
-    if (captureWasAvailable && !tookCapture) {
-      capturesRefused[seat]++;
-    }
-
     if (action.type === 'play' && played) {
       for (const word of played.words) {
         wordLengths.push(word.word.length);
@@ -132,12 +129,23 @@ function runGame(
         if (word.word.length === 2) twoLetterPlays++;
       }
 
-      if (tookCapture) {
-        capturer = state.players[seat].id;
+      if (played.capturesOwnFlag) {
+        selfCapturer = state.players[seat].id;
+        captureType = 'self_triple';
+        captureCorner = cornerFromPlay(state, seat);
         const longest = [...played.words].sort((a, b) => b.word.length - a.word.length)[0];
         captureWordLength = longest?.word.length ?? null;
         captureWordScore = played.totalScore;
-        capturePost = livePostBefore;
+        captureTurn = state.turnCount;
+      } else if (played.capturesOpponentFlag) {
+        captureType =
+          state.endReason === 'second_steal' || state.players[seat === 0 ? 1 : 0].flagsLost >= 2
+            ? 'opponent_second'
+            : 'opponent_first';
+        captureCorner = cornerFromPlay(state, seat);
+        const longest = [...played.words].sort((a, b) => b.word.length - a.word.length)[0];
+        captureWordLength = longest?.word.length ?? null;
+        captureWordScore = played.totalScore;
         captureTurn = state.turnCount;
       }
     }
@@ -148,8 +156,6 @@ function runGame(
     console.error(`game ${gameId} (seed ${seed}) hit the ${maxTurns}-turn cap without ending`);
   }
 
-  const capturerSeat = capturer === 'P1' ? 0 : capturer === 'P2' ? 1 : null;
-
   return {
     gameId,
     seed,
@@ -158,10 +164,12 @@ function runGame(
     first: seatPersonalities[0],
     winner: state.winner ?? 'draw',
     endReason: state.endReason ?? (hitTurnCap ? 'turn_cap' : 'unknown'),
-    capturer,
-    capturerWon: capturer ? capturer === state.winner : null,
+    selfCapturer,
+    selfCapturerWon: selfCapturer ? selfCapturer === state.winner : null,
     scoreP1: state.players[0].score,
     scoreP2: state.players[1].score,
+    flagsLostP1: state.players[0].flagsLost,
+    flagsLostP2: state.players[1].flagsLost,
     turns: state.turnCount,
     playsP1: plays[0],
     drawsP1: draws[0],
@@ -174,10 +182,9 @@ function runGame(
     twoLetterPlays,
     captureWordLength,
     captureWordScore,
-    capturePost,
+    captureCorner,
+    captureType,
     captureTurn,
-    captureWasRefused: capturerSeat === null ? null : capturesRefused[capturerSeat] > 0,
-    legalCapturesRefused: capturesRefused[0] + capturesRefused[1],
     seatOfP1Personality: seatPersonalities[0] === options.p1 ? 'P1' : 'P2',
   };
 }
@@ -198,14 +205,12 @@ function computeSummary(results: GameResult[], options: CLIOptions) {
   const games = results.length;
   const draws = results.filter(r => r.winner === 'draw').length;
   const p1Wins = results.filter(r => r.winner === 'P1').length;
-
-  // Win rate for the --p1 personality, whichever seat it occupied.
   const personalityWins = results.filter(r =>
     r.seatOfP1Personality === 'P1' ? r.winner === 'P1' : r.winner === 'P2'
   ).length;
 
-  const captureGames = results.filter(r => r.capturer !== null);
-  const capturerWins = captureGames.filter(r => r.capturerWon).length;
+  const selfCaptureGames = results.filter(r => r.endReason === 'self_capture');
+  const selfCapturerWins = selfCaptureGames.filter(r => r.selfCapturerWon).length;
 
   const scoresP1 = results.map(r => r.scoreP1);
   const scoresP2 = results.map(r => r.scoreP2);
@@ -213,12 +218,9 @@ function computeSummary(results: GameResult[], options: CLIOptions) {
 
   const totalPlays = results.reduce((sum, r) => sum + r.playsP1 + r.playsP2, 0);
   const totalDraws = results.reduce((sum, r) => sum + r.drawsP1 + r.drawsP2, 0);
-
   const allWordLengths = results.flatMap(r => r.wordLengths);
   const totalTwoLetterPlays = results.reduce((sum, r) => sum + r.twoLetterPlays, 0);
-  const captureTurns = captureGames
-    .map(r => r.captureTurn)
-    .filter((t): t is number => t !== null);
+  const captureTurns = results.map(r => r.captureTurn).filter((t): t is number => t !== null);
 
   return {
     games,
@@ -230,13 +232,13 @@ function computeSummary(results: GameResult[], options: CLIOptions) {
     drawRate: draws / games,
     p1WinRate: p1Wins / games,
     personalityWinRate: personalityWins / games,
-    captureEndRate: results.filter(r => r.endReason === 'capture').length / games,
-    bagEndRate: results.filter(r => r.endReason === 'bag').length / games,
-    postsFullEndRate: results.filter(r => r.endReason === 'posts_full').length / games,
+    selfCaptureEndRate: results.filter(r => r.endReason === 'self_capture').length / games,
+    secondStealEndRate: results.filter(r => r.endReason === 'second_steal').length / games,
+    noSpareEndRate: results.filter(r => r.endReason === 'no_spare').length / games,
     doublePassEndRate: results.filter(r => r.endReason === 'double_pass').length / games,
-    /** Should be 0. Anything else means a game stalled without ending. */
+    stuckOutEndRate: results.filter(r => r.endReason === 'stuck_out').length / games,
     turnCapGames: results.filter(r => r.endReason === 'turn_cap').length,
-    capturerWinRate: captureGames.length > 0 ? capturerWins / captureGames.length : null,
+    selfCapturerWinRate: selfCaptureGames.length > 0 ? selfCapturerWins / selfCaptureGames.length : null,
     meanScore: mean(allScores),
     medianScore: median(allScores),
     meanScoreP1: mean(scoresP1),
@@ -248,7 +250,6 @@ function computeSummary(results: GameResult[], options: CLIOptions) {
     meanWordLength: mean(allWordLengths),
     twoLetterPlayRate: allWordLengths.length > 0 ? totalTwoLetterPlays / allWordLengths.length : 0,
     meanCaptureTurn: captureTurns.length > 0 ? mean(captureTurns) : null,
-    refusedCaptureRate: results.filter(r => r.legalCapturesRefused > 0).length / games,
   };
 }
 
@@ -279,7 +280,6 @@ function main() {
   console.log(`Dictionary: ${dictionary.size()} playable words`);
   console.log(`Running ${options.games} games: ${options.p1} vs ${options.p2} (threshold ${options.threshold}, seed ${options.seed})`);
 
-  // Identical personalities have nothing to swap.
   const swap = !options.noSwap && options.p1 !== options.p2;
   if (swap) console.log('Swapping seats for half the games');
 
@@ -314,19 +314,19 @@ function main() {
   console.log(`Draw rate             ${pct(summary.drawRate)}`);
   console.log(`P1 (first) win rate   ${pct(summary.p1WinRate)}`);
   console.log(`${options.p1} win rate${' '.repeat(Math.max(1, 14 - options.p1.length))}${pct(summary.personalityWinRate)}`);
-  console.log(`Capture end rate      ${pct(summary.captureEndRate)}`);
-  console.log(`Bag end rate          ${pct(summary.bagEndRate)}`);
-  console.log(`Posts-full end rate   ${pct(summary.postsFullEndRate)}`);
-  console.log(`Double-pass end rate  ${pct(summary.doublePassEndRate)}`);
+  console.log(`Self-capture end      ${pct(summary.selfCaptureEndRate)}`);
+  console.log(`Second-steal end      ${pct(summary.secondStealEndRate)}`);
+  console.log(`No-spare end          ${pct(summary.noSpareEndRate)}`);
+  console.log(`Double-pass end       ${pct(summary.doublePassEndRate)}`);
+  console.log(`Stuck-out end         ${pct(summary.stuckOutEndRate)}`);
   console.log(`Stalled (turn cap)    ${summary.turnCapGames}`);
-  console.log(`Capturer win rate     ${pct(summary.capturerWinRate)}`);
+  console.log(`Self-capturer win     ${pct(summary.selfCapturerWinRate)}`);
   console.log(`Mean / median score   ${num(summary.meanScore)} / ${num(summary.medianScore)}`);
   console.log(`Mean turns            ${num(summary.meanTurns)}`);
   console.log(`Draws per play        ${num(summary.meanDrawPlayRatio)}`);
   console.log(`Mean word length      ${num(summary.meanWordLength)}`);
   console.log(`Two-letter play rate  ${pct(summary.twoLetterPlayRate)}`);
   console.log(`Mean capture turn     ${num(summary.meanCaptureTurn)}`);
-  console.log(`Refused-capture rate  ${pct(summary.refusedCaptureRate)}`);
   console.log(`\nWrote ${options.out}/games.jsonl and ${options.out}/summary.json`);
 }
 

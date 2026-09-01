@@ -1,10 +1,10 @@
-// AI personalities: Greedy, Hunter, Sleeper. No search — see spec section 12.
+// AI personalities: Greedy, Hunter, Sleeper. No search — see spec section 13.
 
 import type { GameState, AIPersonality, GameAction, DrawAction, PlayAction, Tile, WordPlacement } from './types';
-import { RACK_MAX, MAX_MARKET_TAKE } from './types';
+import { RACK_MAX, DRAW_COUNT } from './types';
 import { generateLegalPlays } from './moveGenerator';
-import { canDraw, canGrowRack } from './actions';
-import { random } from './game';
+import { canDraw } from './actions';
+import { random, getMarketTiles } from './game';
 import type { Dictionary } from './dictionary';
 
 export const DRAW_THRESHOLD = 8;
@@ -22,15 +22,9 @@ function toPlayAction(play: WordPlacement): PlayAction {
 
 export interface AIPlan {
   action: GameAction;
-  /** Every play that was on the table, so the lab can spot refused captures. */
   legalPlays: WordPlacement[];
 }
 
-/**
- * Choose an action and hand back the plays that were considered. The lab CLI
- * uses the play list for refusal stats, which is why it is returned rather than
- * regenerated.
- */
 export function planAIAction(
   state: GameState,
   personality: AIPersonality,
@@ -40,15 +34,18 @@ export function planAIAction(
   const player = state.players[state.currentPlayer];
   const opponent = state.players[state.currentPlayer === 0 ? 1 : 0];
 
-  const legalPlays = generateLegalPlays(state.board, player.rack, dictionary, state.livePost);
+  const legalPlays = generateLegalPlays(state, player.rack, dictionary, player.id);
 
   if (legalPlays.length === 0) {
-    return { action: drawWouldHelp(state) ? selectDrawAction(state) : { type: 'pass' }, legalPlays };
+    if (canDraw(state)) {
+      return { action: selectDrawAction(state), legalPlays };
+    }
+    return { action: { type: 'pass' }, legalPlays };
   }
 
   switch (personality) {
     case 'hunter':
-      return { action: selectHunterAction(state, legalPlays, threshold), legalPlays };
+      return { action: selectHunterAction(state, legalPlays, threshold, player.score, opponent.score), legalPlays };
     case 'sleeper':
       return {
         action: selectSleeperAction(state, legalPlays, threshold, player.score, opponent.score),
@@ -69,37 +66,21 @@ export function selectAIAction(
   return planAIAction(state, personality, dictionary, threshold).action;
 }
 
-/**
- * Would drawing actually gain the AI anything?
- *
- * A full-rack draw is only an exchange, which never drains the bag (see
- * canGrowRack in actions.ts). Chasing a blank is worth an exchange because a
- * blank is wild and there are only two of them; otherwise the AI spends its rack
- * instead of trading tiles back and forth forever.
- */
-function drawWouldHelp(state: GameState): boolean {
-  if (!canDraw(state)) return false;
-  if (canGrowRack(state)) return true;
-  return state.market.some(t => t.isBlank);
-}
-
 function selectGreedyAction(
   state: GameState,
   legalPlays: WordPlacement[],
   threshold: number
 ): GameAction {
   const bestPlay = findBestPlay(legalPlays);
-  const canImprove = drawWouldHelp(state);
 
-  if (bestPlay && (bestPlay.totalScore >= threshold || !canImprove)) {
+  if (bestPlay && (bestPlay.totalScore >= threshold || !canDraw(state))) {
     return toPlayAction(bestPlay);
   }
 
-  if (canImprove) {
+  if (canDraw(state)) {
     return selectDrawAction(state);
   }
 
-  // Nothing worth drawing for and no play worth making: take what we have.
   if (bestPlay) return toPlayAction(bestPlay);
   return { type: 'pass' };
 }
@@ -107,13 +88,24 @@ function selectGreedyAction(
 function selectHunterAction(
   state: GameState,
   legalPlays: WordPlacement[],
-  threshold: number
+  threshold: number,
+  myScore: number,
+  opponentScore: number
 ): GameAction {
-  const capturePlays = legalPlays.filter(p => p.captures);
-  const bestCapture = findBestPlay(capturePlays);
-  if (bestCapture) {
-    return toPlayAction(bestCapture);
+  const stealPlays = legalPlays.filter(p => p.capturesOpponentFlag);
+  const bestSteal = findBestPlay(stealPlays);
+  if (bestSteal) {
+    return toPlayAction(bestSteal);
   }
+
+  const winningSelfCaptures = legalPlays.filter(
+    p => p.capturesOwnFlag && myScore + p.totalScore > opponentScore
+  );
+  const bestSelfCapture = findBestPlay(winningSelfCaptures);
+  if (bestSelfCapture) {
+    return toPlayAction(bestSelfCapture);
+  }
+
   return selectGreedyAction(state, legalPlays, threshold);
 }
 
@@ -124,56 +116,50 @@ function selectSleeperAction(
   myScore: number,
   opponentScore: number
 ): GameAction {
-  // Capture only when it wins outright.
-  const winningCaptures = legalPlays.filter(
-    p => p.captures && myScore + p.totalScore > opponentScore
+  const winningSelfCaptures = legalPlays.filter(
+    p => p.capturesOwnFlag && myScore + p.totalScore > opponentScore
   );
-  const bestCapture = findBestPlay(winningCaptures);
-  if (bestCapture) {
-    return toPlayAction(bestCapture);
+  const bestSelfCapture = findBestPlay(winningSelfCaptures);
+  if (bestSelfCapture) {
+    return toPlayAction(bestSelfCapture);
   }
 
-  return selectGreedyAction(state, legalPlays.filter(p => !p.captures), threshold);
+  const winningSteals = legalPlays.filter(
+    p => p.capturesOpponentFlag && p.endsGame && myScore + p.totalScore > opponentScore
+  );
+  const bestSteal = findBestPlay(winningSteals);
+  if (bestSteal) {
+    return toPlayAction(bestSteal);
+  }
+
+  const safePlays = legalPlays.filter(p => !p.capturesOwnFlag && !p.capturesOpponentFlag);
+  return selectGreedyAction(state, safePlays.length > 0 ? safePlays : legalPlays, threshold);
 }
 
-/** Score desc, then longer word, then capture over not. */
+/** Score desc, then longer word, then self-capture over steal over normal. */
 export function findBestPlay(plays: WordPlacement[]): WordPlacement | null {
   if (plays.length === 0) return null;
 
   return [...plays].sort((a, b) => {
     if (a.totalScore !== b.totalScore) return b.totalScore - a.totalScore;
     if (a.tiles.length !== b.tiles.length) return b.tiles.length - a.tiles.length;
-    if (a.captures !== b.captures) return a.captures ? -1 : 1;
+    const rank = (p: WordPlacement) =>
+      p.capturesOwnFlag ? 2 : p.capturesOpponentFlag ? 1 : 0;
+    if (rank(a) !== rank(b)) return rank(b) - rank(a);
     return 0;
   })[0];
 }
 
 function selectDrawAction(state: GameState): DrawAction {
   const player = state.players[state.currentPlayer];
-  const room = RACK_MAX - player.rack.length;
+  const marketTiles = getMarketTiles(state.market);
+  const chosen = selectRandomMarketTiles(marketTiles, DRAW_COUNT);
 
-  // Priority 1: a blank is worth the whole market take.
-  const blank = state.market.find(t => t.isBlank);
-  if (blank) {
-    const discardCount = Math.max(0, 1 - room);
-    return {
-      type: 'draw',
-      marketTiles: [blank.id],
-      discardTiles: discardCount > 0 ? selectDiscardTiles(player.rack, discardCount) : undefined,
-      takeBagTile: false,
-    };
-  }
+  const rackAfterTake = player.rack.length + chosen.length;
+  const discardCount = Math.max(0, rackAfterTake - RACK_MAX);
+  const discardTiles = discardCount > 0 ? selectDiscardTiles(player.rack, discardCount) : undefined;
 
-  const wanted = Math.min(MAX_MARKET_TAKE, state.market.length);
-  const marketTiles = selectRandomMarketTiles(state.market, wanted);
-
-  const isRefresh = wanted > room;
-  const discardTiles = isRefresh ? selectDiscardTiles(player.rack, wanted - room) : undefined;
-
-  const rackAfterTake = player.rack.length - (discardTiles?.length ?? 0) + wanted;
-  const takeBagTile = !isRefresh && rackAfterTake <= 5 && state.bag.length > 0;
-
-  return { type: 'draw', marketTiles, discardTiles, takeBagTile };
+  return { type: 'draw', marketTiles: chosen, discardTiles };
 }
 
 function selectRandomMarketTiles(market: Tile[], count: number): string[] {
@@ -182,10 +168,9 @@ function selectRandomMarketTiles(market: Tile[], count: number): string[] {
     const j = Math.floor(random() * (i + 1));
     [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
   }
-  return shuffled.slice(0, count).map(t => t.id);
+  return shuffled.slice(0, Math.min(count, shuffled.length)).map(t => t.id);
 }
 
-/** Prefer discarding duplicate letters; never discard a blank if anything else exists. */
 function selectDiscardTiles(rack: Tile[], count: number): string[] {
   const nonBlanks = rack.filter(t => !t.isBlank);
   const pool = nonBlanks.length >= count ? nonBlanks : rack;
