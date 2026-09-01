@@ -1,6 +1,7 @@
 // Main menu. Logo is the title; fits the viewport with no scrolling.
 
 import type { GameMode, AIOpponent } from '../App';
+import HomeLink from './HomeLink';
 import './Menu.css';
 
 interface MenuProps {
@@ -12,9 +13,7 @@ function Menu({ onSelectMode }: MenuProps) {
     <div className="screen menu">
       <div className="screen-panel menu-panel">
         <div className="menu-head">
-          <a className="menu-logo" href="/flag-game/" aria-label="Flag home">
-            <img src={`${import.meta.env.BASE_URL}logo-header.png`} alt="Flag" className="menu-logo-img" />
-          </a>
+          <HomeLink variant="menu" />
           <p className="menu-subtitle">11×11 · steal flags or self-capture to end</p>
         </div>
 

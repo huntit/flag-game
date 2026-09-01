@@ -4,6 +4,7 @@ import type { Board as BoardModel, FlagPost, Position } from '../engine/types';
 import { FLAG_POSTS, CENTRE_STAR, BOARD_SIZE, PLAYER_COLORS } from '../engine/types';
 import { getBoardTile, positionEquals, isFirstWord } from '../engine/game';
 import { effectiveLetter, tileScore } from '../engine/validator';
+import { TileFace } from './TileFace';
 import './Board.css';
 
 export interface PendingPlacement {
@@ -84,8 +85,7 @@ function Board({ board, flags, pendingPlacements, highlight, onCellClick }: Boar
       >
         {letter ? (
           <span className={tileClasses}>
-            <span className="tile-letter">{letter}</span>
-            <span className="tile-value">{value}</span>
+            <TileFace letter={letter} value={value} isBlank={isBlank} />
           </span>
         ) : (
           <>

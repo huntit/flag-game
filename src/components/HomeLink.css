@@ -1,0 +1,73 @@
+/* Text home link + CSS 2-band pennant (placeholder until Skye wordmark lands). */
+
+.home-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55em;
+  text-decoration: none;
+  color: var(--color-ink);
+}
+
+.home-link-mark {
+  flex: 0 0 auto;
+  position: relative;
+  width: 0.95em;
+  height: 1.05em;
+}
+
+.home-link-mark::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 0.12em;
+  border-radius: 999px;
+  background-color: var(--color-ink);
+}
+
+.home-link-mark::after {
+  content: '';
+  position: absolute;
+  left: 0.18em;
+  top: 0.08em;
+  width: 0.72em;
+  height: 0.42em;
+  background:
+    linear-gradient(var(--color-p1) 0 0) 0 0 / 100% 46% no-repeat,
+    linear-gradient(var(--color-p2) 0 0) 0 100% / 100% 46% no-repeat;
+  clip-path: polygon(0 0, 100% 18%, 100% 82%, 0 100%);
+}
+
+.home-link-word {
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.home-link.is-menu .home-link-word {
+  font-size: clamp(2rem, 10vw, 2.75rem);
+}
+
+.home-link.is-hud {
+  height: 100%;
+}
+
+.home-link.is-hud .home-link-word {
+  font-size: 1rem;
+  letter-spacing: 0.12em;
+}
+
+.home-link.is-hud .home-link-mark {
+  width: 0.85em;
+  height: 0.95em;
+}
+
+.home-link.is-online {
+  justify-content: center;
+}
+
+.home-link.is-online .home-link-word {
+  font-size: clamp(1.6rem, 7vw, 2rem);
+}

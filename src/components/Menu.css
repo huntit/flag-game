@@ -12,16 +12,6 @@
   gap: 8px;
 }
 
-.menu-logo {
-  display: block;
-  line-height: 0;
-}
-
-.menu-logo-img {
-  width: min(100%, 320px);
-  height: auto;
-}
-
 .menu-subtitle {
   font-size: 0.82rem;
   color: var(--color-text-dim);

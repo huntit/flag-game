@@ -1,18 +1,8 @@
-/* HUD: logo home link + player score chip. */
+/* HUD: text home link + player score chip. */
 
-.hud-logo {
+.hud .home-link {
   flex: 0 0 auto;
   height: 100%;
-  display: flex;
-  align-items: center;
-  text-decoration: none;
-}
-
-.hud-logo-img {
-  height: 100%;
-  width: auto;
-  max-width: 132px;
-  object-fit: contain;
 }
 
 .hud-chip {

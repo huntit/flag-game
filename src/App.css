@@ -119,17 +119,27 @@ button:disabled {
   font-size: 0.95rem;
 }
 
-/* Tile score placement — top-right everywhere (WWF / wordmark style). */
+/* Tile score placement — top-right everywhere (WWF / Crossplay), never Scrabble bottom-right. */
+.tray-tile,
+.market-tile {
+  position: relative;
+}
+
 .tile-value {
   position: absolute;
   top: 6%;
   right: 8%;
+  bottom: auto;
+  left: auto;
   font-weight: 800;
   line-height: 1;
   color: var(--color-ink);
   opacity: 0.72;
+  pointer-events: none;
 }
 
 .tile-letter {
-  transform: translate(-4%, 4%);
+  position: relative;
+  transform: translate(-4%, 6%);
+  pointer-events: none;
 }
