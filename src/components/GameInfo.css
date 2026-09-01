@@ -1,9 +1,4 @@
-/* HUD: text home link + player score chip. */
-
-.hud .home-link {
-  flex: 0 0 auto;
-  height: 100%;
-}
+/* HUD: logo home link + player score chip. */
 
 .hud-chip {
   flex: 1 1 auto;

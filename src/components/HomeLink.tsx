@@ -1,4 +1,4 @@
-// Text FLAG home link until Skye ships the 2-band wordmark assets.
+// Skye v2 2-band pennant wordmark (logo-header.png) as the home link.
 
 import './HomeLink.css';
 
@@ -20,8 +20,11 @@ function HomeLink({ variant, onNavigate }: HomeLinkProps) {
       }}
       aria-label="Flag home"
     >
-      <span className="home-link-mark" aria-hidden="true" />
-      <span className="home-link-word">FLAG</span>
+      <img
+        src={`${import.meta.env.BASE_URL}logo-header.png`}
+        alt="Flag"
+        className="home-link-img"
+      />
     </a>
   );
 }

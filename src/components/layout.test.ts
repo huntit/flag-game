@@ -3,7 +3,7 @@
 // action button. These assertions guard the CSS that guarantees it.
 
 import { describe, it, expect } from 'vitest';
-import { readFileSync } from 'fs';
+import { readFileSync, existsSync } from 'fs';
 import { resolve } from 'path';
 
 const read = (file: string) => readFileSync(resolve(__dirname, file), 'utf-8');
@@ -160,11 +160,12 @@ describe('tile score placement', () => {
 });
 
 describe('branding', () => {
-  it('uses a text FLAG home link until the 2-band wordmark ships', () => {
+  it('uses the Skye v2 wordmark PNG as the home link on menu, HUD, and online', () => {
     for (const file of ['GameInfo.tsx', 'Menu.tsx', 'OnlineMode.tsx']) {
       expect(read(`./${file}`)).toMatch(/HomeLink/);
-      expect(read(`./${file}`)).not.toMatch(/logo-header\.png/);
     }
+    expect(read('./HomeLink.tsx')).toMatch(/logo-header\.png/);
+    expect(existsSync(resolve(__dirname, '../../public/logo-header.png'))).toBe(true);
   });
 });
 
