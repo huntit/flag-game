@@ -24,7 +24,9 @@ const snapshot = () =>
     handover: Boolean(document.querySelector('.handover')),
     handoverText: document.querySelector('.handover h1')?.textContent ?? null,
     seatLabel: document.querySelector('.hud-you .hud-key')?.textContent ?? null,
-    rackLabel: document.querySelector('.rack-row .tray-label')?.textContent ?? null,
+    // The rack has no visible caption; whose it is comes from the seat colour
+    // it is painted in, plus the tray's accessible name.
+    rackLabel: document.querySelector('.rack-tray')?.getAttribute('aria-label') ?? null,
     myLetters: [...document.querySelectorAll('.rack-row .tray-tile .tile-letter')].map(s => s.textContent),
     opponentLabel: document.querySelector('.opponent-name')?.textContent ?? null,
     opponentCount: document.querySelector('.opponent-count')?.textContent.trim() ?? null,
@@ -40,9 +42,10 @@ await page.waitForSelector('.play-shell');
 await page.waitForTimeout(300);
 
 const p1 = await snapshot();
-console.log('P1 turn:', JSON.stringify(p1));
-if (p1.seatLabel !== 'P1') problems.push(`expected to start on P1, got ${p1.seatLabel}`);
-if (p1.opponentLabel !== 'P2') problems.push(`expected opponent P2, got ${p1.opponentLabel}`);
+console.log('first seat turn:', JSON.stringify(p1));
+// Seats are named by their colour, never "P1"/"P2" — see moveLog.test.ts.
+if (p1.seatLabel !== 'Teal') problems.push(`expected to start on Teal, got ${p1.seatLabel}`);
+if (p1.opponentLabel !== 'Terracotta') problems.push(`expected opponent Terracotta, got ${p1.opponentLabel}`);
 if (p1.opponentLetters.length > 0) problems.push('P2 letters visible during P1 turn');
 if (p1.opponentBacks < 1) problems.push('opponent rack backs missing');
 
@@ -62,7 +65,9 @@ await page.waitForTimeout(400);
 const between = await snapshot();
 console.log('between turns:', JSON.stringify({ handover: between.handover, text: between.handoverText }));
 if (!between.handover) problems.push('no pass-the-phone interstitial between turns');
-if (!/P2/.test(between.handoverText ?? '')) problems.push(`interstitial should name P2, got ${between.handoverText}`);
+if (!/Terracotta/.test(between.handoverText ?? '')) {
+  problems.push(`interstitial should name Terracotta, got ${between.handoverText}`);
+}
 if (between.myLetters.length > 0) problems.push('rack letters visible on the handover screen');
 if (between.scrollH > between.clientH) problems.push('handover screen overflows');
 
@@ -70,11 +75,13 @@ await page.getByRole('button', { name: /^Ready$/ }).click();
 await page.waitForTimeout(300);
 
 const p2 = await snapshot();
-console.log('P2 turn:', JSON.stringify(p2));
-if (p2.seatLabel !== 'P2') problems.push(`expected P2 seat after handover, got ${p2.seatLabel}`);
-if (p2.opponentLabel !== 'P1') problems.push(`expected opponent P1, got ${p2.opponentLabel}`);
-if (p2.opponentLetters.length > 0) problems.push('P1 letters visible during P2 turn');
-if (p2.rackLabel !== 'P2') problems.push(`rack should be labelled P2, got ${p2.rackLabel}`);
+console.log('second seat turn:', JSON.stringify(p2));
+if (p2.seatLabel !== 'Terracotta') problems.push(`expected Terracotta after handover, got ${p2.seatLabel}`);
+if (p2.opponentLabel !== 'Teal') problems.push(`expected opponent Teal, got ${p2.opponentLabel}`);
+if (p2.opponentLetters.length > 0) problems.push('Teal letters visible during Terracotta turn');
+if (!/Terracotta/.test(p2.rackLabel ?? '')) {
+  problems.push(`rack should be announced as Terracotta's, got ${p2.rackLabel}`);
+}
 if (p2.myLetters.length === 0) problems.push('P2 has no visible letters on their own turn');
 if (p2.opponentBacks !== 4) {
   // P1 drew 2 on top of their opening 2.

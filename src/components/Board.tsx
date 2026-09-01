@@ -1,13 +1,12 @@
-// Board component. Tap-to-place only — no HTML5 drag anywhere.
+// Board component. Tap-to-place and drag-to-place; a cell is a drop target
+// identified by its data-row / data-col (see useTileDrag).
 
 import type { Board as BoardModel, FlagPost, Position } from '../engine/types';
-import { FLAG_POSTS, CENTRE_STAR, BOARD_SIZE } from '../engine/types';
+import { FLAG_POSTS, CENTRE_STAR, BOARD_SIZE, SEAT_COLOR_NAMES } from '../engine/types';
 import { getBoardTile, positionEquals, isFirstWord } from '../engine/game';
 import { effectiveLetter, tileScore } from '../engine/validator';
 import { TileFace } from './TileFace';
 import './Board.css';
-
-const base = import.meta.env.BASE_URL;
 
 export interface PendingPlacement {
   tileId: string;
@@ -23,7 +22,14 @@ interface BoardProps {
   flags: { P1: FlagPost | null; P2: FlagPost | null };
   pendingPlacements: PendingPlacement[];
   highlight: Position[];
+  /** Cell the pointer is currently over mid-drag, so it can light up. */
+  dropTarget?: Position | null;
+  /** Tile ids being carried by a drag — hidden at rest, drawn under the cursor. */
+  liftedTileIds?: string[];
   onCellClick: (position: Position) => void;
+  onTilePointerDown?: (event: React.PointerEvent, tileId: string) => void;
+  /** Names shown on each goal square, so "whose corner is this" needs no legend. */
+  seatNames?: { P1: string; P2: string };
 }
 
 function cornerFlagOwner(
@@ -37,11 +43,17 @@ function cornerFlagOwner(
   return null;
 }
 
-function cornerTokenSrc(flagOwner: 'P1' | 'P2'): string {
-  return flagOwner === 'P1' ? `${base}token-p1.svg` : `${base}token-p2.svg`;
-}
-
-function Board({ board, flags, pendingPlacements, highlight, onCellClick }: BoardProps) {
+function Board({
+  board,
+  flags,
+  pendingPlacements,
+  highlight,
+  dropTarget,
+  liftedTileIds = [],
+  onCellClick,
+  onTilePointerDown,
+  seatNames,
+}: BoardProps) {
   const showCentreStar = isFirstWord(board) && pendingPlacements.length === 0;
   const cornerPositions = Object.values(FLAG_POSTS);
 
@@ -54,11 +66,13 @@ function Board({ board, flags, pendingPlacements, highlight, onCellClick }: Boar
     const flagOwner = cornerFlagOwner(position, flags);
     const isCentre = positionEquals(position, CENTRE_STAR);
     const isHighlighted = highlight.some(p => positionEquals(p, position));
+    const isDropTarget = Boolean(dropTarget && positionEquals(dropTarget, position));
 
     const letter = pending ? pending.letter : boardTile ? effectiveLetter(boardTile) : '';
     const value = pending ? pending.value : boardTile ? tileScore(boardTile) : 0;
     const isBlank = pending ? pending.isBlank : Boolean(boardTile?.isBlank);
     const tilePlayer = pending?.playerId ?? boardTile?.playerId;
+    const isLifted = Boolean(pending && liftedTileIds.includes(pending.tileId));
 
     const classes = [
       'board-cell',
@@ -66,6 +80,7 @@ function Board({ board, flags, pendingPlacements, highlight, onCellClick }: Boar
       flagOwner && `has-flag is-flag-${flagOwner.toLowerCase()}`,
       isCentre && 'is-centre',
       isHighlighted && 'is-highlighted',
+      isDropTarget && 'is-drop-target',
     ]
       .filter(Boolean)
       .join(' ');
@@ -73,11 +88,14 @@ function Board({ board, flags, pendingPlacements, highlight, onCellClick }: Boar
     const tileClasses = [
       'board-tile',
       pending && 'is-pending',
+      isLifted && 'is-lifted',
       isBlank && !letter && 'is-blank',
       tilePlayer && `is-player-${tilePlayer.toLowerCase()}`,
     ]
       .filter(Boolean)
       .join(' ');
+
+    const goalName = flagOwner ? (seatNames?.[flagOwner] ?? SEAT_COLOR_NAMES[flagOwner]) : null;
 
     return (
       <button
@@ -86,22 +104,36 @@ function Board({ board, flags, pendingPlacements, highlight, onCellClick }: Boar
         className={classes}
         data-row={row}
         data-col={col}
-        aria-label={`Row ${row} column ${col}${letter ? `, ${letter}` : ''}`}
+        aria-label={
+          flagOwner && !letter
+            ? `Row ${row} column ${col}, ${goalName} goal square, triple word`
+            : `Row ${row} column ${col}${letter ? `, ${letter}` : ''}`
+        }
         onClick={() => onCellClick(position)}
       >
         {letter ? (
-          <span className={tileClasses}>
+          <span
+            className={tileClasses}
+            data-tile-id={pending?.tileId}
+            onPointerDown={
+              pending && onTilePointerDown
+                ? e => onTilePointerDown(e, pending.tileId)
+                : undefined
+            }
+          >
             <TileFace letter={letter} value={value} isBlank={isBlank && !letter} />
           </span>
         ) : (
           <>
             {showCentreStar && isCentre && <span className="cell-mark">★</span>}
             {flagOwner && (
-              <img
-                className="corner-token"
-                src={cornerTokenSrc(flagOwner)}
-                alt=""
-              />
+              /* The goal is a triple-word square painted in its owner's
+                 colour — the same colour as their score card — so there is
+                 no doubt about whose corner it is. */
+              <span className={`goal-square is-${flagOwner.toLowerCase()}`}>
+                <span className="goal-mult">3×</span>
+                <span className="goal-word">WORD</span>
+              </span>
             )}
           </>
         )}

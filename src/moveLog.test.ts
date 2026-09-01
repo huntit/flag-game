@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { describeMove, firstPlayerLogEntry, seatDisplayName } from './moveLog';
+import { describeMove, firstPlayerLogEntry, joinWords, playSummaryText, seatDisplayName } from './moveLog';
 import { initializeGame } from './engine/game';
 import { executeAction } from './engine/actions';
 import type { TileData } from './engine/types';
@@ -43,6 +43,37 @@ describe('move log seat names', () => {
     expect(entry.system).toBe(true);
     expect(entry.text).toBe('You play first');
     expect(entry.name).toBeUndefined();
+  });
+});
+
+describe('play line copy', () => {
+  it('reads "<words> for <score>", never "+score"', () => {
+    expect(playSummaryText('ABHORS + AD + BO + HE', 22)).toBe('ABHORS + AD + BO + HE for 22');
+    expect(playSummaryText('ABHORS + AD + BO + HE', 22)).not.toContain('+22');
+  });
+
+  it('joins every word the play made in scoring order', () => {
+    expect(joinWords([{ word: 'ABHORS' }, { word: 'AD' }, { word: 'BO' }, { word: 'HE' }])).toBe(
+      'ABHORS + AD + BO + HE'
+    );
+  });
+
+  it('hands the UI the words and the score apart, so the score can be styled', () => {
+    const state = initializeGame(mockTileData);
+    state.flags.P1 = 'NW';
+    state.flags.P2 = 'SE';
+    state.board[5][5] = { id: 'a0', letter: 'A', value: 1, isBlank: false };
+    state.players[0].rack = [{ id: 't1', letter: 'T', value: 1, isBlank: false }];
+    executeAction(
+      state,
+      { type: 'play', placements: [{ tileId: 't1', position: { row: 6, col: 7 } }] },
+      dictionary
+    );
+    const entry = describeMove(state, soloCtx);
+    expect(entry?.words).toBe('AT');
+    expect(entry?.score).toBe(state.lastPlay!.totalScore);
+    // The plain text still carries the whole line for screen readers.
+    expect(entry?.text).toBe(`AT for ${state.lastPlay!.totalScore}`);
   });
 });
 

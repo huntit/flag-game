@@ -1,10 +1,17 @@
-// Play screen. Tap a rack tile, then tap a square. No drag anywhere.
+// Play screen. Tap a rack tile then tap a square, or drag a tile straight onto
+// the board. Rack tiles can also be dragged into a new order.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { TileData, GameState, GameAction, Tile, Position, Letter } from '../engine/types';
 import { DRAW_COUNT, RACK_MAX, SEAT_COLOR_NAMES } from '../engine/types';
 import type { Dictionary } from '../engine/dictionary';
-import { getBoardTile, initializeGame, shuffleRack, emptySpareCorners } from '../engine/game';
+import {
+  getBoardTile,
+  initializeGame,
+  shuffleRack,
+  reorderRack,
+  emptySpareCorners,
+} from '../engine/game';
 import { executeAction, validateDraw, wouldTriggerExchangeThreeOnDraw, canPass } from '../engine/actions';
 import { validatePlay, type FlagContext } from '../engine/validator';
 import { selectAIAction } from '../engine/ai';
@@ -13,11 +20,13 @@ import Board, { type PendingPlacement } from './Board';
 import { Rack } from './Rack';
 import Market from './Market';
 import { ScoreCard } from './GameInfo';
+import { TileFace } from './TileFace';
 import HomeLink from './HomeLink';
 import SidePanel from './SidePanel';
 import GameOverOverlay from './GameOverOverlay';
 import PassThePhone from './PassThePhone';
 import BlankPicker from './BlankPicker';
+import { useTileDrag } from './useTileDrag';
 import {
   pickHumanSeat,
   soloFirstPlayerBanner,
@@ -27,6 +36,8 @@ import {
 import {
   describeMove,
   firstPlayerLogEntry,
+  joinWords,
+  playSummaryText,
   type MoveLogEntry,
   type SeatNameContext,
 } from '../moveLog';
@@ -47,6 +58,16 @@ interface Pending {
   assignedLetter?: Letter;
 }
 
+interface StatusToast {
+  kind: string;
+  /** Whole line as text — also the accessible announcement. */
+  text: string;
+  /** When set, the line is rendered as "<words> for <score>". */
+  words?: string;
+  score?: number;
+  prefix?: string;
+}
+
 const AI_NAMES: Record<AIOpponent, string> = {
   hunter: 'Hunter',
   greedy: 'Greedy',
@@ -58,7 +79,7 @@ const EXCHANGE_WARNING =
 
 function ShuffleIcon() {
   return (
-    <svg className="shuffle-icon" viewBox="0 0 24 24" aria-hidden="true">
+    <svg className="control-icon" viewBox="0 0 24 24" aria-hidden="true">
       <path
         fill="none"
         stroke="currentColor"
@@ -73,7 +94,7 @@ function ShuffleIcon() {
 
 function ClearIcon() {
   return (
-    <svg className="shuffle-icon" viewBox="0 0 24 24" aria-hidden="true">
+    <svg className="control-icon" viewBox="0 0 24 24" aria-hidden="true">
       <path
         fill="none"
         stroke="currentColor"
@@ -92,6 +113,21 @@ function buildFlagContext(state: GameState, playerId: 'P1' | 'P2'): FlagContext 
     flagsLost: { P1: state.players[0].flagsLost, P2: state.players[1].flagsLost },
     emptySpareCount: emptySpareCorners(state).length,
   };
+}
+
+/** "ABHORS + AD + BO + HE for 22", with the total bold in the score colour. */
+function ToastLine({ toast }: { toast: StatusToast }) {
+  if (toast.words === undefined || toast.score === undefined) {
+    return <>{toast.text}</>;
+  }
+  return (
+    <>
+      {toast.prefix && <span className="toast-prefix">{toast.prefix} </span>}
+      <span className="toast-words">{toast.words}</span>
+      <span className="toast-for"> for </span>
+      <span className="score-value">{toast.score}</span>
+    </>
+  );
 }
 
 function Game({ tileData, dictionary, mode, aiOpponent, onBackToMenu }: GameProps) {
@@ -266,21 +302,24 @@ function Game({ tileData, dictionary, mode, aiOpponent, onBackToMenu }: GameProp
     return () => window.clearTimeout(timer);
   }, [error]);
 
-  const handleRackTileClick = (tile: Tile) => {
-    if (!interactive) return;
-    setError(null);
+  const selectRackTile = useCallback(
+    (tile: Tile) => {
+      if (!interactive) return;
+      setError(null);
 
-    if (requiredDiscards > 0) {
-      setDiscardIds(current => {
-        if (current.includes(tile.id)) return current.filter(id => id !== tile.id);
-        if (current.length >= requiredDiscards) return [...current.slice(1), tile.id];
-        return [...current, tile.id];
-      });
-      return;
-    }
+      if (requiredDiscards > 0) {
+        setDiscardIds(current => {
+          if (current.includes(tile.id)) return current.filter(id => id !== tile.id);
+          if (current.length >= requiredDiscards) return [...current.slice(1), tile.id];
+          return [...current, tile.id];
+        });
+        return;
+      }
 
-    setSelectedRackTileId(current => (current === tile.id ? null : tile.id));
-  };
+      setSelectedRackTileId(current => (current === tile.id ? null : tile.id));
+    },
+    [interactive, requiredDiscards]
+  );
 
   const handleMarketTileClick = (tile: Tile) => {
     if (!interactive) return;
@@ -297,6 +336,49 @@ function Game({ tileData, dictionary, mode, aiOpponent, onBackToMenu }: GameProp
       return [...current, tile.id];
     });
   };
+
+  /** Shared by tap-to-place and drag-to-place: put one held tile on a square. */
+  const placeTile = useCallback(
+    (tileId: string, position: Position): boolean => {
+      if (getBoardTile(gameState.board, position)) {
+        setHint('That square is taken');
+        return false;
+      }
+
+      const tile = viewer.rack.find(t => t.id === tileId);
+      if (!tile) return false;
+
+      let blocked = false;
+      setPending(current => {
+        const occupant = current.find(
+          p => p.position.row === position.row && p.position.col === position.col
+        );
+        if (occupant && occupant.tileId !== tileId) {
+          blocked = true;
+          return current;
+        }
+        // Moving a tile already on the board keeps whatever letter a blank was
+        // given, so a re-placed blank never has to be chosen twice.
+        const without = current.filter(p => p.tileId !== tileId);
+        const existing = current.find(p => p.tileId === tileId);
+        return [...without, { tileId, position, assignedLetter: existing?.assignedLetter }];
+      });
+
+      if (blocked) {
+        setHint('That square is taken');
+        return false;
+      }
+
+      setSelectedRackTileId(null);
+      setSelectedMarketIds([]);
+      setHint(null);
+      if (tile.isBlank && !pending.find(p => p.tileId === tileId)?.assignedLetter) {
+        setBlankPrompt(tile.id);
+      }
+      return true;
+    },
+    [gameState.board, viewer.rack, pending]
+  );
 
   const handleCellClick = (position: Position) => {
     if (!interactive) return;
@@ -321,14 +403,55 @@ function Game({ tileData, dictionary, mode, aiOpponent, onBackToMenu }: GameProp
       return;
     }
 
-    const tile = viewer.rack.find(t => t.id === selectedRackTileId);
-    if (!tile) return;
+    placeTile(selectedRackTileId, position);
+  };
 
-    setPending(current => [...current, { tileId: tile.id, position }]);
-    setSelectedRackTileId(null);
-    setSelectedMarketIds([]);
-    setHint(null);
-    if (tile.isBlank) setBlankPrompt(tile.id);
+  /**
+   * Slide a rack tile to the slot the player dropped it on. Visible slots skip
+   * tiles that are currently out on the board, so the drop index has to be
+   * translated back into a position in the full rack.
+   */
+  const moveRackTile = useCallback(
+    (tileId: string, visibleIndex: number) => {
+      const rack = gameState.players[viewerIndex].rack;
+      const visible = rack.filter(t => t.id !== tileId && !placedTileIds.includes(t.id));
+      const anchor = visible[visibleIndex];
+      const rawIndex = anchor ? rack.findIndex(t => t.id === anchor.id) : rack.length;
+      gameState.players[viewerIndex].rack = reorderRack(rack, tileId, rawIndex);
+      setGameState({ ...gameState });
+    },
+    [gameState, viewerIndex, placedTileIds]
+  );
+
+  const drag = useTileDrag({
+    enabled: interactive,
+    onDropOnBoard: (tileId, position) => {
+      setError(null);
+      placeTile(tileId, position);
+    },
+    onDropOnRack: (tileId, index, origin) => {
+      setError(null);
+      if (origin.kind === 'board') {
+        // Dragged back off the board: return it to the rack at that slot.
+        setPending(current => current.filter(p => p.tileId !== tileId));
+      }
+      moveRackTile(tileId, index);
+      setSelectedRackTileId(null);
+    },
+    onTap: (tileId, origin) => {
+      if (origin.kind === 'board') {
+        setPending(current => current.filter(p => p.tileId !== tileId));
+        setSelectedRackTileId(null);
+        return;
+      }
+      const tile = viewer.rack.find(t => t.id === tileId);
+      if (tile) selectRackTile(tile);
+    },
+  });
+
+  const handleRackTileClick = (tile: Tile) => {
+    if (drag.consumeGhostClick(tile.id)) return;
+    selectRackTile(tile);
   };
 
   const handleBlankPick = (letter: Letter) => {
@@ -411,19 +534,28 @@ function Game({ tileData, dictionary, mode, aiOpponent, onBackToMenu }: GameProp
   const otherLabel = isVsAI
     ? (opponentName ?? 'Opponent')
     : SEAT_COLOR_NAMES[other.id];
-  const viewerKind = 'human' as const;
-  const otherKind = isVsAI ? ('ai' as const) : ('human' as const);
 
   const p1 = gameState.players[0];
   const p2 = gameState.players[1];
   const seatLabel = (seat: 0 | 1) =>
     isVsAI ? (seat === humanSeat ? youLabel : otherLabel) : SEAT_COLOR_NAMES[seat === 0 ? 'P1' : 'P2'];
-  const seatKind = (seat: 0 | 1) => (isVsAI && seat !== humanSeat ? otherKind : viewerKind);
 
   const drawButtonLabel = exchangeWarning ? 'Draw 2 — ends game' : 'Draw 2';
 
+  // The tile riding under the cursor, drawn once above everything else.
+  const draggedTile = drag.state
+    ? viewer.rack.find(t => t.id === drag.state!.tileId) ?? null
+    : null;
+  const draggedPending = drag.state
+    ? pending.find(p => p.tileId === drag.state!.tileId)
+    : undefined;
+  const dragBoardTarget =
+    drag.state?.target?.kind === 'board' ? drag.state.target.position : null;
+  const dragRackIndex = drag.state?.target?.kind === 'rack' ? drag.state.target.index : null;
+  const liftedTileId = drag.state?.tileId ?? null;
+
   const statusToasts = useMemo(() => {
-    const items: { kind: string; text: string }[] = [];
+    const items: StatusToast[] = [];
     if (error) items.push({ kind: 'toast-error', text: error });
     if (firstPlayerBannerText) items.push({ kind: 'toast-info', text: firstPlayerBannerText });
     if (exchangeWarning && interactive) {
@@ -433,8 +565,14 @@ function Game({ tileData, dictionary, mode, aiOpponent, onBackToMenu }: GameProp
     if (pending.length > 0 && playEvaluation && !playEvaluation.valid) {
       items.push({ kind: 'toast-error', text: playEvaluation.reason ?? 'Not a legal play' });
     } else if (playEvaluation?.valid) {
-      const words = playEvaluation.words?.map(w => w.word).join(' + ') ?? '';
-      items.push({ kind: 'toast-hint', text: `${words} for ${playEvaluation.totalScore}` });
+      const words = joinWords(playEvaluation.words ?? []);
+      const score = playEvaluation.totalScore ?? 0;
+      items.push({
+        kind: 'toast-score',
+        text: playSummaryText(words, score),
+        words,
+        score,
+      });
     }
     if (selectedMarketIds.length > 0 && selectedMarketIds.length < DRAW_COUNT) {
       items.push({
@@ -454,14 +592,20 @@ function Game({ tileData, dictionary, mode, aiOpponent, onBackToMenu }: GameProp
     }
     if (hint) items.push({ kind: 'toast-hint', text: hint });
     if (!firstPlayerBannerText && gameState.lastPlay) {
-      const words = gameState.lastPlay.words.map(w => w.word).join(' + ');
+      const words = joinWords(gameState.lastPlay.words);
       const who =
         gameState.lastPlay.player === viewer.id
           ? youLabel
           : isVsAI
             ? otherLabel
             : SEAT_COLOR_NAMES[gameState.lastPlay.player];
-      items.push({ kind: 'toast-info', text: `${who} played ${words} +${gameState.lastPlay.totalScore}` });
+      items.push({
+        kind: 'toast-score',
+        text: `${who} played ${playSummaryText(words, gameState.lastPlay.totalScore)}`,
+        prefix: `${who} played`,
+        words,
+        score: gameState.lastPlay.totalScore,
+      });
     }
     return items;
   }, [
@@ -496,12 +640,12 @@ function Game({ tileData, dictionary, mode, aiOpponent, onBackToMenu }: GameProp
   }
 
   return (
-    <div className="play-shell">
-      <div className="play-main">
-        <header className="play-header">
-          <HomeLink variant="play" onNavigate={onBackToMenu} />
-        </header>
+    <div className={`play-shell ${drag.isDragging ? 'is-dragging' : ''}`}>
+      <header className="play-header">
+        <HomeLink variant="play" onNavigate={onBackToMenu} />
+      </header>
 
+      <div className="play-side">
         <div className="scores-row">
           <ScoreCard
             name={seatLabel(0)}
@@ -509,7 +653,6 @@ function Game({ tileData, dictionary, mode, aiOpponent, onBackToMenu }: GameProp
             rackCount={p1.rack.length}
             isActive={activeIndex === 0}
             playerColor="P1"
-            kind={seatKind(0)}
             variant={viewerIndex === 0 ? 'you' : 'opponent'}
           />
           <ScoreCard
@@ -518,18 +661,29 @@ function Game({ tileData, dictionary, mode, aiOpponent, onBackToMenu }: GameProp
             rackCount={p2.rack.length}
             isActive={activeIndex === 1}
             playerColor="P2"
-            kind={seatKind(1)}
             variant={viewerIndex === 1 ? 'you' : 'opponent'}
           />
         </div>
 
+        <SidePanel entries={moveLog} />
+      </div>
+
+      <div className="play-main">
         <div className="stage">
           <Board
             board={gameState.board}
             flags={gameState.flags}
             pendingPlacements={pendingForBoard}
             highlight={pending.length === 0 ? lastPlayHighlight : []}
+            dropTarget={dragBoardTarget}
+            liftedTileIds={liftedTileId ? [liftedTileId] : []}
+            seatNames={{ P1: seatLabel(0), P2: seatLabel(1) }}
             onCellClick={handleCellClick}
+            onTilePointerDown={(event, tileId) => {
+              const placement = pending.find(p => p.tileId === tileId);
+              if (!placement) return;
+              drag.begin(event, { kind: 'board', tileId, position: placement.position });
+            }}
           />
         </div>
 
@@ -542,10 +696,42 @@ function Game({ tileData, dictionary, mode, aiOpponent, onBackToMenu }: GameProp
               disabled={!interactive}
               onTileClick={handleMarketTileClick}
             />
+          </div>
+
+          <div className="rack-row">
+            <Rack
+              tiles={viewer.rack}
+              label={youLabel}
+              playerColor={viewerColor}
+              selectedTileId={selectedRackTileId}
+              discardTileIds={discardIds}
+              placedTileIds={placedTileIds}
+              liftedTileId={liftedTileId}
+              dropIndex={dragRackIndex}
+              disabled={!interactive}
+              onTileClick={handleRackTileClick}
+              onTilePointerDown={(event, tileId) => drag.begin(event, { kind: 'rack', tileId })}
+            />
+          </div>
+
+          <div className="actions-row">
+            <button
+              type="button"
+              className="control control-ghost action-shuffle"
+              onClick={canClearNow ? handleClear : handleShuffle}
+              disabled={!canClearNow && !canShuffleNow}
+              aria-label={canClearNow ? 'Clear' : 'Shuffle your tiles'}
+              title={canClearNow ? 'Clear' : 'Shuffle your tiles'}
+            >
+              {canClearNow ? <ClearIcon /> : <ShuffleIcon />}
+            </button>
+
+            <span className="actions-spacer" />
+
             {canPassNow ? (
               <button
                 type="button"
-                className="action-button action-pass"
+                className="control control-solid action-pass"
                 data-pass-stuck-only="true"
                 onClick={handlePass}
               >
@@ -554,7 +740,7 @@ function Game({ tileData, dictionary, mode, aiOpponent, onBackToMenu }: GameProp
             ) : (
               <button
                 type="button"
-                className={`action-button action-draw ${exchangeWarning ? 'is-swap-warning' : ''}`}
+                className={`control control-solid action-draw ${exchangeWarning ? 'is-swap-warning' : ''}`}
                 onClick={handleDraw}
                 disabled={!canDrawNow}
                 aria-label={exchangeWarning ? `${drawButtonLabel}. ${EXCHANGE_WARNING}` : drawButtonLabel}
@@ -562,31 +748,13 @@ function Game({ tileData, dictionary, mode, aiOpponent, onBackToMenu }: GameProp
                 {drawButtonLabel}
               </button>
             )}
-          </div>
 
-          <div className="rack-row">
-            <Rack
-              tiles={viewer.rack}
-              label={youLabel}
-              playerColor={viewerColor}
-              kind={viewerKind}
-              selectedTileId={selectedRackTileId}
-              discardTileIds={discardIds}
-              placedTileIds={placedTileIds}
-              disabled={!interactive}
-              onTileClick={handleRackTileClick}
-            />
             <button
               type="button"
-              className="icon-button action-shuffle"
-              onClick={canClearNow ? handleClear : handleShuffle}
-              disabled={!canClearNow && !canShuffleNow}
-              aria-label={canClearNow ? 'Clear' : 'Shuffle'}
+              className="control control-solid action-play"
+              onClick={handlePlay}
+              disabled={!canPlayNow}
             >
-              {canClearNow ? <ClearIcon /> : <ShuffleIcon />}
-              <span className="sr-only">{canClearNow ? 'Clear' : 'Shuffle'}</span>
-            </button>
-            <button type="button" className="action-button action-play" onClick={handlePlay} disabled={!canPlayNow}>
               Play
             </button>
           </div>
@@ -594,12 +762,35 @@ function Game({ tileData, dictionary, mode, aiOpponent, onBackToMenu }: GameProp
 
         <div className="status-row" aria-live="polite">
           {statusToasts[0] && (
-            <div className={`toast ${statusToasts[0].kind}`}>{statusToasts[0].text}</div>
+            <div className={`toast ${statusToasts[0].kind}`} title={statusToasts[0].text}>
+              <ToastLine toast={statusToasts[0]} />
+            </div>
           )}
         </div>
       </div>
 
-      <SidePanel entries={moveLog} />
+      {/* The tile riding under the cursor. Fixed to the viewport and inert, so
+          hit-testing sees the board underneath rather than this. */}
+      {drag.state && (draggedTile || draggedPending) && (
+        <div
+          className="drag-ghost"
+          style={{
+            left: `${drag.state.left}px`,
+            top: `${drag.state.top}px`,
+            width: `${drag.state.width}px`,
+            height: `${drag.state.height}px`,
+          }}
+          aria-hidden="true"
+        >
+          <span className={`tray-tile rack-tile ${draggedTile?.isBlank ? 'is-blank' : ''}`}>
+            <TileFace
+              letter={draggedPending?.assignedLetter ?? draggedTile?.letter ?? null}
+              value={draggedTile?.isBlank ? 0 : draggedTile?.value ?? 0}
+              isBlank={Boolean(draggedTile?.isBlank) && !draggedPending?.assignedLetter}
+            />
+          </span>
+        </div>
+      )}
 
       {blankPrompt && <BlankPicker onPick={handleBlankPick} onCancel={handleBlankCancel} />}
 

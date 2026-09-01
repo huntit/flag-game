@@ -33,6 +33,9 @@ const readState = () =>
     flag: document.querySelector('.hud-flag')?.textContent,
     oppCount: document.querySelector('.opponent-count')?.textContent.trim(),
     rack: [...document.querySelectorAll('.rack-row .tray-tile .tile-letter')].map(s => s.textContent),
+    // Identity, not letters: a rack of I E E can be genuinely reordered and
+    // still spell the same thing.
+    rackIds: [...document.querySelectorAll('.rack-row .tray-tile')].map(t => t.dataset.tileId),
     toast: document.querySelector('.toast')?.textContent,
     playEnabled: !document.querySelector('.action-play')?.disabled,
     drawEnabled: !document.querySelector('.action-draw')?.disabled,
@@ -67,21 +70,22 @@ if (start.playEnabled) problems.push('Play is enabled with nothing placed');
 // Shuffle must reorder without changing which letters are held.
 await rackTiles().first().waitFor();
 for (let i = 0; i < 3; i++) {
-  const before = (await readState()).rack;
+  const before = await readState();
   await thirdButton().click();
   await page.waitForTimeout(120);
-  const after = (await readState()).rack;
-  if ([...before].sort().join('') !== [...after].sort().join('')) {
-    problems.push(`shuffle changed the letters: ${before} -> ${after}`);
+  const after = await readState();
+  if ([...before.rack].sort().join('') !== [...after.rack].sort().join('')) {
+    problems.push(`shuffle changed the letters: ${before.rack} -> ${after.rack}`);
   }
-  if (before.length > 1 && before.join('') === after.join('')) {
-    problems.push(`shuffle did not reorder: ${before.join('')}`);
+  if (before.rackIds.length > 1 && before.rackIds.join() === after.rackIds.join()) {
+    problems.push(`shuffle did not reorder: ${before.rackIds.join()}`);
   }
 }
 console.log('shuffle: letters preserved, order changed on every tap');
 
 async function clearPending() {
-  const label = (await thirdButton().textContent())?.trim();
+  // The button is icon-only, so its purpose lives in the accessible name.
+  const label = (await thirdButton().getAttribute('aria-label'))?.trim();
   if (label === 'Clear') await thirdButton().click();
   await page.waitForTimeout(70);
 }

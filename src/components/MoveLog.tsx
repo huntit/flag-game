@@ -1,4 +1,4 @@
-// Scrolling move log for desktop/iPad — entries coloured by player.
+// Scrolling move log — entries coloured by player, scores in the score colour.
 
 import type { MoveLogEntry } from '../moveLog';
 import './MoveLog.css';
@@ -9,12 +9,36 @@ interface MoveLogProps {
   entries: MoveLogEntry[];
 }
 
+/**
+ * "ABHORS + AD + BO + HE for 22" — the words plain, the total bold in the
+ * score colour, so a glance down the log reads as a column of scores.
+ */
+export function MoveLogText({ entry }: { entry: MoveLogEntry }) {
+  if (entry.words === undefined || entry.score === undefined) {
+    return <span className="move-log-text">{entry.text}</span>;
+  }
+
+  return (
+    <span className="move-log-text">
+      <span className="move-log-words">{entry.words}</span>
+      <span className="move-log-for"> for </span>
+      <span className="score-value">{entry.score}</span>
+      {entry.suffix}
+    </span>
+  );
+}
+
 function MoveLog({ entries }: MoveLogProps) {
-  if (entries.length === 0) return null;
+  if (entries.length === 0) {
+    return (
+      <div className="move-log is-empty" aria-label="Move log">
+        <p className="move-log-blank">Moves appear here as the game unfolds.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="move-log" aria-label="Move log">
-      <span className="move-log-label">Log</span>
       <ol className="move-log-list">
         {entries.map((entry, i) => (
           <li
@@ -24,7 +48,7 @@ function MoveLog({ entries }: MoveLogProps) {
             {!entry.system && entry.name && (
               <span className="move-log-seat">{entry.name}</span>
             )}
-            <span className="move-log-text">{entry.text}</span>
+            <MoveLogText entry={entry} />
           </li>
         ))}
       </ol>

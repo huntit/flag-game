@@ -1,51 +1,58 @@
-// Racks. Your own letters are always visible; an opponent's never are.
+// Your rack. Your own letters are always visible; an opponent's never are.
+// Tiles stand in a rail tinted with your seat colour — the same fill as your
+// score card — so "these are mine" needs no label. Market tiles, by contrast,
+// lie flat on the table with no tray behind them.
 
 import type { Tile } from '../engine/types';
 import { RACK_MAX } from '../engine/types';
 import { TileFace } from './TileFace';
 import { ScoreCard } from './GameInfo';
-import { PlayerAvatar, type AvatarKind } from './PlayerAvatar';
 import './Rack.css';
 
 interface RackProps {
   tiles: Tile[];
   label: string;
   playerColor: 'P1' | 'P2';
-  kind: AvatarKind;
   selectedTileId: string | null;
   discardTileIds: string[];
   placedTileIds: string[];
+  /** Tile currently under the cursor mid-drag — hidden here, drawn floating. */
+  liftedTileId?: string | null;
+  /** Slot the drag would drop into, so the rack can open a gap for it. */
+  dropIndex?: number | null;
   disabled: boolean;
   onTileClick: (tile: Tile) => void;
+  onTilePointerDown?: (event: React.PointerEvent, tileId: string) => void;
 }
 
 export function Rack({
   tiles,
   label,
   playerColor,
-  kind,
   selectedTileId,
   discardTileIds,
   placedTileIds,
+  liftedTileId,
+  dropIndex,
   disabled,
   onTileClick,
+  onTilePointerDown,
 }: RackProps) {
   const available = tiles.filter(tile => !placedTileIds.includes(tile.id));
   const emptySlots = Math.max(0, RACK_MAX - available.length);
 
   return (
     <div className={`rack-row-inner is-${playerColor.toLowerCase()}`}>
-      <span className="tray-label">
-        <PlayerAvatar kind={kind} playerColor={playerColor} name={label} />
-        <span className="tray-label-text">{label}</span>
-      </span>
-      <div className="tray" aria-label={label}>
-        {available.map(tile => {
+      <div className="tray rack-tray" data-rack-zone="true" aria-label={`${label}: your tiles`}>
+        {available.map((tile, index) => {
           const classes = [
             'tray-tile',
+            'rack-tile',
             selectedTileId === tile.id && 'is-selected',
             discardTileIds.includes(tile.id) && 'is-discarding',
+            liftedTileId === tile.id && 'is-lifted',
             tile.isBlank && 'is-blank',
+            dropIndex === index && 'has-gap-before',
           ]
             .filter(Boolean)
             .join(' ');
@@ -55,8 +62,15 @@ export function Rack({
               type="button"
               key={tile.id}
               className={classes}
+              data-tile-id={tile.id}
+              data-rack-index={index}
               disabled={disabled}
               onClick={() => onTileClick(tile)}
+              onPointerDown={
+                onTilePointerDown && !disabled
+                  ? e => onTilePointerDown(e, tile.id)
+                  : undefined
+              }
               aria-label={tile.isBlank ? 'Blank tile' : `${tile.letter}, ${tile.value} points`}
             >
               <TileFace letter={tile.letter} value={tile.value} isBlank={tile.isBlank} />
@@ -64,7 +78,13 @@ export function Rack({
           );
         })}
         {Array.from({ length: emptySlots }, (_, i) => (
-          <span key={`empty-${i}`} className="tray-slot-empty" aria-hidden="true" />
+          <span
+            key={`empty-${i}`}
+            className={`tray-slot-empty rack-slot-empty ${
+              dropIndex === available.length + i ? 'has-gap-before' : ''
+            }`}
+            aria-hidden="true"
+          />
         ))}
       </div>
     </div>
@@ -74,13 +94,12 @@ export function Rack({
 interface OpponentRackProps {
   name: string;
   playerColor: 'P1' | 'P2';
-  kind: AvatarKind;
   count: number;
   score: number;
   isTheirTurn: boolean;
 }
 
-export function OpponentRack({ name, playerColor, kind, count, score, isTheirTurn }: OpponentRackProps) {
+export function OpponentRack({ name, playerColor, count, score, isTheirTurn }: OpponentRackProps) {
   return (
     <ScoreCard
       name={name}
@@ -88,7 +107,6 @@ export function OpponentRack({ name, playerColor, kind, count, score, isTheirTur
       rackCount={count}
       isActive={isTheirTurn}
       playerColor={playerColor}
-      kind={kind}
       variant="opponent"
     />
   );

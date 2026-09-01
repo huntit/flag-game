@@ -36,7 +36,10 @@ for (const mode of modes) {
     opponentCount: document.querySelector('.opponent-count')?.textContent.trim() ?? null,
     opponentLetters: [...document.querySelectorAll('.opponent-inner .tile-letter')].length,
     myTiles: document.querySelectorAll('.rack-row .tray-tile').length,
+    // Six slots: four face up, two face down.
     marketTiles: document.querySelectorAll('.market-row .tray-tile').length,
+    marketFaceUp: document.querySelectorAll('.market-tile:not(.is-facedown)').length,
+    marketFaceDown: document.querySelectorAll('.market-tile.is-facedown').length,
     boardCells: document.querySelectorAll('.board-cell').length,
     buttons: [...document.querySelectorAll('.action-draw, .action-play, .action-shuffle')].map(b => ({
       label: (b.getAttribute('aria-label') || b.textContent || '').trim(),
@@ -49,6 +52,9 @@ for (const mode of modes) {
     ),
     innerH: window.innerHeight,
     centreStar: Boolean(document.querySelector('.board-cell.is-centre .cell-mark')),
+    // Who plays first is randomised, so half these runs open on the AI's turn
+    // and the whole board is correctly inert.
+    yourTurn: Boolean(document.querySelector('.score-card.hud-you.is-active')),
     livePost: document.querySelector('.hud-flag')?.textContent ?? null,
   }));
 
@@ -57,7 +63,9 @@ for (const mode of modes) {
   if (state.opponent !== mode.opponent) problems.push(`${mode.opponent}: opponent shown as ${state.opponent}`);
   if (state.opponentLetters !== 0) problems.push(`${mode.opponent}: opponent letters rendered`);
   if (state.myTiles < 2 || state.myTiles > 3) problems.push(`${mode.opponent}: opening rack should be 2–3, got ${state.myTiles}`);
-  if (state.marketTiles !== 4) problems.push(`${mode.opponent}: market should be 4, got ${state.marketTiles}`);
+  if (state.marketTiles !== 6) problems.push(`${mode.opponent}: market should be 6, got ${state.marketTiles}`);
+  if (state.marketFaceUp !== 4) problems.push(`${mode.opponent}: 4 face-up expected, got ${state.marketFaceUp}`);
+  if (state.marketFaceDown !== 2) problems.push(`${mode.opponent}: 2 face-down expected, got ${state.marketFaceDown}`);
   if (state.boardCells !== 121) problems.push(`${mode.opponent}: board should be 11x11=121 cells, got ${state.boardCells}`);
   if (!state.centreStar) problems.push(`${mode.opponent}: centre star not shown on an empty board`);
 
@@ -65,7 +73,14 @@ for (const mode of modes) {
   if (byLabel['Draw 2'] === false) problems.push(`${mode.opponent}: Draw 2 enabled with no market selection`);
   if (byLabel.Play === false) problems.push(`${mode.opponent}: Play enabled with nothing placed`);
   if ('Pass' in byLabel) problems.push(`${mode.opponent}: Pass button must not exist`);
-  if (byLabel.Shuffle !== false) problems.push(`${mode.opponent}: Shuffle disabled on your own turn`);
+  // Icon-only button: its purpose lives in the accessible name. Only assert
+  // it is live when it is actually your turn.
+  if (state.yourTurn && byLabel['Shuffle your tiles'] !== false) {
+    problems.push(`${mode.opponent}: Shuffle disabled on your own turn`);
+  }
+  if (!state.yourTurn && byLabel['Shuffle your tiles'] !== true) {
+    problems.push(`${mode.opponent}: Shuffle live during the opponent's turn`);
+  }
   if (state.scrollH > state.clientH) problems.push(`${mode.opponent}: document overflows`);
   if (state.actionsBottom > state.innerH) problems.push(`${mode.opponent}: buttons below the fold`);
 }

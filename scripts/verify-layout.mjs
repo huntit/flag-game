@@ -52,7 +52,7 @@ for (const t of targets) {
       const r = el.getBoundingClientRect();
       return { top: r.top, bottom: r.bottom, left: r.left, right: r.right, w: r.width, h: r.height };
     };
-    const buttons = [...document.querySelectorAll('.action-draw, .action-play, .action-shuffle')].map(b => ({
+    const buttons = [...document.querySelectorAll('.action-draw, .action-pass, .action-play, .action-shuffle')].map(b => ({
       label: (b.getAttribute('aria-label') || b.textContent || '').trim(),
       disabled: b.disabled,
       ...rect(b),
@@ -72,15 +72,19 @@ for (const t of targets) {
     const youCard = document.querySelector('.hud-you');
     const oppCard = document.querySelector('.opponent-inner');
     const marketLabel = document.querySelector('.market-row .tray-label');
+    const marketInner = document.querySelector('.market-row-inner');
+    const rackTrayEl = document.querySelector('.rack-tray');
+    const actionsRow = document.querySelector('.actions-row');
+    const goalSquares = [...document.querySelectorAll('.goal-square')];
     const bagArt = document.querySelector('.market-bag-art');
     const bagCount = document.querySelector('.market-bag-count');
-    const avatars = document.querySelectorAll('.player-avatar');
+    const avatars = document.querySelectorAll('.player-avatar, [class*="avatar"]');
     const emptyPips = document.querySelectorAll('.score-pip.is-empty');
     const raisedTile = document.querySelector('.board-tile');
     const youName = document.querySelector('.hud-you .score-card-name');
     const youScore = document.querySelector('.hud-you .score-card-score');
     const youBacks = [...document.querySelectorAll('.hud-you .score-back')];
-    const rackLabel = document.querySelector('.rack-row .tray-label');
+    const rackLabel = document.querySelector('.rack-tray');
     const toasts = [...document.querySelectorAll('.status-row .toast')];
     const overlaps = (a, b) => {
       if (!a || !b) return false;
@@ -104,16 +108,66 @@ for (const t of targets) {
       opponentCount: document.querySelector('.opponent-count')?.textContent.trim(),
       opponentBacks: document.querySelectorAll('.opponent-back').length,
       youBacks: document.querySelectorAll('.hud-you .score-back').length,
-      cornerTokens: document.querySelectorAll('.corner-token').length,
-      cornerImgs: [...document.querySelectorAll('.corner-token')].map(img => img.currentSrc || img.src),
+      // Seven slots on every card, filled or not, so both cards line up and
+      // an empty rack is still legible as "holding nothing".
+      pipsPerCard: [...document.querySelectorAll('.score-card')].map(
+        card => card.querySelectorAll('.score-pip').length
+      ),
+      goalSquares: goalSquares.length,
+      goalSeats: goalSquares.map(el => (el.classList.contains('is-p1') ? 'P1' : 'P2')),
+      goalFills: goalSquares.map(el => getComputedStyle(el).backgroundColor),
+      goalCoversCell: goalSquares.every(el => {
+        const cellBox = el.closest('.board-cell').getBoundingClientRect();
+        const own = el.getBoundingClientRect();
+        return Math.abs(own.width - cellBox.width) < 1.5 && Math.abs(own.height - cellBox.height) < 1.5;
+      }),
+      seatColors: (() => {
+        const cs = getComputedStyle(document.documentElement);
+        return { p1: cs.getPropertyValue('--color-p1').trim(), p2: cs.getPropertyValue('--color-p2').trim() };
+      })(),
       logo: (() => {
         const img = document.querySelector('.play-header .home-link-img');
         return img ? rect(img) : null;
       })(),
-      drawNextToMarket: Boolean(document.querySelector('.market-row .action-draw')),
-      shuffleNextToRack: Boolean(document.querySelector('.rack-row .action-shuffle')),
+      actionsOnOwnRow: Boolean(document.querySelector('.actions-row .action-play')),
+      // Every control shares one family: same pill radius, same height.
+      controlFamily: [...document.querySelectorAll('.actions-row .control')].map(b => {
+        const cs = getComputedStyle(b);
+        return { cls: b.className, radius: cs.borderRadius, h: Math.round(b.getBoundingClientRect().height) };
+      }),
       opponentLettersRendered: [...document.querySelectorAll('.opponent-inner .tile-letter')].length,
       rackTiles: [...document.querySelectorAll('.rack-row .tray-tile .tile-letter')].map(s => s.textContent),
+      // Rows must stay inside the board's left and right edges.
+      rowBounds: ['.market-row-inner', '.rack-tray', '.actions-row', '.scores-row']
+        .map(sel => {
+          const el = document.querySelector(sel);
+          return el ? { sel, ...rect(el) } : null;
+        })
+        .filter(Boolean),
+      lastMarketTile: (() => {
+        const tiles = [...document.querySelectorAll('.market-tile')];
+        return tiles.length ? rect(tiles[tiles.length - 1]) : null;
+      })(),
+      lastRackSlot: (() => {
+        const slots = [...document.querySelectorAll('.rack-tray > *')];
+        return slots.length ? rect(slots[slots.length - 1]) : null;
+      })(),
+      // The rack must be painted in its owner's score-card colour.
+      rackTrayBg: rackTrayEl ? getComputedStyle(rackTrayEl).backgroundColor : '',
+      viewerCardBg: (() => {
+        const card = document.querySelector('.score-card.hud-you');
+        return card ? getComputedStyle(card).backgroundColor : '';
+      })(),
+      // Market tiles lie on the page; only the rack gets a tray behind it.
+      marketTrayBg: (() => {
+        const el = document.querySelector('.market-tray');
+        return el ? getComputedStyle(el).backgroundColor : '';
+      })(),
+      facedownCount: document.querySelectorAll('.market-tile.is-facedown').length,
+      facedownBg: (() => {
+        const el = document.querySelector('.market-tile.is-facedown');
+        return el ? getComputedStyle(el).backgroundImage : '';
+      })(),
       youCard: youCard ? rect(youCard) : null,
       oppCard: oppCard ? rect(oppCard) : null,
       p1Card: p1Card ? rect(p1Card) : null,
@@ -172,19 +226,77 @@ for (const t of targets) {
     if (b.h < 32) problems.push(`${b.label} button only ${b.h.toFixed(1)}px tall`);
   }
   if (m.opponentLettersRendered !== 0) problems.push('opponent letters rendered');
-  if (m.opponentBacks < 1) problems.push(`opponent rack backs missing: ${m.opponentBacks}`);
-  if (m.youBacks < 1) problems.push(`you rack backs missing: ${m.youBacks}`);
-  if (m.cornerTokens !== 2) problems.push(`expected 2 flag tokens, got ${m.cornerTokens}`);
-  if (m.emptyCornerToken) problems.push('empty spare corners still show TWS tokens');
+  // A rack can legitimately be empty mid-game, so assert the slot row rather
+  // than the fill: seven slots per card, always.
+  for (const count of m.pipsPerCard) {
+    if (count !== 7) problems.push(`score card shows ${count} rack slots, expected 7`);
+  }
+  if (m.goalSquares !== 2) problems.push(`expected 2 goal squares, got ${m.goalSquares}`);
+  if (new Set(m.goalSeats).size !== 2) problems.push(`goal squares share a seat: ${m.goalSeats.join(',')}`);
+  if (!m.goalCoversCell) problems.push('a goal square does not fill its board cell');
+  if (new Set(m.goalFills).size !== 2) problems.push(`goal squares share a colour: ${m.goalFills.join(' / ')}`);
   if (m.shuffleOverlapsTile) problems.push('shuffle overlaps a rack tile');
   if (m.playOverlapsTile) problems.push('Play overlaps a rack tile');
   if (m.drawOverlapsMarket) problems.push('Draw 2 overlaps a market tile');
+
+  // A row stacked UNDER the board shares its column, so it must stay inside the
+  // board's left and right edges. This is what catches a control or the tile
+  // bag quietly eating the width the tile maths reserved for it. Rows placed
+  // BESIDE the board (tablet landscape, desktop side column) are exempt.
+  const underBoard = box => box && box.top >= m.board.bottom - 2;
+  const checkWidth = (label, box) => {
+    if (!underBoard(box)) return;
+    if (box.left < m.board.left - 1.5) {
+      problems.push(`${label} starts left of the board: ${box.left.toFixed(1)} < ${m.board.left.toFixed(1)}`);
+    }
+    if (box.right > m.board.right + 1.5) {
+      problems.push(`${label} runs past the board: ${box.right.toFixed(1)} > ${m.board.right.toFixed(1)}`);
+    }
+  };
+  for (const row of m.rowBounds) checkWidth(row.sel, row);
+  checkWidth('last market tile', m.lastMarketTile);
+  checkWidth('last rack slot', m.lastRackSlot);
+
+  // One tile size everywhere, so a tile reads as the same object in both rows.
+  if (m.rackTile && m.marketTile && Math.abs(m.rackTile.w - m.marketTile.w) > 1.5) {
+    problems.push(`rack and market tiles differ: ${m.rackTile.w.toFixed(1)} vs ${m.marketTile.w.toFixed(1)}`);
+  }
+
+  // The rack is painted in its owner's score-card colour.
+  if (m.rackTrayBg && m.viewerCardBg && m.rackTrayBg !== m.viewerCardBg) {
+    problems.push(`rack fill does not match the score card: ${m.rackTrayBg} vs ${m.viewerCardBg}`);
+  }
+  // …and the market has no tray of its own behind it.
+  if (m.marketTrayBg && !/rgba\(0, 0, 0, 0\)|transparent/.test(m.marketTrayBg)) {
+    problems.push(`market row has its own background: ${m.marketTrayBg}`);
+  }
+  if (m.facedownCount < 1) problems.push('no face-down market tiles rendered');
+  if (m.facedownCount && !/tile-back/.test(m.facedownBg)) {
+    problems.push(`face-down tiles are not drawn as tile backs: ${m.facedownBg}`);
+  }
+
+  // Every button is the same family: one radius, one height.
+  if (m.controlFamily.length >= 2) {
+    const radii = new Set(m.controlFamily.map(c => c.radius));
+    const heights = new Set(m.controlFamily.map(c => c.h));
+    if (radii.size > 1) problems.push(`buttons disagree on radius: ${[...radii].join(' / ')}`);
+    if (heights.size > 1) problems.push(`buttons disagree on height: ${[...heights].join(' / ')}`);
+  }
   if (m.backsOverlapName) problems.push('score-card backs overlap the name');
   if (m.backsOverlapScore) problems.push('score-card backs overlap the score');
   if (m.toastCount > 1) problems.push(`toasts stacked: ${m.toastCount}`);
   if (m.p1Card && m.p2Card) {
-    if (m.p1Card.left > m.p2Card.left - 2) {
-      problems.push(`P1 is not left of P2: ${m.p1Card.left.toFixed(1)} vs ${m.p2Card.left.toFixed(1)}`);
+    // Side by side on phone, stacked in the desktop side column — either way
+    // the first player comes first in reading order.
+    const sideBySide = Math.abs(m.p1Card.top - m.p2Card.top) < 2;
+    const firstComesFirst = sideBySide
+      ? m.p1Card.left < m.p2Card.left - 2
+      : m.p1Card.top < m.p2Card.top - 2;
+    if (!firstComesFirst) {
+      problems.push(
+        `P1 does not come before P2: ${m.p1Card.left.toFixed(1)},${m.p1Card.top.toFixed(1)} ` +
+          `vs ${m.p2Card.left.toFixed(1)},${m.p2Card.top.toFixed(1)}`
+      );
     }
     if (Math.abs(m.p1Card.w - m.p2Card.w) > 2) {
       problems.push(`score cards unequal width: ${m.p1Card.w.toFixed(1)} vs ${m.p2Card.w.toFixed(1)}`);
@@ -201,44 +313,36 @@ for (const t of targets) {
   if (m.marketWordLabel) problems.push('MARKET word label is still visible');
   if (!m.bagArt) problems.push('bag art missing');
   if (!/^\d+$/.test(m.bagCountText)) problems.push(`bag count missing: "${m.bagCountText}"`);
-  if (m.avatarCount < 3) problems.push(`avatars missing: ${m.avatarCount}`);
+  if (m.avatarCount > 0) problems.push(`avatars should be gone, found ${m.avatarCount}`);
   if (m.emptyPipCount < 1) problems.push('empty score-card pips missing');
   if (m.statusRow && m.rackRow && m.statusRow.top + 1 < m.rackRow.bottom) {
     problems.push('toast strip is not below the rack');
   }
   if (m.marketRow && m.marketRow.bottom > m.innerH) problems.push('market below the fold');
   if (m.rackRow && m.rackRow.bottom > m.innerH) problems.push('rack below the fold');
-  if (!m.drawNextToMarket) problems.push('Draw 2 is not beside the market');
-  if (!m.shuffleNextToRack) problems.push('Shuffle is not beside the rack');
+  if (!m.actionsOnOwnRow) problems.push('the action buttons are not on their own row');
   if (m.logo && m.logo.top < -1) problems.push(`logo clipped at top: ${m.logo.top}`);
   if (m.logo && m.logo.h < 24) problems.push(`logo too short: ${m.logo.h}`);
   if (errors.length) problems.push(`console errors: ${errors.join(' | ')}`);
 
   if (desktop) {
     if (!m.finePointer || !m.wide) problems.push(`desktop media gate missed: fine=${m.finePointer} wide=${m.wide}`);
-    if (m.board.w < 400) problems.push(`desktop board too small: ${m.board.w.toFixed(1)}`);
-    if (m.board.w > 480) problems.push(`desktop board too large: ${m.board.w.toFixed(1)}`);
-    if (m.shell.w > 1280) problems.push(`desktop shell not capped: ${m.shell.w.toFixed(1)}`);
+    if (m.board.w < 440) problems.push(`desktop board too small: ${m.board.w.toFixed(1)}`);
+    if (m.board.w > 680) problems.push(`desktop board too large: ${m.board.w.toFixed(1)}`);
     if (!/you/i.test(m.youNameText) && !/hunter/i.test(m.youNameText)) {
       problems.push(`viewer name missing on a score card: "${m.youNameText}"`);
     }
-    if (!/you/i.test(m.rackLabelText)) problems.push(`rack label truncated: "${m.rackLabelText}"`);
+  
     if (m.tileBoxShadow === 'none' || /inset 0 [2-9]px [2-9]px/.test(m.tileBoxShadow)) {
       problems.push(`board tiles are not raised: ${m.tileBoxShadow}`);
     }
     if (m.actions.w > 200) problems.push(`desktop Play stretched: ${m.actions.w.toFixed(1)}`);
-    if (m.rackTile) {
-      if (m.rackTile.w > 50) problems.push(`desktop rack tile huge: ${m.rackTile.w.toFixed(1)}`);
-      if (m.rackTile.h > 50) problems.push(`desktop rack tile tall: ${m.rackTile.h.toFixed(1)}`);
-      if (Math.abs(m.rackTile.w - m.rackTile.h) >= 3) {
-        problems.push(`desktop rack tile not square: ${m.rackTile.w.toFixed(1)}x${m.rackTile.h.toFixed(1)}`);
-      }
-    }
-    if (m.marketTile) {
-      if (m.marketTile.w > 50) problems.push(`desktop market tile huge: ${m.marketTile.w.toFixed(1)}`);
-      if (m.marketTile.h > 50) problems.push(`desktop market tile tall: ${m.marketTile.h.toFixed(1)}`);
-      if (Math.abs(m.marketTile.w - m.marketTile.h) >= 3) {
-        problems.push(`desktop market tile not square: ${m.marketTile.w.toFixed(1)}x${m.marketTile.h.toFixed(1)}`);
+    for (const [what, box] of [['rack', m.rackTile], ['market', m.marketTile]]) {
+      if (!box) continue;
+      if (box.w < 40) problems.push(`desktop ${what} tile too small: ${box.w.toFixed(1)}`);
+      if (box.w > 72) problems.push(`desktop ${what} tile huge: ${box.w.toFixed(1)}`);
+      if (Math.abs(box.w - box.h) >= 3) {
+        problems.push(`desktop ${what} tile not square: ${box.w.toFixed(1)}x${box.h.toFixed(1)}`);
       }
     }
   }
@@ -250,6 +354,7 @@ for (const t of targets) {
   console.log(`  buttons bottom ${bottomMost.toFixed(1)} of ${m.innerH}  (${(m.innerH - bottomMost).toFixed(1)}px clear)`);
   console.log(`  ${m.buttons.map(b => `${b.label}${b.disabled ? '(off)' : '(ON)'} h=${b.h.toFixed(0)}`).join('  ')}`);
   console.log(`  opponent: "${m.opponentCount}", ${m.opponentBacks} backs, ${m.opponentLettersRendered} letters shown`);
+  console.log(`  goals ${m.goalSeats.join('/')}  facedown ${m.facedownCount}  bag "${m.bagCountText}"`);
   console.log(`  your rack: ${m.rackTiles.join(' ')}`);
   console.log(problems.length ? `  FAIL: ${problems.join('; ')}` : '  OK');
   failures += problems.length;
