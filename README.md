@@ -2,15 +2,17 @@
 
 **Working title** — Private prototype repository
 
-A two-player word game combining crossword mechanics with a six-tile market (four face-up, two face-down) and per-player corner flags. Player 1 starts with two tiles from the bag; Player 2 starts with three (second-player compensation). Each new game randomly assigns who is P1. Players build a rack by drawing exactly two tiles from the market, then spend those tiles to form words on an 11×11 crossword grid (odd size so there is a centre cell). Each player has a coloured flag on a true corner; covering flags applies triple-word or double-word multipliers and can end the game. Highest score wins.
+A two-player word game combining crossword mechanics with a five-tile market (three face-up, two face-down) and per-player corner flags. **Phone v0.1 (default):** 9×9 board, centre star at (5,5), rack max 6, 69-tile bag (~⅔ Words With Friends English). Player 1 starts with two tiles from the bag; Player 2 starts with three (second-player compensation — unchanged on the smaller rack). Each new game randomly assigns who is P1. Players build a rack by drawing exactly two tiles from the market, then spend those tiles to form words on the grid. Each player has a coloured flag on a true corner; covering flags applies triple-word multipliers and can end the game (+10 flat bonus to the ender, at most once). Highest score wins.
+
+An **11×11 large layout (v0)** remains documented for lab use — not the default playtest Ada ships now. See [prototype-spec.md](docs/prototype-spec.md#32-large-layout-v0-not-default).
 
 ## Status
 
-v0 playable prototype. Solo vs Hunter/Greedy/Sleeper and Hotseat play now; Remote 2-player is engine-complete but waiting on a PartyKit deployment.
+v0.1 docs landed; engine still on prior v0 constants until Ada implements. Solo vs Hunter/Greedy/Sleeper and Hotseat play now; Remote 2-player is engine-complete but waiting on a PartyKit deployment.
 
 **Play it:** https://huntit.github.io/flag-game/ — built for iPhone Safari, Add to Home Screen for the feel-test.
 
-**Stack:** Phone-first static web app (Vite + React + TypeScript, iPhone Safari as primary target). 11×11 stays tap-to-place on iPhone Safari (smaller cells are OK; do not switch to desktop drag). The play screen fits the visual viewport with no vertical scrolling — see [prototype-spec.md](docs/prototype-spec.md) section 10.
+**Stack:** Phone-first static web app (Vite + React + TypeScript, iPhone Safari as primary target). 9×9 stays tap-to-place on iPhone Safari (smaller cells are OK; do not switch to desktop drag). The play screen fits the visual viewport with no vertical scrolling — see [prototype-spec.md](docs/prototype-spec.md) section 10.
 
 ```bash
 npm install
@@ -21,28 +23,28 @@ npm run sim -- --games 200 --p1 greedy --p2 hunter --seed 1 --out ./out
 ```
 
 **Data files:**
-- ✅ Word list available at `data/words.txt` (175,030 words from Word Eagle)
-- ✅ Tile set available at `data/tiles.json` (WWF English bag: 104 tiles, 2 blanks + Word Eagle WWF values)
+- ✅ Word list available at `data/words.txt` (175,030 words from Word Eagle) — phone v0.1 validates length 2–9 at load
+- ✅ Tile set at `data/tiles.json` — **Ada updates to 69-tile v0.1 bag** per [prototype-spec.md](docs/prototype-spec.md#5-tiles) (currently still 104-tile WWF + Word Eagle values)
 
 ## Documentation
 
-- [How to Play](docs/how-to-play.md) — Human-readable rules for v0
+- [How to Play](docs/how-to-play.md) — Human-readable rules for v0.1 (phone default)
 - [Prototype Specification](docs/prototype-spec.md) — Technical build spec for Ada
-- [Assets](docs/assets.md) — Word list ✅, tile set ✅ (WWF English bag + Word Eagle values)
+- [Assets](docs/assets.md) — Word list ✅, tile set ✅ (WWF values; bag counts updating to 69 in code)
 - [Cloudflare Pages + GitHub autodeploy](docs/cloudflare-pages.md) — Hosting setup walkthrough
 
 ## Distinctiveness
 
 Flag is a distinct game, not a variant of commercial crossword products:
 
-- **Custom dictionary and tile set** — Flag uses Peter's custom ENABLE-based word list and the WWF English bag (104 tiles) paired with Word Eagle's WWF letter values, not third-party crossword publisher data
-- **11×11 board with no premium squares** — Odd size so there is a centre cell (6,6). Not 10×10. Simple grid, no double/triple letter or word scores on the board
+- **Custom dictionary and tile set** — Flag uses Peter's custom ENABLE-based word list and a ~⅔ WWF English bag (69 tiles) paired with Word Eagle's WWF letter values, not third-party crossword publisher data
+- **9×9 board with no premium squares** — Odd size so there is a centre cell (5,5). Simple grid, no double/triple letter or word scores on the board. (11×11 large layout documented separately.)
 - **Opening tiles from the bag** — P1 starts with 2 tiles; P2 starts with 3 (second-player compensation). First action may be Draw or Play. Who is P1 is randomised each new game (remote: when the second seat sits)
-- **Draw XOR Play** — Draw exactly 2 tiles from a 6-tile market (4 face-up + 2 face-down) OR play tiles to score; playing does not refill your rack
-- **Per-player corner flags** — Each player has a flag on a true corner; own-flag capture is triple-word and ends the game; opponent steals apply double-word and can end on a second steal
-- **Public rack count, hidden letters** — Opponent (and AI) rack letters stay hidden; tile count is public as 0–7 facedown backs with empty slots plus a readable count number
+- **Draw XOR Play** — Draw exactly 2 tiles from a 5-tile market (3 face-up + 2 face-down) OR play tiles to score; playing does not refill your rack
+- **Per-player corner flags** — Each player has a flag on a true corner; any cover of a flag cell scores triple-word; own-flag capture ends the game; opponent steals can end on a second steal; +10 to the ender (once per game)
+- **Public rack count, hidden letters** — Opponent (and AI) rack letters stay hidden; tile count is public as 0–6 facedown backs with empty slots plus a readable count number
 
-The crossword-on-a-grid mechanic is shared with games like Scrabble and Words With Friends, but Flag's six-tile market, asymmetric opening deal (P1=2, P2=3), random first player, per-player flag scoring, and custom tile set make it a different game.
+The crossword-on-a-grid mechanic is shared with games like Scrabble and Words With Friends, but Flag's five-tile market, asymmetric opening deal (P1=2, P2=3), random first player, per-player flag scoring, and custom tile set make it a different game.
 
 ## Playtesting
 
@@ -55,7 +57,7 @@ The prototype supports three modes plus the lab:
 
 **Build readiness:**
 - ✅ Word list available (`data/words.txt`)
-- ✅ Tile set available (`data/tiles.json` — WWF English bag: 104 tiles, 2 blanks + Word Eagle WWF values)
+- ⏳ Tile set (`data/tiles.json`) — Ada updates to 69-tile v0.1 bag per spec
 
 ## Team
 
@@ -67,7 +69,7 @@ The prototype supports three modes plus the lab:
 
 ## Prior Work
 
-Peter's other game [Word Eagle](https://www.huntit.com.au/apps/wordgame/) ([source](https://github.com/huntit/web-apps/tree/main/wordgame)) already implements the custom word list and tile set that Flag will use. Ada may reuse UI ideas (tile rack, drag-and-drop, definition lookup) but should not copy Word Eagle code for v0.
+Peter's other game [Word Eagle](https://www.huntit.com.au/apps/wordgame/) ([source](https://github.com/huntit/web-apps/tree/main/wordgame)) already implements the custom word list and tile set that Flag will use. Ada may reuse UI ideas (tile rack, drag-and-drop, definition lookup) but should not copy Word Eagle code for v0.1.
 
 ## Archive
 

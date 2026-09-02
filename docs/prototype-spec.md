@@ -1,7 +1,7 @@
 # Flag Prototype Specification
 
-**For Ada** — Build specification v0  
-**From Finch** — 1 September 2026
+**For Ada** — Build specification v0.1 (phone default)  
+**From Finch** — 2 September 2026
 
 Build this. Do not add out-of-scope features. If something is ambiguous, leave a TODO and ask Finch.
 
@@ -11,11 +11,13 @@ Human-readable rules: [docs/how-to-play.md](how-to-play.md)
 
 A two-player digital prototype combining crossword mechanics, a Splendor-style gem market (Draw XOR Play), and per-player corner flags with capture multipliers.
 
+**Default layout: Phone v0.1 (9×9).** Ada ships this now. An **11×11 large layout (v0)** remains documented in section 3.1 for lab use — not the default playtest.
+
 **Three play modes, one engine:**
 
-1. **Solo vs Hunter** — Play against Greedy, Hunter, or Sleeper personality (opponent rack **letters** hidden; rack **count** public as 0–7 facedown tile backs with empty slots **plus a readable number**). Local TypeScript engine in the browser. No room server. **Random P1 each new game** (human sometimes P1 with 2 opening tiles, sometimes P2 with 3). This is the iPhone Safari feel-test.
+1. **Solo vs Hunter** — Play against Greedy, Hunter, or Sleeper personality (opponent rack **letters** hidden; rack **count** public as 0–6 facedown tile backs with empty slots **plus a readable number**). Local TypeScript engine in the browser. No room server. **Random P1 each new game** (human sometimes P1 with 2 opening tiles, sometimes P2 with 3). This is the iPhone Safari feel-test.
 2. **Hotseat** — Two humans on one device, local engine. Pass-the-phone. No room. **Random P1 each new game.**
-3. **Remote 2-player** — Live and correspondence are ONE mode (persistent game links). Secret unguessable game/seat links. No 4-letter room codes. Host creates a game and gets a P2 invite link to send. Each seat is a secret token so players can return for days on another device without accounts. No logins, no matchmaking, no friend lists, no accounts for v0. **Random P1 when the second seat sits** (not first joiner). Transport: PartyKit (one Cloudflare Durable Object per game). UI can stay on Vercel; rooms on PartyKit. Authority: the same TypeScript rules engine is room-authoritative. Clients send actions (Draw, Play, Pass). The room validates, applies, and broadcasts public state. Opponent rack **letters** must not leak in the URL or in the other client's payload. Opponent rack **count** is public state. Bag, market, board, scores, flags, whose-turn, and rack counts live on the room. Persistence: store the engine snapshot in room storage. Do NOT destroy the room when tabs close or both players go offline. A game may sit for days. If both players are online it feels live; if not, it waits. Pass is an explicit button. Never treat silence, a closed tab, or elapsed time as a pass. Consecutive double-pass still ends the game only after two explicit Passes in a row (a Draw or Play between Passes breaks the streak). See section 8.3. Notifications are out of scope for v0. Testers ping each other (iMessage etc.) for "your turn" until later.
+3. **Remote 2-player** — Live and correspondence are ONE mode (persistent game links). Secret unguessable game/seat links. No 4-letter room codes. Host creates a game and gets a P2 invite link to send. Each seat is a secret token so players can return for days on another device without accounts. No logins, no matchmaking, no friend lists, no accounts for v0.1. **Random P1 when the second seat sits** (not first joiner). Transport: PartyKit (one Cloudflare Durable Object per game). UI can stay on Vercel; rooms on PartyKit. Authority: the same TypeScript rules engine is room-authoritative. Clients send actions (Draw, Play, Pass). The room validates, applies, and broadcasts public state. Opponent rack **letters** must not leak in the URL or in the other client's payload. Opponent rack **count** is public state. Bag, market, board, scores, flags, whose-turn, and rack counts live on the room. Persistence: store the engine snapshot in room storage. Do NOT destroy the room when tabs close or both players go offline. A game may sit for days. If both players are online it feels live; if not, it waits. Pass is an explicit button. Never treat silence, a closed tab, or elapsed time as a pass. Consecutive double-pass still ends the game only after two explicit Passes in a row (a Draw or Play between Passes breaks the streak). See section 8.3. Notifications are out of scope for v0.1. Testers ping each other (iMessage etc.) for "your turn" until later.
 4. **AI vs AI lab** — Headless simulation for game balance analysis
 
 **Constraints:**
@@ -27,9 +29,9 @@ A two-player digital prototype combining crossword mechanics, a Splendor-style g
 
 **Tech stack (locked):**
 
-- **Phone-first static web app** — NOT native iOS / TestFlight / App Store for v0
+- **Phone-first static web app** — NOT native iOS / TestFlight / App Store for v0.1
 - **TypeScript rules engine** — Shared by UI, CLI, and PartyKit room authority
-- **UI:** Vite + React (tap-to-place input for iPhone Safari; do NOT rely on desktop HTML5 drag). The 11×11 grid must stay tap-to-place on iPhone Safari; smaller cells are OK. Do not switch to desktop drag.
+- **UI:** Vite + React (tap-to-place input for iPhone Safari; do NOT rely on desktop HTML5 drag). The 9×9 grid must stay tap-to-place on iPhone Safari; smaller cells are OK. Do not switch to desktop drag.
 - **CLI:** Node.js for `flag-sim` headless simulation
 - **Hosting:** Vercel or Cloudflare Pages from huntit/flag-game (every push gets a preview URL)
 - **Remote multiplayer:** PartyKit (one Cloudflare Durable Object per game) for rooms
@@ -40,12 +42,14 @@ A two-player digital prototype combining crossword mechanics, a Splendor-style g
 
 ## 2. Success Criteria
 
-- Two humans can complete a legal 11×11 game in hotseat mode
-- Two humans can complete a legal 11×11 game in remote mode via persistent game links (live and correspondence, same mode)
-- Human can play vs Hunter AI on 11×11 with opponent rack **letters** hidden and rack **count** public (0–7 facedown backs with empty slots; local engine, no room)
+All criteria below describe **phone v0.1 (9×9)** unless noted.
+
+- Two humans can complete a legal 9×9 game in hotseat mode
+- Two humans can complete a legal 9×9 game in remote mode via persistent game links (live and correspondence, same mode)
+- Human can play vs Hunter AI on 9×9 with opponent rack **letters** hidden and rack **count** public (0–6 facedown backs with empty slots; local engine, no room)
 - `flag-sim --games 200 --p1 greedy --p2 greedy` writes summary JSON with:
   - P1 win rate
-  - End-reason breakdown (self-capture, second-steal, no-spare-replacement, exchange-three, double-pass, stuck-out)
+  - End-reason breakdown (self-capture, second-steal, no-spare-replacement, going_out, exchange-three, double-pass, stuck-out)
   - Self-capturer win rate
   - Mean/median scores
   - Mean turn count
@@ -53,48 +57,75 @@ A two-player digital prototype combining crossword mechanics, a Splendor-style g
   - 2-letter play rate
 - Tests verify:
   - Per-player flags on diagonally opposite true corners at setup
-  - Own-flag capture: triple-word on capturing word only, immediate end
-  - Opponent first steal: double-word, flag removed, replacement on random empty spare corner
-  - Opponent second steal: double-word, immediate end, no third flag
-  - Steal with no spare corner: double-word, immediate end, no replacement
+  - Own-flag capture: triple-word on capturing word only, immediate end, +10 to ender
+  - Opponent first steal: triple-word (not double-word), flag removed, replacement on random empty spare corner
+  - Opponent second steal: triple-word, immediate end, +10 to ender, no third flag
+  - Steal with no spare corner: triple-word, immediate end, no replacement, +10 to ender
   - Multi-flag play resolves own-flag first
-  - Market: 4 face-up + 2 face-down; Draw takes exactly 2 from showing tiles; orientation-preserving refill
+  - Flag multiplier applies to whichever player covers the flag cell (not own-colour-only)
+  - Market: 3 face-up + 2 face-down; Draw takes exactly 2 from showing tiles; orientation-preserving refill
   - Draw illegal when market showing < 2
-  - Full rack does not block Draw (draw 2, discard to 7)
-  - Exchange: Draw when rack size was 7 before taking (Draw 2 + discard 2); three consecutive Exchanges end the game
+  - Full rack does not block Draw (draw 2, discard to 6)
+  - Exchange: Draw when rack size was 6 before taking (Draw 2 + discard 2); three consecutive Exchanges end the game
   - `consecutiveExchanges` resets on Play, non-Exchange Draw, and Pass
   - Pass legal only when no legal Play AND Draw illegal
+  - Going out: bag empty AND market empty AND player plays last tile(s); +10 to ender; end
+  - +10 awarded at most once per game even if multiple +10 triggers on same play
   - Remote game persistence across disconnects/days
   - Opponent rack letters not leaked in URL or client payload; rack count is public
-  - Opening deal: P1 gets 2 tiles from the bag, P2 gets 3; market 6 tiles; P1 acts first; first action may be Draw or Play
+  - Opening deal: P1 gets 2 tiles from the bag, P2 gets 3; market 5 tiles; P1 acts first; first action may be Draw or Play
   - Random P1 assignment: solo vs AI, hotseat, and remote (remote randomises when second seat sits)
-  - Dictionary load accepts length 2–11 without shrinking `data/words.txt`
-- **Out of scope:** Board premium squares, bingo, 3–4 player, secret goals, turn clocks/timeouts, spectators, accounts, push/email notifications
+  - Dictionary load accepts length 2–9 without shrinking `data/words.txt`
+  - Bag: 69 tiles per section 5 count table (update `data/tiles.json` — not in docs-only PR)
+  - **Leftover tiles at end:** TODO hook only — Peter has not chosen ignore vs Scrabble-style; do NOT implement leftover scoring
+- **Out of scope:** Board premium squares, bingo, 3–4 player, secret goals, turn clocks/timeouts, spectators, accounts, push/email notifications, leftover-tile scoring until Peter chooses
 
 ## 3. Board
 
-**Size:** 11×11 (NOT 10×10 — an odd size is required so there is a centre cell)
+### 3.1 Phone v0.1 (default — ship this)
 
-**Coordinates:** 1–11 (persist and log as 1-indexed). Row 1 at top, column 1 at left.
+**Size:** 9×9 (NOT 8×8 — an odd size is required so there is a centre cell)
 
-**Centre star:** (6,6) — first word must cover this cell.
+**Coordinates:** 1–9 (persist and log as 1-indexed). Row 1 at top, column 1 at left.
+
+**Centre star:** (5,5) — first word must cover this cell.
 
 **True corners** (1-indexed):
 
 | Corner | Coordinates |
 |--------|-------------|
 | Northwest | (1,1) |
-| Northeast | (1,11) |
-| Southeast | (11,11) |
-| Southwest | (11,1) |
+| Northeast | (1,9) |
+| Southeast | (9,9) |
+| Southwest | (9,1) |
 
 **No inland flag posts.** No rotating shared flag. Flags do not move.
 
 **No premium squares on the board.**
 
+### 3.2 Large layout v0 (not default)
+
+Short reference for lab / future large-board play. **Phone v0.1 is what Ada ships now.**
+
+| Setting | Phone v0.1 | Large v0 |
+|---------|------------|----------|
+| Board | 9×9 | 11×11 |
+| Centre star | (5,5) | (6,6) |
+| True corners | (1,1)(1,9)(9,9)(9,1) | (1,1)(1,11)(11,11)(11,1) |
+| Rack max | 6 | 7 |
+| Market | 3 up + 2 down (5 showing) | 4 up + 2 down (6 showing) |
+| Bag | 69 tiles (~⅔ WWF) | Full 104 WWF |
+| Word length at load | 2–9 | 2–11 |
+| Exchange full rack | 6 | 7 |
+| Opening deal | P1=2, P2=3 | P1=2, P2=3 |
+
+Same flags, +10 ends, exchange-three, double-pass, and going-out rules apply to both layouts.
+
 ## 4. Flags (2-player)
 
 Each player has a distinct pleasant colour and one flag token of that colour.
+
+**Multiplier rule (locked v0.1):** A flag cell is a **Triple-Word square for EITHER player** who covers it — not own-colour-only. **Colour still marks whose flag** (own capture vs steal/replacement). Never stack two multipliers on one word.
 
 ### Setup
 
@@ -108,47 +139,89 @@ Persist each player's flag location, colour, and `flagsLost` (integer, starts at
 
 A flag is captured when a legal play places a tile on that flag's cell. The tile remains; the flag token is removed.
 
-**Own flag:** Apply **triple-word** multiplier to the **capturing word only** (other words in the same play score normally). End game immediately. Winner = highest total score; tie = draw. Self-capture always ends regardless of `flagsLost`.
+**Own flag:** Apply **triple-word** multiplier to the **capturing word only** (other words in the same play score normally). End game immediately. Award **+10** to the ending player. Winner = highest total score after bonuses; tie = draw. Self-capture always ends regardless of `flagsLost`.
 
-**Opponent's flag (first steal):** Apply **double-word** multiplier to the **capturing word only**. Remove that flag. Increment victim's `flagsLost`. If victim's `flagsLost` < 2, spawn a **replacement flag** of the victim's colour on a uniformly random **spare true corner** that is empty (no tile, no flag). Victim may still self-capture the replacement later.
+**Opponent's flag (first steal):** Apply **triple-word** multiplier to the **capturing word only** (NOT double-word). Remove that flag. Increment victim's `flagsLost`. If victim's `flagsLost` < 2, spawn a **replacement flag** of the victim's colour on a uniformly random **spare true corner** that is empty (no tile, no flag). Victim may still self-capture the replacement later.
 
-**Opponent's flag (second steal):** When `flagsLost` reaches 2 for a player (second capture **by an opponent**), apply double-word on the capturing word and **end immediately** — no third flag.
+**Opponent's flag (second steal):** When `flagsLost` reaches 2 for a player (second capture **by an opponent**), apply triple-word on the capturing word, award **+10** to the ending player, and **end immediately** — no third flag.
 
-**Steal with no spare:** If a steal would grant a replacement but no spare true corner is empty, apply double-word and **end immediately** (no replacement). Treat as decisive steal.
+**Steal with no spare:** If a steal would grant a replacement but no spare true corner is empty, apply triple-word, award **+10** to the ending player, and **end immediately** (no replacement). Treat as decisive steal.
 
-**Multiple flags in one play:** Resolve own-flag first (triple-word + end). If no own-flag but opponent flag(s), apply opponent rules. Never apply both triple-word and double-word to the same word.
+**Multiple flags in one play:** Resolve own-flag first (triple-word + end + +10 if applicable). If no own-flag but opponent flag(s), apply opponent rules. Never apply two multipliers to the same word.
+
+### +10 flat end bonus (locked)
+
+Award **+10** to the **ending player** on these ends only:
+
+1. Self-capture (own flag)
+2. Second opponent-steal of the same player's flag
+3. Going out (section 9)
+
+**At most one +10 per game.** If two triggers would fire on the same play (e.g. last tile covers own flag while going out), award +10 once.
 
 ### 3–4 player note (do not implement)
 
-Only four true corners exist. Two-player uses a diagonal pair leaving two spares for replacements. Extra players need corners we do not have. **3–4 player is out of scope for v0.** Do not ship it.
+Only four true corners exist. Two-player uses a diagonal pair leaving two spares for replacements. Extra players need corners we do not have. **3–4 player is out of scope for v0.1.** Do not ship it.
 
 ## 5. Tiles
 
 **DO NOT use a third-party crossword publisher's bag composition or letter values.**
 
-**Tile set:** ✅ Available at `data/tiles.json`
+**Tile set:** ✅ Available at `data/tiles.json` — **Ada updates this file to match the v0.1 bag table below.** The docs-only PR does not change `data/tiles.json`.
 
 **Source:**
-- **Letter values:** Word Eagle TILE_SETS.wwf (huntit/web-apps/wordgame/index.html lines ~997–1002)
-- **Bag counts:** Published Words With Friends English distribution (104 tiles, 2 blanks)
+- **Letter values:** Word Eagle TILE_SETS.wwf (huntit/web-apps/wordgame/index.html lines ~997–1002) — **unchanged**
+- **Bag counts (v0.1 phone):** ~⅔ of published Words With Friends English distribution (104 tiles → 69 tiles)
 
-**Complete WWF English tile set (104 tiles):**
-
-```
-A9 B2 C2 D5 E13 F2 G3 H4 I8 J1 K1 L4 M2 N5 O8 P2 Q1 R6 S5 T7 U4 V2 W2 X1 Y2 Z1 Blank 2
-```
-
-**Letter values:**
+**WWF / Word Eagle letter values (unchanged):**
 
 ```
-A1 B4 C4 D2 E1 F4 G3 H3 I1 J10 K5 L2 M4 N2 O1 P4 Q10 R1 S1 T1 U2 V5 W4 X8 Y3 Z10
+A1 B4 C4 D2 E1 F4 G3 H3 I1 J10 K5 L2 M4 N2 O1 P4 Q10 R1 S1 T1 U2 V5 W4 X8 Y3 Z10 (Blank 0)
 ```
+
+**Phone v0.1 bag — 69 tiles total** (104 × 2/3 ≈ 69.3; N rounded up from 3.33 so total is 69):
+
+| Letter | Count | Value |
+|--------|-------|-------|
+| A | 6 | 1 |
+| B | 1 | 4 |
+| C | 1 | 4 |
+| D | 3 | 2 |
+| E | 9 | 1 |
+| F | 1 | 4 |
+| G | 2 | 3 |
+| H | 3 | 3 |
+| I | 5 | 1 |
+| J | 1 | 10 |
+| K | 1 | 5 |
+| L | 3 | 2 |
+| M | 1 | 4 |
+| N | 4 | 2 |
+| O | 5 | 1 |
+| P | 1 | 4 |
+| Q | 1 | 10 |
+| R | 4 | 1 |
+| S | 3 | 1 |
+| T | 5 | 1 |
+| U | 3 | 2 |
+| V | 1 | 5 |
+| W | 1 | 4 |
+| X | 1 | 8 |
+| Y | 1 | 3 |
+| Z | 1 | 10 |
+| Blank | 1 | 0 |
+
+**Notes:**
+- Keep J, Q, X, Z, K at 1 each
+- One blank only
+- N rounded up from 3.33 (104×2/3 scaling) so total = 69
+
+**Large layout v0 bag:** Full WWF English 104 tiles (A9 B2 C2 D5 E13 F2 G3 H4 I8 J1 K1 L4 M2 N5 O8 P2 Q1 R6 S5 T7 U4 V2 W2 X1 Y2 Z1 Blank 2) — for lab only, not default.
 
 **Important:**
-- Load both counts and values from `data/tiles.json`
+- Load both counts and values from `data/tiles.json` after Ada updates it
 - **NOT** NYT Crossplay bag (100 tiles / 3 blanks / different values)
 - **NOT** Scrabble bag (100 tiles / different counts)
-- Flag uses the **WWF English bag (104 tiles)** paired with **Word Eagle's WWF letter values**
 
 **Blank tiles:**
 
@@ -168,7 +241,8 @@ Peter's custom ENABLE-based word list with additions and exclusions from Word Ea
 - Text file, one word per line
 - Uppercase A–Z only
 - Full source contains words of length 2–28
-- **For v0 (11×11 board):** At load, accept words of length 2–11 for validation. Keep the full `data/words.txt` file; do not shrink it.
+- **For phone v0.1 (9×9 board):** At load, accept words of length **2–9** for validation. Keep the full `data/words.txt` file; do not shrink it.
+- **For large layout v0 (11×11):** Accept words of length 2–11 at load
 - No network lookup at runtime
 
 **Validation:**
@@ -178,10 +252,10 @@ A play is legal if and only if every new straight-line word (the main play word 
 ## 7. Setup
 
 1. Shuffle the tile bag
-2. Deal 4 tiles **face-up** and 2 tiles **face-down** to the market (6 showing)
-3. Deal opening tiles from the bag (not from the market; do NOT deal 7; do NOT deal from the market into opening racks):
+2. Deal 3 tiles **face-up** and 2 tiles **face-down** to the market (5 showing)
+3. Deal opening tiles from the bag (not from the market; do NOT deal 6; do NOT deal from the market into opening racks):
    - **P1:** 2 tiles
-   - **P2:** 3 tiles (second-player compensation — locked; no points bonus, no one-time draw privilege)
+   - **P2:** 3 tiles (second-player compensation — locked; no points bonus, no one-time draw privilege; **do not scale** for the 6-rack)
 4. **Randomly assign who is P1** (first to act). P1 flag corner = random true corner; P2 flag on diagonally opposite corner
 5. P1 takes the first turn
 
@@ -189,7 +263,7 @@ A play is legal if and only if every new straight-line word (the main play word 
 
 ### 7.1 Who is Player 1 (locked)
 
-**No first-player menu in v0.** Randomise P1 every new game in all modes:
+**No first-player menu in v0.1.** Randomise P1 every new game in all modes:
 
 | Mode | When to randomise | Banner (before first action) |
 |------|-------------------|------------------------------|
@@ -211,7 +285,7 @@ Each turn: **Draw XOR Play**. No flag rotation after turns. Flag state changes o
 
 **Precondition:** At least **2 tiles** are currently showing in the market (face-up + face-down combined). Otherwise Draw is illegal.
 
-**Take:** Player **must** take **exactly 2 tiles** from the 6 showing — any mix of face-up and face-down.
+**Take:** Player **must** take **exactly 2 tiles** from the 5 showing — any mix of face-up and face-down.
 
 **Refill:** For each emptied market slot, draw from the bag into that slot preserving orientation:
 - Face-up slot ← next tile dealt face-up from bag
@@ -219,11 +293,11 @@ Each turn: **Draw XOR Play**. No flag rotation after turns. Flag state changes o
 
 If the bag runs short, refill what you can; unfilled slots stay empty.
 
-**Rack cap:** If `rack.size > 7` after taking, player discards down to 7 (may discard tiles just taken). Discarded tiles are shuffled into the bag.
+**Rack cap:** If `rack.size > 6` after taking, player discards down to 6 (may discard tiles just taken). Discarded tiles are shuffled into the bag.
 
-**No optional +1 bag draw.** No separate facedown-from-bag action. Full rack does **not** block Draw — draw 2 then discard to 7 is an **Exchange**.
+**No optional +1 bag draw.** No separate facedown-from-bag action. Full rack does **not** block Draw — draw 2 then discard to 6 is an **Exchange**.
 
-**Exchange (locked):** An Exchange is a Draw taken when that player's rack **already held 7 tiles** before taking from the market: they must take exactly 2 from the market, then discard exactly 2 (back to 7). That is Draw 2 + Discard 2. A Draw 2 that does **not** discard 2 (rack was under 7 before the take; they discard 0 or 1) is **not** an Exchange and does not increment the counter.
+**Exchange (locked):** An Exchange is a Draw taken when that player's rack **already held 6 tiles** before taking from the market: they must take exactly 2 from the market, then discard exactly 2 (back to 6). That is Draw 2 + Discard 2. A Draw 2 that does **not** discard 2 (rack was under 6 before the take; they discard 0 or 1) is **not** an Exchange and does not increment the counter.
 
 **Exchange stall counter:** Maintain `consecutiveExchanges` (integer, starts at 0).
 
@@ -231,13 +305,13 @@ If the bag runs short, refill what you can; unfilled slots stay empty.
 - Reset `consecutiveExchanges` to **0** on any **Play**, on any **Draw that is not an Exchange**, and on any **Pass**.
 - Count Exchanges **across both players** in turn order (not per player, not three Exchanges in the whole game).
 
-**Examples** (7 = Exchange from full rack; 6 = Draw from 6-tile rack, not an Exchange):
+**Examples** (6 = Exchange from full rack; 5 = Draw from 5-tile rack, not an Exchange):
 
 | Turn sequence | `consecutiveExchanges` after last turn |
 |---------------|----------------------------------------|
-| 7-draw, 7-draw, 7-draw | 3 → game ends |
-| 7-draw, 6-draw, 7-draw | 1 (reset on 6-draw) |
-| 7-draw, Play, 7-draw | 1 (reset on Play) |
+| 6-draw, 6-draw, 6-draw | 3 → game ends |
+| 6-draw, 5-draw, 6-draw | 1 (reset on 5-draw) |
+| 6-draw, Play, 6-draw | 1 (reset on Play) |
 
 **Illegal draw:** Fewer than 2 tiles showing in the market.
 
@@ -247,7 +321,7 @@ If the bag runs short, refill what you can; unfilled slots stay empty.
 
 - Place 1 or more tiles from rack in a straight line (horizontal or vertical)
 - Tiles must be contiguous when read through existing board tiles
-- **First word must occupy (6,6)**
+- **First word must occupy centre star** — (5,5) on phone v0.1
 - **All later plays must attach** to existing words (orthogonally adjacent or sharing a cell)
 
 **Validation:**
@@ -265,8 +339,8 @@ If the bag runs short, refill what you can; unfilled slots stay empty.
   - Sum the letter values of **every tile in that word** (including tiles already on the board)
   - Blanks score 0
 - Sum all new words' scores → base turn score
-- Apply flag multipliers to the **capturing word only** when applicable (see section 4)
-- Never stack triple-word and double-word on the same word
+- Apply flag **triple-word** multiplier to the **capturing word only** when applicable (see section 4)
+- Never stack two multipliers on one word
 
 **Flag resolution:** After scoring, resolve captures per section 4. Game may end immediately.
 
@@ -276,14 +350,14 @@ If the bag runs short, refill what you can; unfilled slots stay empty.
 
 ### 8.3 Pass (Stuck-Only)
 
-**Locked (Finch, 1 September 2026).** Pass is not a voluntary third action. Never silence, a closed tab, or elapsed time.
+**Locked.** Pass is not a voluntary third action. Never silence, a closed tab, or elapsed time.
 
 **Pass is legal only when both are true:**
 
 - **No legal Play** (no valid word placements possible), AND
 - **Draw is illegal** (fewer than 2 tiles showing in the market)
 
-**Removed obsolete rule:** Full rack does **not** make Draw illegal for Pass purposes. Full rack + market showing ≥ 2 → Draw remains legal (draw 2, discard to 7).
+**Removed obsolete rule:** Full rack does **not** make Draw illegal for Pass purposes. Full rack + market showing ≥ 2 → Draw remains legal (draw 2, discard to 6).
 
 **UI requirement:**
 
@@ -297,24 +371,34 @@ If the bag runs short, refill what you can; unfilled slots stay empty.
 - Consecutive double-pass ends the game **only after two consecutive explicit Passes** (one from each player)
 - A Draw or Play between Passes **breaks the streak**
 
-**Important:** Draw XOR Play remains the normal turn action. Pass is a stuck-only escape valve when Draw is illegal (market showing < 2). **Exchange-three** is the separate stall end when Draw is still legal but players only full-rack Exchange; do not conflate with double-pass.
+**Important:** Draw XOR Play remains the normal turn action. Pass is a stuck-only escape valve when Draw is illegal (market showing < 2). **Exchange-three** is the separate stall end when Draw is still legal but players only full-rack Exchange; do not conflate with double-pass. On a short bag, both exchange-three and double-pass remain useful.
 
 ## 9. Game End
 
 The game ends when:
 
-- **Self-capture** — Player covers own flag (triple-word on that word, then end)
-- **Second steal** — Opponent captures a player's flag for the second time (`flagsLost === 2`; double-word on that word, then end)
-- **No spare replacement** — Opponent steals but no empty spare true corner exists (double-word on that word, then end)
+- **Self-capture** — Player covers own flag (triple-word on that word, +10, then end)
+- **Second steal** — Opponent captures a player's flag for the second time (`flagsLost === 2`; triple-word on that word, +10, then end)
+- **No spare replacement** — Opponent steals but no empty spare true corner exists (triple-word on that word, +10, then end)
+- **Going out** — Bag empty **and** market empty **and** that player plays their last tile(s) this turn; +10 to ender, then end. If bag or market is not both empty, playing last tile(s) is **not** going out
 - **Exchange three** — Three consecutive Exchanges (full-rack Draw 2 + Discard 2; see section 8.1). Counted across both players. Play, non-Exchange Draw, or Pass between Exchanges resets `consecutiveExchanges` to 0
 - **Double pass** — Two consecutive explicit Passes (one from each player). Stuck-only — Draw illegal because market showing < 2. A Draw or Play between Passes breaks the streak
 - **Stuck out** — Draw permanently illegal for both players and they pass out (both stuck, both Pass)
 
-**Winner:** Higher score after all bonuses. Ties are draws (no tiebreaker).
+**Winner:** Higher score after all bonuses (including at-most-one +10). Ties are draws (no tiebreaker).
 
-**Log `endReason`:** One of: `self_capture`, `second_steal`, `no_spare`, `exchange_three`, `double_pass`, `stuck_out`.
+**Log `endReason`:** One of: `self_capture`, `second_steal`, `no_spare`, `going_out`, `exchange_three`, `double_pass`, `stuck_out`.
 
 Do NOT tie-break by who captured.
+
+### 9.1 Leftover tiles (OPEN — do not implement)
+
+**Leftover tiles in racks at game end are NOT locked in v0.1.** Peter has not chosen:
+
+- **Option A:** Ignore leftovers — scores stand as played
+- **Option B:** Scrabble-style — e.g. winner/ender adds opponent remaining tile values, or each player subtracts their own unplayed tiles
+
+**TODO:** Leave a hook in the engine; do **not** invent or implement leftover-tile scoring until Peter chooses.
 
 ## 10. UI Requirements (Minimum)
 
@@ -330,7 +414,7 @@ Desktop browsers (wide window, `pointer: fine` — Safari on Mac) use a separate
 
 **Board view:**
 
-- 11×11 grid
+- 9×9 grid (phone v0.1 default)
 - Each player's flag shown on its true corner in that player's colour
 - Spare corners visible (empty until a replacement flag spawns)
 - Centre star visible until first word is played
@@ -350,7 +434,7 @@ Desktop browsers (wide window, `pointer: fine` — Safari on Mac) use a separate
 
 **Game state:**
 
-- Market: 4 face-up + 2 face-down tiles
+- Market: 3 face-up + 2 face-down tiles
 - Bag tile count shown near the market
 - Both player scores
 - Whose turn it is
@@ -359,7 +443,7 @@ Desktop browsers (wide window, `pointer: fine` — Safari on Mac) use a separate
 **Racks:**
 
 - Your own rack always visible (letters)
-- **Opponent (and AI) rack CONTENTS stay hidden.** Rack **COUNT** is public: show 0–7 facedown tile backs with empty slots, **and show the count as a number**
+- **Opponent (and AI) rack CONTENTS stay hidden.** Rack **COUNT** is public: show 0–6 facedown tile backs with empty slots, **and show the count as a number**
 - **Hotseat:** Pass-the-device interstitial between turns. After the interstitial, the incoming player sees how many tiles the opponent has (facedown backs and empty slots), not the letters
 - **Remote 2-player:** Rack count is public state; letters are not. Do not leak opponent letters in the URL or the other client's payload
 
@@ -370,15 +454,15 @@ Desktop browsers (wide window, `pointer: fine` — Safari on Mac) use a separate
 
 **Draw flow:**
 
-- Select exactly 2 tiles from the 6 showing (face-up and/or face-down)
-- If selection would leave rack > 7, discard down to 7 (may discard tiles just taken)
+- Select exactly 2 tiles from the 5 showing (face-up and/or face-down)
+- If selection would leave rack > 6, discard down to 6 (may discard tiles just taken)
 - Confirm selection
 - Refill market preserving orientations
 - **No +1 bag button**
 
 **Play flow:**
 
-- Tap tiles from rack to board (tap-to-place). On iPhone Safari this remains tap-to-place even on the 11×11 grid; smaller cells are OK. Do not switch to desktop drag as the primary input.
+- Tap tiles from rack to board (tap-to-place). On iPhone Safari this remains tap-to-place even on the 9×9 grid; smaller cells are OK. Do not switch to desktop drag as the primary input.
 - Tapping a placed-but-unconfirmed tile returns it to the rack
 - Placing a blank prompts for the letter it stands for
 - Confirm placement
@@ -394,7 +478,7 @@ Desktop browsers (wide window, `pointer: fine` — Safari on Mac) use a separate
 
 **Art:**
 
-Art is Skye's domain later. For v0:
+Art is Skye's domain later. For v0.1:
 
 - Letter tiles
 - Grid
@@ -404,7 +488,7 @@ Art is Skye's domain later. For v0:
 **Useful Word Eagle UX to reuse later (do NOT copy code now):**
 
 - Tile rack layout
-- Browser drag-and-drop (desktop later only; v0 iPhone Safari stays tap-to-place on 11×11)
+- Browser drag-and-drop (desktop later only; v0.1 iPhone Safari stays tap-to-place on 9×9)
 - Word definition lookup on click
 
 ## 11. Remote Multiplayer (Persistent Game Links)
@@ -430,7 +514,7 @@ Art is Skye's domain later. For v0:
 3. Each seat is a secret unguessable token (NOT 4-letter room codes — those get guessed over days)
 4. Players can return for days on another device without accounts
 
-**No logins, no matchmaking, no friend lists, no accounts for v0.**
+**No logins, no matchmaking, no friend lists, no accounts for v0.1.**
 
 **P1 assignment:** Randomise who is P1 when the **second seat sits**, not when the host creates the room. Run full setup (opening deal P1=2 / P2=3, flags, whose-turn) at that moment. Broadcast the first-player banner to both clients. See section 7.1.
 
@@ -440,9 +524,9 @@ Pass is an explicit button. Never treat silence, a closed tab, or elapsed time a
 
 ### Notifications
 
-Notifications are out of scope for v0. Testers ping each other (iMessage etc.) for "your turn" until later.
+Notifications are out of scope for v0.1. Testers ping each other (iMessage etc.) for "your turn" until later.
 
-### Out of Scope for v0
+### Out of Scope for v0.1
 
 - Async-only correspondence as a separate mode
 - Turn clocks/timeouts
@@ -463,11 +547,11 @@ Returns all legal plays with:
 - Board cells
 - Words formed
 - Base score
-- Flag effects per word (`none`, `own_triple`, `opponent_double`)
+- Flag effects per word (`none`, `triple_word`) — all flag captures use triple-word in v0.1
 - `endsGame` (boolean)
 - `capturesOwnFlag`, `capturesOpponentFlag` (booleans)
 
-**Implementation:** Brute force is acceptable for 11×11.
+**Implementation:** Brute force is acceptable for 9×9.
 
 Use the same generator for:
 
@@ -476,13 +560,13 @@ Use the same generator for:
 
 ## 13. AI Personalities
 
-**No search-based AI.** Three simple personalities. They play the same v0 setup: 11×11 board, **P1=2 / P2=3 opening tiles from the bag**, market of 6 (4 up + 2 down), **random P1 assignment each new solo game** (human sometimes P1, sometimes P2), first action may be Draw or Play. Opponent rack letters stay hidden from the human; rack count is public.
+**No search-based AI.** Three simple personalities. They play the same **phone v0.1 setup**: 9×9 board, **P1=2 / P2=3 opening tiles from the bag**, market of 5 (3 up + 2 down), **random P1 assignment each new solo game** (human sometimes P1, sometimes P2), first action may be Draw or Play. Opponent rack letters stay hidden from the human; rack count is public.
 
 **Shared constant:** `DRAW_THRESHOLD = 8` (CLI-configurable)
 
 ### Greedy
 
-- If best play's score ≥ threshold (including flag multipliers on the capturing word):
+- If best play's score ≥ threshold (including flag triple-word multipliers on the capturing word):
   - Play it
   - Tiebreaker: longer word, then self-capture-over-steal-over-normal, then stable random
 - Else: Draw (when legal)
@@ -491,14 +575,14 @@ Use the same generator for:
 ### Hunter
 
 - If any play captures opponent flag (first or second steal):
-  - Play the highest-scoring among those (including DWS)
+  - Play the highest-scoring among those (including triple-word)
 - Else if any self-capture play exists:
-  - Play self-capture only if it would win after triple-word
+  - Play self-capture only if it would win after triple-word + +10
 - Else: Greedy behavior
 
 ### Sleeper
 
-- If any self-capture play would put you **strictly ahead** after triple-word:
+- If any self-capture play would put you **strictly ahead** after triple-word + +10:
   - Play the highest-scoring among those
 - Else if any opponent-flag steal would end the game in your favour:
   - Play it
@@ -510,7 +594,7 @@ Keep this simple and dumb:
 
 1. If Draw illegal (market showing < 2): Pass if stuck, else Play
 2. Take 2 random tiles from showing market (any mix of up/down)
-3. If rack > 7 after take: discard random tiles until size 7 (prefer duplicates; never discard blank if other tiles exist)
+3. If rack > 6 after take: discard random tiles until size 6 (prefer duplicates; never discard blank if other tiles exist)
 4. No optional bag tile
 
 **No thinking-time slider.** Human vs AI should respond instantly.
@@ -539,12 +623,13 @@ Write one JSON object per line for each game:
 - `p2` (personality)
 - `first` (which personality went first)
 - `winner` (P1, P2, or draw)
-- `endReason` (`self_capture`, `second_steal`, `no_spare`, `exchange_three`, `double_pass`, `stuck_out`)
+- `endReason` (`self_capture`, `second_steal`, `no_spare`, `going_out`, `exchange_three`, `double_pass`, `stuck_out`)
 - `selfCapturer` (P1, P2, or null)
 - `selfCapturerWon` (boolean or null)
 - `scoreP1`
 - `scoreP2`
 - `flagsLostP1`, `flagsLostP2`
+- `endBonus` (+10 or 0 — at most once per game)
 - `turns` (total)
 - `playsP1`, `drawsP1`, `discardsP1`
 - `playsP2`, `drawsP2`, `discardsP2`
@@ -565,7 +650,7 @@ Write summary statistics in a separate file:
 - `drawRate` (ties)
 - `p1WinRate`
 - `personalityWinRate` (adjusting for swaps)
-- End-reason rates (`selfCaptureEndRate`, `secondStealEndRate`, `noSpareEndRate`, `exchangeThreeEndRate`, `doublePassEndRate`, `stuckOutEndRate`)
+- End-reason rates (`selfCaptureEndRate`, `secondStealEndRate`, `noSpareEndRate`, `goingOutEndRate`, `exchangeThreeEndRate`, `doublePassEndRate`, `stuckOutEndRate`)
 - `selfCapturerWinRate` (when someone self-captured, did they win?)
 - Mean and median scores (per player, per game)
 - `meanTurns`
@@ -593,13 +678,16 @@ Other matchups via CLI.
 **Constants (with CLI overrides where noted):**
 
 - `DRAW_THRESHOLD = 8` (CLI-configurable: `--threshold`)
-- Board size: 11×11 (NOT a runtime flag; NOT 10×10 — need a centre cell)
-- **Second-player compensation (locked):** P1 opens with 2 tiles from the bag; P2 opens with 3. No points compensation, no one-time draw privilege
-- **Random P1 (locked):** Solo, hotseat, and remote (remote: when second seat sits). No first-player menu in v0
+- Board size: **9×9 phone v0.1 default** (11×11 large layout documented in section 3.2 — not default)
+- Rack max: **6** (7 on large layout only)
+- **Second-player compensation (locked):** P1 opens with 2 tiles from the bag; P2 opens with 3. No points compensation, no one-time draw privilege; do not scale for 6-rack
+- **Random P1 (locked):** Solo, hotseat, and remote (remote: when second seat sits). No first-player menu in v0.1
+- **+10 end bonus (locked):** At most once per game; see section 4 and 9
 
 **Hooks for later tuning (commented out, not implemented):**
 
 - *(none for opening deal — P2+1 tile is locked)*
+- **Leftover tiles at end** — OPEN; do not implement until Peter chooses (section 9.1)
 
 **After lab results:**
 
@@ -609,12 +697,12 @@ Other matchups via CLI.
 
 **Do NOT implement these patches until Finch says so.**
 
-## 16. Out of Scope (Not v0)
+## 16. Out of Scope (Not v0.1)
 
 **3–4 player variant (later):**
 
 - Needs more corners or a different board
-- Not spec'd for v0 — see section 4 note
+- Not spec'd for v0.1 — see section 4 note
 
 **Also out of scope:**
 
@@ -624,7 +712,7 @@ Other matchups via CLI.
 - Board premium squares
 - Bingo bonus
 - Rotating shared flag / inland posts
-- 4-only face-up market, optional +1 bag draw, full-rack Pass special case
+- Optional +1 bag draw, full-rack Pass special case
 - User accounts
 - Matchmaking
 - Animation polish
@@ -636,22 +724,26 @@ Other matchups via CLI.
 - Push/email notifications
 - Discord integration
 - Native iOS app
+- **Leftover-tile scoring** until Peter chooses (section 9.1)
 
 ## 17. Design Intent (Do NOT "Fix")
 
 These are intentional design choices:
 
 - **Draw XOR Play, no refill after play** — Playing empties your rack; drawing builds it
-- **Per-player corner flags with capture multipliers** — Own flag = triple-word + end; opponent steals escalate to game end on second steal
+- **Per-player corner flags with triple-word capture multipliers** — Own flag = triple-word + end + +10; opponent steals use triple-word (not double-word); second steal ends (+10)
 - **Two spare corners from diagonal setup** — Replacement flags need empty true corners
-- **Second-player compensation** — P1 opens with 2 tiles from the bag; P2 opens with 3 (no points bonus, no one-time draw privilege). P1 acts first
-- **Random P1 every game** — Solo, hotseat, and remote (remote: when second seat sits). Banner before first action; no first-player menu in v0
+- **Second-player compensation** — P1 opens with 2 tiles from the bag; P2 opens with 3 (no points bonus, no one-time draw privilege). P1 acts first; do not scale for 6-rack
+- **Random P1 every game** — Solo, hotseat, and remote (remote: when second seat sits). Banner before first action; no first-player menu in v0.1
 - **Two opening tiles from the bag (P1 only)** — P2 gets three. First action may be Draw or Play
-- **11×11, not 10×10** — Odd size so there is a centre cell at (6,6)
+- **9×9 phone default, 11×11 large layout noted** — Odd size so there is a centre cell at (5,5) / (6,6)
 - **Public rack count, hidden letters** — Show facedown backs and empty slots plus a readable count number; never expose opponent letters
-- **Market 6 = 4 up + 2 down; Draw always takes 2** — Exchange via draw-then-discard when rack full
+- **Market 5 = 3 up + 2 down; Draw always takes 2** — Exchange via draw-then-discard when rack full (6)
+- **69-tile bag (~⅔ WWF)** — Short bag makes exchange-three and double-pass both matter
+- **+10 end bonus at most once** — Self-capture, second steal, or going out
+- **Going out requires bag AND market empty** — Playing last tile alone is not enough
 
-## 18. Original Spark (Context, Not v0)
+## 18. Original Spark (Context, Not v0.1)
 
 Peter's original idea (2 July 2018):
 
@@ -665,13 +757,15 @@ Peter's original idea (2 July 2018):
 - Game over when target is covered
 - Capture bonus was a question mark
 
-**v0 changes on purpose:**
+**v0.1 changes on purpose:**
 
-- 11×11 board (not 15×15, not 10×10 — odd size needed for a centre cell)
-- Per-player flags on true corners with TWS/DWS capture scoring (not a rotating shared post)
-- Market 6 (4 up + 2 down); Draw takes exactly 2; no +1 bag
+- 9×9 phone board (11×11 large layout retained for lab)
+- Per-player flags on true corners with triple-word capture scoring for any cover (not DWS on steal)
+- Market 5 (3 up + 2 down); Draw takes exactly 2; no +1 bag
+- 69-tile bag (~⅔ WWF English)
 - P1=2 / P2=3 opening tiles from the bag; random P1 each game; first action may be Draw or Play
-- Second-steal and self-capture end conditions; exchange-three (full-rack stall), double-pass, and stuck-out backups
+- Second-steal and self-capture end conditions; +10 end bonus (once); going out; exchange-three (full-rack stall), double-pass, and stuck-out backups
+- Leftover tiles at end: **open question** — do not implement until Peter chooses
 
 ---
 
@@ -680,4 +774,4 @@ Peter's original idea (2 July 2018):
 **Art questions?** → Skye  
 **Marketing questions?** → Cleo
 
-**Do not wait on Skye, Cleo, or Peter for v0 implementation.** Build from this spec and placeholder data.
+**Do not wait on Skye, Cleo, or Peter for v0.1 implementation.** Build from this spec and placeholder data. Update `data/tiles.json` to the 69-tile bag per section 5.
