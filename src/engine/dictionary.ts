@@ -20,7 +20,8 @@
 // the scan is the whole job. Nothing here *assumes* that: the scan checks as it
 // goes and falls back to normalising and sorting if the list ever changes.
 
-import { MIN_WORD_LENGTH, MAX_WORD_LENGTH } from './types';
+import { MIN_WORD_LENGTH } from './types';
+import { MAX_BOARD_SIZE } from './variants';
 
 /** A half-open slice [lo, hi) of the sorted word list sharing a common prefix. */
 export interface PrefixRange {
@@ -33,11 +34,17 @@ const CODE_A = 65;
 const CODE_Z = 90;
 const CODE_LF = 10;
 
-/** A word is loadable if it is A–Z only and fits on the board. */
-export function isLoadableWord(word: string): boolean {
+/**
+ * A word is loadable if it is A–Z only and fits on the board it is being
+ * loaded for. `maxLength` is the board size of the variant in play: the phone
+ * loads 2–9 and keeps its heap where the memory work below left it, while the
+ * 11×11 boards load 2–11. Loading the longer words on a phone would cost the
+ * saving for words that cannot physically be played there.
+ */
+export function isLoadableWord(word: string, maxLength: number = MAX_BOARD_SIZE): boolean {
   return (
     word.length >= MIN_WORD_LENGTH &&
-    word.length <= MAX_WORD_LENGTH &&
+    word.length <= maxLength &&
     LETTERS_ONLY.test(word)
   );
 }
@@ -63,11 +70,11 @@ export class Dictionary {
   private count!: number;
   private indexedInPlace = false;
 
-  constructor(words: Iterable<string>) {
+  constructor(words: Iterable<string>, maxLength: number = MAX_BOARD_SIZE) {
     const unique = new Set<string>();
     for (const raw of words) {
       const word = raw.trim().toUpperCase();
-      if (isLoadableWord(word)) unique.add(word);
+      if (isLoadableWord(word, maxLength)) unique.add(word);
     }
     const sorted = Array.from(unique).sort();
 
@@ -88,8 +95,10 @@ export class Dictionary {
    * the normalising constructor only if the text is not already the clean,
    * sorted, uppercase list we ship.
    */
-  static fromText(text: string): Dictionary {
-    return Dictionary.indexInPlace(text) ?? new Dictionary(text.split('\n'));
+  static fromText(text: string, maxLength: number = MAX_BOARD_SIZE): Dictionary {
+    return (
+      Dictionary.indexInPlace(text, maxLength) ?? new Dictionary(text.split('\n'), maxLength)
+    );
   }
 
   /**
@@ -97,7 +106,7 @@ export class Dictionary {
    * the text needs normalising (anything outside A–Z) or is not already sorted
    * and unique, in which case the caller takes the allocating path.
    */
-  private static indexInPlace(text: string): Dictionary | null {
+  private static indexInPlace(text: string, maxLength: number): Dictionary | null {
     const total = text.length;
     // Upper bound on the word count: one per line, trimmed to size at the end.
     let lines = 0;
@@ -116,7 +125,7 @@ export class Dictionary {
       let to = text.indexOf('\n', from);
       if (to === -1) to = total;
 
-      const kind = classify(text, from, to);
+      const kind = classify(text, from, to, maxLength);
       if (kind === Line.Dirty) return null;
       if (kind === Line.Usable) {
         const length = to - from;
@@ -147,12 +156,15 @@ export class Dictionary {
     return dictionary;
   }
 
-  static async loadFromFile(path: string): Promise<Dictionary> {
+  static async loadFromFile(
+    path: string,
+    maxLength: number = MAX_BOARD_SIZE
+  ): Promise<Dictionary> {
     const response = await fetch(path);
     if (!response.ok) {
       throw new Error(`Failed to load dictionary from ${path}: ${response.status}`);
     }
-    return Dictionary.fromText(await response.text());
+    return Dictionary.fromText(await response.text(), maxLength);
   }
 
   isValid(word: string): boolean {
@@ -252,14 +264,14 @@ export class Dictionary {
 }
 
 /** Classify one line of the blob without slicing it out. */
-function classify(text: string, from: number, to: number): Line {
+function classify(text: string, from: number, to: number, maxLength: number): Line {
   const length = to - from;
   for (let i = from; i < to; i++) {
     const code = text.charCodeAt(i);
     if (code < CODE_A || code > CODE_Z) return Line.Dirty;
   }
   if (length === 0) return Line.Skip;
-  return length >= MIN_WORD_LENGTH && length <= MAX_WORD_LENGTH ? Line.Usable : Line.Skip;
+  return length >= MIN_WORD_LENGTH && length <= maxLength ? Line.Usable : Line.Skip;
 }
 
 /** Compare two lines of the same blob by content. */

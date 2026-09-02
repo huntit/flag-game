@@ -1,7 +1,7 @@
 // AI personalities: Greedy, Hunter, Sleeper. No search — see spec section 13.
 
 import type { GameState, AIPersonality, GameAction, DrawAction, PlayAction, Tile, WordPlacement } from './types';
-import { RACK_MAX, DRAW_COUNT } from './types';
+import { DRAW_COUNT } from './types';
 import { generateLegalPlays } from './moveGenerator';
 import { canDraw, wouldTriggerExchangeThreeOnDraw } from './actions';
 import { random, getMarketTiles } from './game';
@@ -163,7 +163,7 @@ function selectDrawAction(state: GameState): DrawAction {
   const chosen = selectRandomMarketTiles(marketTiles, DRAW_COUNT);
 
   const rackAfterTake = player.rack.length + chosen.length;
-  const discardCount = Math.max(0, rackAfterTake - RACK_MAX);
+  const discardCount = Math.max(0, rackAfterTake - state.rules.rackMax);
   const discardTiles = discardCount > 0 ? selectDiscardTiles(player.rack, discardCount) : undefined;
 
   return { type: 'draw', marketTiles: chosen, discardTiles };

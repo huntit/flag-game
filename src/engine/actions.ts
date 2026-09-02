@@ -1,7 +1,7 @@
 // Action executor - validates then applies game actions
 
 import type { GameState, GameAction, DrawAction, PlayAction, Tile, Letter, Position, EndReason } from './types';
-import { DRAW_COUNT, RACK_MAX, MAX_CONSECUTIVE_EXCHANGES, LEFTOVER_END_REASONS } from './types';
+import { DRAW_COUNT, MAX_CONSECUTIVE_EXCHANGES, LEFTOVER_END_REASONS } from './types';
 import {
   returnToBag,
   shuffleBag,
@@ -40,7 +40,7 @@ export function canPass(state: GameState, dictionary?: Dictionary): boolean {
 
 /** A Draw is an Exchange when the acting player already holds a full rack (Draw 2 + Discard 2). */
 export function isExchangeDraw(state: GameState): boolean {
-  return state.players[state.currentPlayer].rack.length >= RACK_MAX;
+  return state.players[state.currentPlayer].rack.length >= state.rules.rackMax;
 }
 
 /** The next Draw would be the 3rd consecutive Exchange and would end the game. */
@@ -133,24 +133,25 @@ export function validateDraw(
     take.push(slot.tile);
   }
 
+  const rackMax = state.rules.rackMax;
   const discardIds = action.discardTiles ?? [];
   const rackAfterTake = player.rack.length + take.length - discardIds.length;
-  const wouldOverfill = player.rack.length + take.length > RACK_MAX;
+  const wouldOverfill = player.rack.length + take.length > rackMax;
 
   if (wouldOverfill) {
-    const required = player.rack.length + take.length - RACK_MAX;
+    const required = player.rack.length + take.length - rackMax;
     if (discardIds.length !== required) {
       return {
         valid: false,
-        reason: `Discard ${required} tile${required === 1 ? '' : 's'} down to ${RACK_MAX}`,
+        reason: `Discard ${required} tile${required === 1 ? '' : 's'} down to ${rackMax}`,
       };
     }
   } else if (discardIds.length > 0) {
     return { valid: false, reason: 'No need to discard' };
   }
 
-  if (rackAfterTake > RACK_MAX) {
-    return { valid: false, reason: `Rack cannot exceed ${RACK_MAX} tiles` };
+  if (rackAfterTake > rackMax) {
+    return { valid: false, reason: `Rack cannot exceed ${rackMax} tiles` };
   }
 
   if (new Set(discardIds).size !== discardIds.length) {
@@ -176,7 +177,7 @@ function executeDraw(state: GameState, action: DrawAction): ActionResult {
   const { take, discard } = check.plan;
   const player = state.players[state.currentPlayer];
   const rackSizeBefore = player.rack.length;
-  const isExchange = rackSizeBefore >= RACK_MAX && discard.length === DRAW_COUNT;
+  const isExchange = rackSizeBefore >= state.rules.rackMax && discard.length === DRAW_COUNT;
 
   if (discard.length > 0) {
     const discardIds = new Set(discard.map(t => t.id));

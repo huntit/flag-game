@@ -12,13 +12,11 @@ import type {
   Position,
 } from './types';
 import {
-  FLAG_POSTS,
-  BOARD_SIZE,
-  MARKET_FACE_UP,
-  MARKET_FACE_DOWN,
   P1_STARTING_RACK_TILES,
   P2_STARTING_RACK_TILES,
 } from './types';
+import type { RuleSet } from './variants';
+import { PHONE_9, flagPosts } from './variants';
 
 let tileIdCounter = 0;
 
@@ -138,8 +136,14 @@ export function returnToBag(bag: Tile[], tiles: Tile[]): void {
   bag.push(...tiles);
 }
 
-function createEmptyBoard(): Board {
-  return Array(BOARD_SIZE).fill(null).map(() => Array(BOARD_SIZE).fill(null));
+function createEmptyBoard(boardSize: number): Board {
+  return Array(boardSize).fill(null).map(() => Array(boardSize).fill(null));
+}
+
+/** The four true corners of the board in hand — a board is square, so its own
+    length is the authority on its geometry. */
+export function cornersOf(board: Board): Record<FlagPost, Position> {
+  return flagPosts(board.length);
 }
 
 const ALL_CORNERS: FlagPost[] = ['NW', 'NE', 'SE', 'SW'];
@@ -158,22 +162,18 @@ export function spareCorners(p1Corner: FlagPost, p2Corner: FlagPost): FlagPost[]
   return ALL_CORNERS.filter(c => c !== p1Corner && c !== p2Corner);
 }
 
-function randomCorner(): FlagPost {
-  return ALL_CORNERS[Math.floor(random() * ALL_CORNERS.length)];
-}
-
 /**
  * Face-up slots first, then the two face-down ones on the end. A slot keeps its
  * face-up/face-down identity for the whole game: refilling writes the
  * replacement into the same slot (see refillMarketSlot), so the two face-down
  * positions stay put and the row never reshuffles under the player's eye.
  */
-function dealMarket(bag: Tile[]): MarketSlot[] {
+function dealMarket(bag: Tile[], rules: RuleSet): MarketSlot[] {
   const slots: MarketSlot[] = [];
-  for (let i = 0; i < MARKET_FACE_UP; i++) {
+  for (let i = 0; i < rules.marketFaceUp; i++) {
     slots.push({ tile: bag.shift() ?? null, faceUp: true });
   }
-  for (let i = 0; i < MARKET_FACE_DOWN; i++) {
+  for (let i = 0; i < rules.marketFaceDown; i++) {
     slots.push({ tile: bag.shift() ?? null, faceUp: false });
   }
   return slots;
@@ -191,22 +191,32 @@ export function getMarketTiles(market: MarketSlot[]): Tile[] {
   return market.flatMap(slot => (slot.tile ? [slot.tile] : []));
 }
 
-export function initializeGame(tileData: TileData): GameState {
+/**
+ * Opening flag corners are fixed, not drawn: P1 in the north-west, P2 in the
+ * south-east, leaving NE and SW as the spare corners. Both players learn one
+ * board rather than re-reading which diagonal they are on every game, and the
+ * corner a player defends is the one nearest their own score card.
+ */
+export const P1_FLAG_CORNER: FlagPost = 'NW';
+export const P2_FLAG_CORNER: FlagPost = 'SE';
+
+export function initializeGame(tileData: TileData, rules: RuleSet = PHONE_9): GameState {
   const bag = createTileBag(tileData);
   shuffleBag(bag);
 
-  const market = dealMarket(bag);
+  const market = dealMarket(bag, rules);
 
   const players: [Player, Player] = [
     { id: 'P1', rack: drawFromBag(bag, P1_STARTING_RACK_TILES), score: 0, flagsLost: 0 },
     { id: 'P2', rack: drawFromBag(bag, P2_STARTING_RACK_TILES), score: 0, flagsLost: 0 },
   ];
 
-  const p1Corner = randomCorner();
-  const p2Corner = diagonalCorner(p1Corner);
+  const p1Corner = P1_FLAG_CORNER;
+  const p2Corner = P2_FLAG_CORNER;
 
   return {
-    board: createEmptyBoard(),
+    rules,
+    board: createEmptyBoard(rules.boardSize),
     players,
     currentPlayer: 0,
     market,
@@ -224,23 +234,32 @@ export function positionEquals(a: { row: number; col: number }, b: { row: number
   return a.row === b.row && a.col === b.col;
 }
 
-export function isValidPosition(pos: { row: number; col: number }): boolean {
-  return pos.row >= 1 && pos.row <= BOARD_SIZE && pos.col >= 1 && pos.col <= BOARD_SIZE;
+export function isValidPosition(pos: { row: number; col: number }, size: number): boolean {
+  return pos.row >= 1 && pos.row <= size && pos.col >= 1 && pos.col <= size;
+}
+
+export function isOnBoard(board: Board, pos: { row: number; col: number }): boolean {
+  return isValidPosition(pos, board.length);
 }
 
 export function getBoardTile(board: Board, pos: { row: number; col: number }) {
-  if (!isValidPosition(pos)) return null;
+  if (!isOnBoard(board, pos)) return null;
   return board[pos.row - 1][pos.col - 1];
 }
 
 export function setBoardTile(board: Board, pos: { row: number; col: number }, tile: Board[number][number]) {
-  if (!isValidPosition(pos)) return;
+  if (!isOnBoard(board, pos)) return;
   board[pos.row - 1][pos.col - 1] = tile;
 }
 
-export function cornerAtPosition(pos: Position, flags: GameState['flags']): FlagPost | null {
+export function cornerAtPosition(
+  pos: Position,
+  flags: GameState['flags'],
+  boardSize: number
+): FlagPost | null {
+  const posts = flagPosts(boardSize);
   for (const corner of ALL_CORNERS) {
-    if (positionEquals(pos, FLAG_POSTS[corner])) {
+    if (positionEquals(pos, posts[corner])) {
       if (flags.P1 === corner || flags.P2 === corner) return corner;
     }
   }
@@ -259,9 +278,10 @@ export function emptySpareCorners(state: GameState): FlagPost[] {
   if (state.flags.P1) occupied.add(state.flags.P1);
   if (state.flags.P2) occupied.add(state.flags.P2);
 
+  const posts = cornersOf(state.board);
   return ALL_CORNERS.filter(corner => {
     if (occupied.has(corner)) return false;
-    return !getBoardTile(state.board, FLAG_POSTS[corner]);
+    return !getBoardTile(state.board, posts[corner]);
   });
 }
 
@@ -272,8 +292,8 @@ export function randomEmptySpareCorner(state: GameState): FlagPost | null {
 }
 
 export function isFirstWord(board: Board): boolean {
-  for (let row = 0; row < BOARD_SIZE; row++) {
-    for (let col = 0; col < BOARD_SIZE; col++) {
+  for (let row = 0; row < board.length; row++) {
+    for (let col = 0; col < board.length; col++) {
       if (board[row][col] !== null) {
         return false;
       }

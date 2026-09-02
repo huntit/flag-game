@@ -1,9 +1,8 @@
-// Market: six slots — four face up, two face down, scattered through the row.
-// The bag sits immediately to the left of the row it refills, with its
+// Market: the variant's slots — face up first, then the face-down pair on the
+// end. The bag sits immediately to the left of the row it refills, with its
 // remaining count as plain text rather than a badge stamped on the art.
 
 import type { MarketSlot, Tile } from '../engine/types';
-import { MARKET_SLOTS } from '../engine/types';
 import { TileFace } from './TileFace';
 import './Market.css';
 
@@ -11,14 +10,16 @@ const base = import.meta.env.BASE_URL;
 
 interface MarketProps {
   market: MarketSlot[];
+  /** Slots the variant deals — 5 on the 9×9, 6 on the 11×11. */
+  capacity: number;
   selectedTileIds: string[];
   bagCount: number;
   disabled: boolean;
   onTileClick: (tile: Tile) => void;
 }
 
-function Market({ market, selectedTileIds, bagCount, disabled, onTileClick }: MarketProps) {
-  const emptySlots = Math.max(0, MARKET_SLOTS - market.length);
+function Market({ market, capacity, selectedTileIds, bagCount, disabled, onTileClick }: MarketProps) {
+  const emptySlots = Math.max(0, capacity - market.length);
 
   return (
     <div className="market-row-inner" data-market-count={market.length}>
