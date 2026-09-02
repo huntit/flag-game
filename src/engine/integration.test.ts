@@ -105,7 +105,10 @@ describe('real games', () => {
             }
 
             expect(state.lastPlay.totalScore).toBe(expectedTotal);
-            expect(state.players[seat].score).toBe(scoreBefore + expectedTotal);
+            // Leftover on closer ends is applied after the play score, not into lastPlay.
+            expect(state.players[seat].score).toBe(
+              scoreBefore + expectedTotal + (state.leftoverPoints ?? 0)
+            );
 
             // A play spends tiles and never refills the rack.
             expect(state.players[seat].rack.length).toBe(
