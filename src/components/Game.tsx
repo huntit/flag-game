@@ -27,6 +27,7 @@ import GameOverOverlay from './GameOverOverlay';
 import PassThePhone from './PassThePhone';
 import BlankPicker from './BlankPicker';
 import { useTileDrag } from './useTileDrag';
+import { useDesktopLayout } from './useDesktopLayout';
 import {
   pickHumanSeat,
   soloFirstPlayerBanner,
@@ -131,6 +132,7 @@ function ToastLine({ toast }: { toast: StatusToast }) {
 }
 
 function Game({ tileData, dictionary, mode, aiOpponent, onBackToMenu }: GameProps) {
+  const isDesktop = useDesktopLayout();
   const [humanSeat, setHumanSeat] = useState<0 | 1>(() => pickHumanSeat(Math.random));
   const [gameState, setGameState] = useState<GameState>(() => initializeGame(tileData));
   const [moveLog, setMoveLog] = useState<MoveLogEntry[]>([]);
@@ -645,6 +647,32 @@ function Game({ tileData, dictionary, mode, aiOpponent, onBackToMenu }: GameProp
     hint,
   ]);
 
+  /**
+   * Drawing acts on the market, so the button belongs beside it: in the market
+   * panel on desktop, and in the actions row on phone where the market has no
+   * room for it. One node either way — never two controls doing the same job.
+   */
+  const drawOrPassButton = canPassNow ? (
+    <button
+      type="button"
+      className="control control-solid action-pass"
+      data-pass-stuck-only="true"
+      onClick={handlePass}
+    >
+      Pass
+    </button>
+  ) : (
+    <button
+      type="button"
+      className={`control control-solid action-draw ${exchangeWarning ? 'is-swap-warning' : ''}`}
+      onClick={handleDraw}
+      disabled={!canDrawNow}
+      aria-label={exchangeWarning ? `${drawButtonLabel}. ${EXCHANGE_WARNING}` : drawButtonLabel}
+    >
+      {drawButtonLabel}
+    </button>
+  );
+
   if (awaitingHandover) {
     return (
       <PassThePhone
@@ -684,6 +712,24 @@ function Game({ tileData, dictionary, mode, aiOpponent, onBackToMenu }: GameProp
         </div>
 
         <SidePanel entries={moveLog} />
+
+        {/* The market. On desktop this whole panel sits in the side column,
+            under the log and away from the rack, which is the clearest way to
+            say "these tiles are not yours yet". On phone the wrapper collapses
+            and the row takes its own place in the single-column shell. */}
+        <div className="market-panel">
+          <h2 className="market-heading">Market</h2>
+          <div className="market-row">
+            <Market
+              market={gameState.market}
+              selectedTileIds={selectedMarketIds}
+              bagCount={gameState.bag.length}
+              disabled={!interactive}
+              onTileClick={handleMarketTileClick}
+            />
+          </div>
+          {isDesktop && drawOrPassButton}
+        </div>
       </div>
 
       <div className="play-main">
@@ -706,16 +752,6 @@ function Game({ tileData, dictionary, mode, aiOpponent, onBackToMenu }: GameProp
         </div>
 
         <div className="dock">
-          <div className="market-row">
-            <Market
-              market={gameState.market}
-              selectedTileIds={selectedMarketIds}
-              bagCount={gameState.bag.length}
-              disabled={!interactive}
-              onTileClick={handleMarketTileClick}
-            />
-          </div>
-
           <div className="rack-row">
             <Rack
               tiles={viewer.rack}
@@ -746,26 +782,7 @@ function Game({ tileData, dictionary, mode, aiOpponent, onBackToMenu }: GameProp
 
             <span className="actions-spacer" />
 
-            {canPassNow ? (
-              <button
-                type="button"
-                className="control control-solid action-pass"
-                data-pass-stuck-only="true"
-                onClick={handlePass}
-              >
-                Pass
-              </button>
-            ) : (
-              <button
-                type="button"
-                className={`control control-solid action-draw ${exchangeWarning ? 'is-swap-warning' : ''}`}
-                onClick={handleDraw}
-                disabled={!canDrawNow}
-                aria-label={exchangeWarning ? `${drawButtonLabel}. ${EXCHANGE_WARNING}` : drawButtonLabel}
-              >
-                {drawButtonLabel}
-              </button>
-            )}
+            {!isDesktop && drawOrPassButton}
 
             <button
               type="button"

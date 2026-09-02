@@ -110,4 +110,66 @@
       inset 0 0 0 1px var(--tile-edge),
       0 3px 7px rgba(44, 58, 61, 0.18);
   }
+
+  /* ---- Market panel layout ---------------------------------------------
+     In its own column the market is a block, not a strip: the bag heads the
+     panel with its count beside it, and the six slots sit in a 3x2 grid whose
+     edges align with the panel. A grid also makes the two face-down slots on
+     the end read as a pair rather than as the tail of a queue. */
+
+  /* height:100% is a phone rule — it makes sense in a fixed-height row. Here
+     the panel sizes itself from its content, and inheriting 100% made the
+     column overflow and centre its overflow, which is what put the bag on top
+     of the heading. */
+  .market-row-inner {
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    gap: 10px;
+    height: auto;
+  }
+
+  .market-row-inner,
+  .market-tray {
+    height: auto;
+  }
+
+  .market-bag {
+    flex: 0 0 auto;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 8px;
+    width: auto;
+    height: auto;
+  }
+
+  .market-bag-art {
+    height: 38px;
+    width: auto;
+  }
+
+  .market-bag-count {
+    font-size: 1rem;
+  }
+
+  /* Tiles size themselves from the panel width, not the board's. */
+  .market-tray {
+    display: grid;
+    grid-template-columns: repeat(var(--market-cols, 3), 1fr);
+    gap: 10px;
+    width: 100%;
+    justify-items: center;
+    align-items: center;
+    padding: 0;
+  }
+
+  /* Still one tile size: a market tile and a rack tile are the same object,
+     and the panel changes where they sit, not how big they are. */
+  .market-tray .tray-tile,
+  .market-tray .tray-slot-empty {
+    width: 100%;
+    max-width: var(--tile-size);
+    height: auto;
+  }
 }

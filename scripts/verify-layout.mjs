@@ -151,6 +151,23 @@ for (const t of targets) {
         const cs = getComputedStyle(b);
         return { cls: b.className, radius: cs.borderRadius, h: Math.round(b.getBoundingClientRect().height) };
       }),
+      // Draw and Play end a turn; they are the same control at the same size,
+      // each sitting on the right edge of the thing it acts on.
+      turnButtons: ['.action-draw, .action-pass', '.action-play'].map(sel => {
+        const el = document.querySelector(sel);
+        return el ? { sel, ...rect(el) } : null;
+      }),
+      // The rail is the player's own strip and lines up with the board.
+      rackTray: (() => {
+        const el = document.querySelector('.rack-tray');
+        return el ? rect(el) : null;
+      })(),
+      seatDotOverlapsTile: (() => {
+        const dot = document.querySelector('.rack-seat-dot');
+        const tile = document.querySelector('.rack-tile');
+        if (!dot || !tile) return false;
+        return dot.getBoundingClientRect().right > tile.getBoundingClientRect().left + 0.5;
+      })(),
       opponentLettersRendered: [...document.querySelectorAll('.opponent-inner .tile-letter')].length,
       rackTiles: [...document.querySelectorAll('.rack-row .tray-tile .tile-letter')].map(s => s.textContent),
       // Rows must stay inside the board's left and right edges.
@@ -272,7 +289,14 @@ for (const t of targets) {
   // board's left and right edges. This is what catches a control or the tile
   // bag quietly eating the width the tile maths reserved for it. Rows placed
   // BESIDE the board (tablet landscape, desktop side column) are exempt.
-  const underBoard = box => box && box.top >= m.board.bottom - 2;
+  // "Under the board" means in the board's column: below it AND overlapping it
+  // horizontally. A panel beside the board (the desktop side column) is not
+  // under it and answers to its own edges.
+  const underBoard = box =>
+    box &&
+    box.top >= m.board.bottom - 2 &&
+    box.left < m.board.right - 1 &&
+    box.right > m.board.left + 1;
   const checkWidth = (label, box) => {
     if (!underBoard(box)) return;
     if (box.left < m.board.left - 1.5) {
@@ -303,6 +327,29 @@ for (const t of targets) {
   if (m.facedownCount && !/tile-back/.test(m.facedownBg)) {
     problems.push(`face-down tiles are not drawn as tile backs: ${m.facedownBg}`);
   }
+
+  // Draw 2 and Play are one control at one size.
+  const [turnA, turnB] = m.turnButtons;
+  if (turnA && turnB) {
+    if (Math.abs(turnA.w - turnB.w) > 1.5 || Math.abs(turnA.h - turnB.h) > 1.5) {
+      problems.push(
+        `Draw and Play differ in size: ${turnA.w.toFixed(1)}x${turnA.h.toFixed(1)} ` +
+          `vs ${turnB.w.toFixed(1)}x${turnB.h.toFixed(1)}`
+      );
+    }
+  }
+
+  // Where the rail sits under the board it shares the board's edges. In the
+  // landscape shell it sits beside the board instead and answers to its column.
+  if (underBoard(m.rackTray)) {
+    if (Math.abs(m.rackTray.left - m.board.left) > 1.5 || Math.abs(m.rackTray.right - m.board.right) > 1.5) {
+      problems.push(
+        `rack rail is not aligned to the board: ${m.rackTray.left.toFixed(1)}-${m.rackTray.right.toFixed(1)} ` +
+          `vs ${m.board.left.toFixed(1)}-${m.board.right.toFixed(1)}`
+      );
+    }
+  }
+  if (m.seatDotOverlapsTile) problems.push('the rack seat dot sits under the first tile');
 
   // Every button is the same family: one radius, one height.
   if (m.controlFamily.length >= 2) {
@@ -366,6 +413,15 @@ for (const t of targets) {
       problems.push(`board tiles are not raised: ${m.tileBoxShadow}`);
     }
     if (m.actions.w > 200) problems.push(`desktop Play stretched: ${m.actions.w.toFixed(1)}`);
+    // Shuffle on the board's left edge, Play on its right.
+    const shuffleBox = m.buttons.find(b => /shuffle|clear/i.test(b.label));
+    const playBox = m.buttons.find(b => /^play$/i.test(b.label));
+    if (shuffleBox && Math.abs(shuffleBox.left - m.board.left) > 1.5) {
+      problems.push(`Shuffle not on the board's left edge: ${shuffleBox.left.toFixed(1)} vs ${m.board.left.toFixed(1)}`);
+    }
+    if (playBox && Math.abs(playBox.right - m.board.right) > 1.5) {
+      problems.push(`Play not on the board's right edge: ${playBox.right.toFixed(1)} vs ${m.board.right.toFixed(1)}`);
+    }
     for (const [what, box] of [['rack', m.rackTile], ['market', m.marketTile]]) {
       if (!box) continue;
       if (box.w < 40) problems.push(`desktop ${what} tile too small: ${box.w.toFixed(1)}`);

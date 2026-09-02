@@ -161,7 +161,51 @@ describe('desktop layout (wide fine-pointer windows only)', () => {
     expect(read('./Game.tsx')).toMatch(/className="market-row"/);
     expect(read('./Game.tsx')).toMatch(/action-draw/);
     expect(read('./Game.tsx')).toMatch(/action-shuffle/);
-    expect(desktop).toMatch(/\.market-row[\s\S]*max-width:\s*var\(--board-size\)/);
+  });
+
+  it('moves the market out of the board column into its own panel', () => {
+    // The market is a shared pool, the rack is your hand. Putting them in
+    // different columns is the clearest way to say so, and it stops the two
+    // tile rows competing for the board's width.
+    expect(desktop).toMatch(/\.play-shell \.market-panel\s*\{[^}]*display:\s*flex/s);
+    expect(desktop).toMatch(/grid-template-areas:[\s\S]*'rack'/);
+    expect(desktop).not.toMatch(/grid-template-areas:[\s\S]*'market'/);
+    expect(desktop).toMatch(/--market-cols:\s*3/);
+    expect(read('./Market.css')).toMatch(/grid-template-columns:\s*repeat\(var\(--market-cols/);
+    // Still one tile size: the panel changes where a tile sits, not its size.
+    expect(read('./Market.css')).toMatch(/max-width:\s*var\(--tile-size\)/);
+  });
+
+  it('renders Draw once, in the column that holds the market', () => {
+    // Two buttons doing the same job would put a duplicate in the a11y tree,
+    // so the single node moves rather than being duplicated and hidden.
+    const game = read('./Game.tsx');
+    expect(game).toMatch(/const drawOrPassButton =/);
+    expect(game).toMatch(/\{isDesktop && drawOrPassButton\}/);
+    expect(game).toMatch(/\{!isDesktop && drawOrPassButton\}/);
+    expect((game.match(/action-draw/g) ?? []).length).toBe(1);
+    // The media query is the same one the CSS is gated on — not a UA test.
+    const hook = read('./useDesktopLayout.ts');
+    expect(hook).toMatch(/\(min-width: 900px\) and \(pointer: fine\)/);
+    expect(hook).not.toMatch(/userAgent/i);
+  });
+
+  it('gives Draw and Play one width, and puts the buttons on real edges', () => {
+    const shell = gameCss.match(/\.play-shell\s*\{[\s\S]*?\n\}/)?.[0] ?? '';
+    expect(shell).toMatch(/--ctl-w:/);
+    expect(gameCss).toMatch(/\.actions-row \.control-solid\s*\{[^}]*width:\s*var\(--ctl-w\)/s);
+    expect(desktop).toMatch(/--ctl-w:\s*\d+px/);
+    expect(desktop).toMatch(/\.market-panel \.control\s*\{[^}]*width:\s*var\(--ctl-w\)/s);
+    // No inset on desktop: Shuffle and Play land on the board's own edges.
+    expect(desktop).toMatch(/\.play-shell \.actions-row\s*\{[^}]*padding:\s*0/s);
+  });
+
+  it('keeps the move log a fixed window that follows the newest line', () => {
+    expect(desktop).toMatch(/\.play-shell \.disclosure-body\s*\{[^}]*height:/s);
+    expect(desktop).toMatch(/\.play-shell \.side-panel\s*\{[^}]*flex:\s*0 0 auto/s);
+    const log = read('./MoveLog.tsx');
+    expect(log).toMatch(/scrollTop = list\.scrollHeight/);
+    expect(read('./MoveLog.css')).toMatch(/\.move-log-list[\s\S]*overflow-y:\s*auto/);
   });
 
   it('keeps the phone shell as the un-queried default', () => {
@@ -275,6 +319,32 @@ describe('branding', () => {
     expect(boardCss).toMatch(/\.goal-square\.is-p2\s*\{[^}]*background-color:\s*var\(--color-p2\)/s);
     // Fills the whole cell rather than sitting inside it as a token.
     expect(boardCss).toMatch(/\.goal-square\s*\{[^}]*inset:\s*0/s);
+  });
+
+  it('keeps the centre star until a word is actually committed', () => {
+    // The star answers "where must the opening word cross?". Putting the first
+    // tile down somewhere else does not answer it, so the star stays; a tile
+    // landing ON the centre covers it through the normal letter branch.
+    const board = read('./Board.tsx');
+    expect(board).toMatch(/const showCentreStar = isFirstWord\(board\);/);
+    expect(board).not.toMatch(/showCentreStar =[^;]*pendingPlacements\.length/);
+  });
+
+  it('marks the rack with its owner\'s seat colour, as the score card does', () => {
+    expect(read('./Rack.tsx')).toMatch(/rack-seat-dot/);
+    expect(rackCss).toMatch(/\.rack-row-inner\.is-p1 \.rack-seat-dot[\s\S]*var\(--color-p1\)/);
+    expect(rackCss).toMatch(/\.rack-row-inner\.is-p2 \.rack-seat-dot[\s\S]*var\(--color-p2\)/);
+    // The dot has reserved space in the rail rather than sitting on a tile.
+    const shell = gameCss.match(/\.play-shell\s*\{[\s\S]*?\n\}/)?.[0] ?? '';
+    expect(shell).toMatch(/--rack-dot:/);
+    expect(shell).toMatch(/--rack-lead:[\s\S]*var\(--rack-dot\)/);
+    expect(shell).toMatch(/--rack-fit:[\s\S]*var\(--rack-lead\)/);
+  });
+
+  it('sits the rack tiles in the rail, not under a translucent band', () => {
+    // The old lip was an overlay drawn on top of the bottom of every tile.
+    expect(rackCss).not.toMatch(/\.rack-tray::after/);
+    expect(rackCss).toMatch(/\.rack-row-inner\.is-p1 \.rack-tray[\s\S]*inset 0 2px 5px/);
   });
 
   it('draws the opening centre square large enough to find at a glance', () => {

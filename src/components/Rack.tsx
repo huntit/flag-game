@@ -44,6 +44,10 @@ export function Rack({
   return (
     <div className={`rack-row-inner is-${playerColor.toLowerCase()}`}>
       <div className="tray rack-tray" data-rack-zone="true" aria-label={`${label}: your tiles`}>
+        {/* The same dot the score card uses, in the same seat colour: this rail
+            is that card's rack, and the market is not. It sits inside the rail
+            so the rail itself still lines up with the board's edges. */}
+        <span className="rack-seat-dot" aria-hidden="true" />
         {available.map((tile, index) => {
           const classes = [
             'tray-tile',

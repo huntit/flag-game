@@ -46,47 +46,55 @@
   min-width: 0;
 }
 
-/* ---- Your rack ---------------------------------------------------------- */
+/* ---- Your rack ----------------------------------------------------------
+   A tray the tiles sit IN, not a panel with a translucent band laid over the
+   bottom of them. The depth comes from an inset shadow inside the tray, which
+   reads as a groove; the previous overlay looked like the tiles were clipped
+   by a sheet of glass. */
 
 .rack-tray {
   position: relative;
-  padding: 0 calc(var(--tile-gap) + 2px);
+  padding: calc(var(--rack-h) * 0.08) var(--tray-pad) calc(var(--rack-h) * 0.08)
+    var(--rack-lead);
   border-radius: calc(var(--rack-h) * 0.2);
-  align-items: flex-start;
-  padding-top: calc(var(--rack-h) * 0.09);
+  align-items: center;
   touch-action: none;
 }
 
-/* The rack rail spans the board's full width; the tiles sit centred in it, on
-   the same axis as the market group above and the board above that. */
-.rack-tray::after {
-  content: '';
+/* The dot that ties this rail to its owner's score card. Absolutely placed so
+   it never shifts the tiles or the rail's own edges. */
+.rack-seat-dot {
   position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: calc(var(--rack-h) * 0.17);
-  border-radius: 0 0 calc(var(--rack-h) * 0.2) calc(var(--rack-h) * 0.2);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  left: var(--tray-pad);
+  top: 50%;
+  transform: translateY(-50%);
+  width: var(--rack-dot);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background-color: currentColor;
   pointer-events: none;
+}
+
+.rack-row-inner.is-p1 .rack-seat-dot {
+  color: var(--color-p1);
+}
+
+.rack-row-inner.is-p2 .rack-seat-dot {
+  color: var(--color-p2);
 }
 
 .rack-row-inner.is-p1 .rack-tray {
   background-color: var(--seat-card-bg-p1);
-  box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--color-p1) 30%, transparent);
+  box-shadow:
+    inset 0 0 0 1.5px color-mix(in srgb, var(--color-p1) 34%, transparent),
+    inset 0 2px 5px color-mix(in srgb, var(--color-p1) 20%, transparent);
 }
 
 .rack-row-inner.is-p2 .rack-tray {
   background-color: var(--seat-card-bg-p2);
-  box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--color-p2) 30%, transparent);
-}
-
-.rack-row-inner.is-p1 .rack-tray::after {
-  background-color: color-mix(in srgb, var(--color-p1) 22%, transparent);
-}
-
-.rack-row-inner.is-p2 .rack-tray::after {
-  background-color: color-mix(in srgb, var(--color-p2) 22%, transparent);
+  box-shadow:
+    inset 0 0 0 1.5px color-mix(in srgb, var(--color-p2) 34%, transparent),
+    inset 0 2px 5px color-mix(in srgb, var(--color-p2) 20%, transparent);
 }
 
 /* ---- Tiles -------------------------------------------------------------- */

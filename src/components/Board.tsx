@@ -54,7 +54,11 @@ function Board({
   onTilePointerDown,
   seatNames,
 }: BoardProps) {
-  const showCentreStar = isFirstWord(board) && pendingPlacements.length === 0;
+  // The star marks where the opening word must cross, so it stays until a word
+  // is committed. Placing the first tile somewhere else does not answer the
+  // question the star is there to answer. A tile ON the centre covers it, which
+  // the letter branch below handles.
+  const showCentreStar = isFirstWord(board);
   const cornerPositions = Object.values(FLAG_POSTS);
 
   const renderCell = (row: number, col: number) => {
