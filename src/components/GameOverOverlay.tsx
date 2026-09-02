@@ -16,7 +16,7 @@ const END_REASONS: Record<string, string> = {
   self_capture: 'Own flag captured (triple-word)',
   second_steal: 'Second flag stolen',
   no_spare: 'Flag stolen — no spare corner',
-  bag_empty: 'Tile bag empty',
+  going_out: 'Went out',
   exchange_three: 'Three consecutive Exchanges',
   double_pass: 'Both players passed',
   stuck_out: 'Both players stuck',
@@ -63,6 +63,11 @@ function GameOverOverlay({
             <strong className="score-value">{other.score}</strong>
           </div>
         </div>
+        {gameState.leftoverPoints !== undefined && gameState.leftoverPoints !== 0 && (
+          <p className="game-over-leftover">
+            Leftover tiles {gameState.leftoverPoints}
+          </p>
+        )}
 
         <button type="button" className="control control-solid game-over-button" onClick={onNewGame}>
           New game

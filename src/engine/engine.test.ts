@@ -1,6 +1,8 @@
 // Feel-test lock: board geometry, flag setup, market, capture multipliers, pass, draw.
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { readFileSync } from 'fs';
+import { resolve } from 'path';
 import {
   initializeGame,
   isFirstWord,
@@ -86,13 +88,13 @@ afterEach(() => {
 });
 
 describe('board geometry', () => {
-  it('is an 11x11 board with centre at (6,6) and true corners only', () => {
-    expect(BOARD_SIZE).toBe(11);
-    expect(CENTRE_STAR).toEqual({ row: 6, col: 6 });
+  it('is a 9x9 board with centre at (5,5) and true corners only', () => {
+    expect(BOARD_SIZE).toBe(9);
+    expect(CENTRE_STAR).toEqual({ row: 5, col: 5 });
     expect(FLAG_POSTS.NW).toEqual({ row: 1, col: 1 });
-    expect(FLAG_POSTS.NE).toEqual({ row: 1, col: 11 });
-    expect(FLAG_POSTS.SE).toEqual({ row: 11, col: 11 });
-    expect(FLAG_POSTS.SW).toEqual({ row: 11, col: 1 });
+    expect(FLAG_POSTS.NE).toEqual({ row: 1, col: 9 });
+    expect(FLAG_POSTS.SE).toEqual({ row: 9, col: 9 });
+    expect(FLAG_POSTS.SW).toEqual({ row: 9, col: 1 });
   });
 });
 
@@ -114,7 +116,7 @@ describe('flag setup', () => {
 });
 
 describe('setup', () => {
-  it('deals 4 face-up + 2 face-down market and P1=2 / P2=3 bag tiles', () => {
+  it('deals 3 face-up + 2 face-down market and P1=2 / P2=3 bag tiles', () => {
     const state = initializeGame(mockTileData);
     expect(state.market).toHaveLength(MARKET_SLOTS);
     expect(state.market.filter(s => s.faceUp).length).toBe(MARKET_FACE_UP);
@@ -162,7 +164,7 @@ describe('draw', () => {
     expect(canPass(state, dictionary)).toBe(true);
   });
 
-  it('does not block Draw on a full rack — draw 2 then discard to 7', () => {
+  it('does not block Draw on a full rack — draw 2 then discard to 6', () => {
     const player = state.players[0];
     player.rack = Array.from({ length: RACK_MAX }, (_, i) => tile(`r${i}`, 'T'));
     const ids = marketIds(state);
@@ -184,23 +186,21 @@ describe('draw', () => {
   });
 });
 
-describe('bag empty', () => {
-  it('ends the game when the bag is empty at turn start', () => {
+describe('bag empty does not auto-end', () => {
+  it('still allows Draw from the market when the bag is empty', () => {
     const state = initializeGame(mockTileData);
     state.bag = [];
     const result = executeAction(state, { type: 'draw', marketTiles: marketIds(state) }, dictionary);
-    expect(result.success).toBe(false);
-    expect(state.gameOver).toBe(true);
-    expect(state.endReason).toBe('bag_empty');
+    expect(result.success).toBe(true);
+    expect(state.gameOver).toBe(false);
   });
 
-  it('ends after a draw when refill depletes the bag', () => {
+  it('does not end after a draw that depletes the bag', () => {
     const state = initializeGame(mockTileData);
     state.bag = [tile('last', 'A')];
     executeAction(state, { type: 'draw', marketTiles: marketIds(state) }, dictionary);
     expect(state.bag).toHaveLength(0);
-    expect(state.gameOver).toBe(true);
-    expect(state.endReason).toBe('bag_empty');
+    expect(state.gameOver).toBe(false);
   });
 });
 
@@ -231,7 +231,7 @@ describe('exchange vs non-exchange draw', () => {
     expect(result.success, result.error).toBe(true);
   }
 
-  it('counts a full-rack Draw 2 + Discard 2 as an Exchange, not a 6-tile Draw', () => {
+  it('counts a full-rack Draw 2 + Discard 2 as an Exchange, not a short-rack Draw', () => {
     const state = initializeGame(mockTileData);
     ensureBag(state);
     fillRack(state, RACK_MAX);
@@ -239,7 +239,7 @@ describe('exchange vs non-exchange draw', () => {
     drawWithDiscards(state);
     expect(state.consecutiveExchanges).toBe(1);
 
-    fillRack(state, 6);
+    fillRack(state, RACK_MAX - 1);
     expect(isExchangeDraw(state)).toBe(false);
     drawWithDiscards(state);
     expect(state.consecutiveExchanges).toBe(0);
@@ -248,11 +248,11 @@ describe('exchange vs non-exchange draw', () => {
   it('does not count a Draw that discards 0 or 1 as an Exchange', () => {
     const state = initializeGame(mockTileData);
     ensureBag(state);
-    fillRack(state, 5);
+    fillRack(state, 4);
     drawWithDiscards(state);
     expect(state.consecutiveExchanges).toBe(0);
 
-    fillRack(state, 6);
+    fillRack(state, 5);
     drawWithDiscards(state);
     expect(state.consecutiveExchanges).toBe(0);
   });
@@ -281,7 +281,7 @@ describe('exchange vs non-exchange draw', () => {
     fillRack(state, RACK_MAX);
     drawWithDiscards(state);
     expect(state.consecutiveExchanges).toBe(1);
-    fillRack(state, 6);
+    fillRack(state, RACK_MAX - 1);
     drawWithDiscards(state);
     expect(state.consecutiveExchanges).toBe(0);
     fillRack(state, RACK_MAX);
@@ -303,8 +303,8 @@ describe('exchange vs non-exchange draw', () => {
       {
         type: 'play',
         placements: [
-          { tileId: 'a1', position: { row: 6, col: 6 } },
-          { tileId: 't1', position: { row: 6, col: 7 } },
+          { tileId: 'a1', position: { row: 5, col: 5 } },
+          { tileId: 't1', position: { row: 5, col: 6 } },
         ],
       },
       dictionary
@@ -386,6 +386,7 @@ describe('flag capture scoring', () => {
     state.board[0][2] = tile('board-t', 'T'); // (1,3) — play A at NW for ART
     const player = state.players[0];
     player.rack = [tile('a1', 'A')];
+    state.players[1].rack = [];
 
     const evalResult = validatePlay(
       state.board,
@@ -404,17 +405,19 @@ describe('flag capture scoring', () => {
     expect(state.gameOver).toBe(true);
     expect(state.endReason).toBe('self_capture');
     expect(player.score).toBe(9);
+    expect(state.leftoverPoints).toBe(0);
   });
 
-  it('applies DWS on first opponent steal and spawns replacement on empty spare', () => {
+  it('applies TWS on first opponent steal and spawns replacement on empty spare', () => {
     setRandomSource(mulberry32(99));
     const state = initializeGame(mockTileData);
     state.flags.P1 = 'NW';
     state.flags.P2 = 'SE';
-    state.board[10][8] = tile('board-a', 'A'); // (11,9)
-    state.board[10][9] = tile('board-r', 'R'); // (11,10)
+    state.board[8][6] = tile('board-a', 'A'); // (9,7)
+    state.board[8][7] = tile('board-r', 'R'); // (9,8)
     const hunter = state.players[0];
     hunter.rack = [tile('t1', 'T')];
+    state.players[1].rack = [];
 
     executeAction(
       state,
@@ -426,7 +429,8 @@ describe('flag capture scoring', () => {
     expect(state.players[1].flagsLost).toBe(1);
     expect(state.flags.P2).toBeTruthy();
     expect(state.flags.P2).not.toBe('SE');
-    expect(hunter.score).toBe(6); // ART base 3 × 2
+    expect(hunter.score).toBe(9); // ART base 3 × 3
+    expect(state.leftoverPoints).toBeUndefined();
   });
 
   it('ends on second steal of opponent flag', () => {
@@ -435,10 +439,11 @@ describe('flag capture scoring', () => {
     state.flags.P2 = 'SE';
     state.players[1].flagsLost = 1;
     state.flags.P2 = 'NE';
-    state.board[0][8] = tile('a', 'A'); // (1,9)
-    state.board[0][9] = tile('r', 'R'); // (1,10)
+    state.board[0][6] = tile('a', 'A'); // (1,7)
+    state.board[0][7] = tile('r', 'R'); // (1,8)
     const hunter = state.players[0];
     hunter.rack = [tile('t1', 'T')];
+    state.players[1].rack = [];
 
     executeAction(
       state,
@@ -455,12 +460,13 @@ describe('flag capture scoring', () => {
     const state = initializeGame(mockTileData);
     state.flags.P1 = 'NW';
     state.flags.P2 = 'SE';
-    state.board[0][10] = tile('block-ne', 'A'); // (1,11) NE spare blocked
-    state.board[10][0] = tile('block-sw', 'A'); // (11,1) SW spare blocked
-    state.board[10][8] = tile('board-a', 'A'); // (11,9)
-    state.board[10][9] = tile('board-r', 'R'); // (11,10)
+    state.board[0][8] = tile('block-ne', 'A'); // (1,9) NE spare blocked
+    state.board[8][0] = tile('block-sw', 'A'); // (9,1) SW spare blocked
+    state.board[8][6] = tile('board-a', 'A'); // (9,7)
+    state.board[8][7] = tile('board-r', 'R'); // (9,8)
     const hunter = state.players[0];
     hunter.rack = [tile('t1', 'T')];
+    state.players[1].rack = [];
 
     executeAction(
       state,
@@ -472,7 +478,7 @@ describe('flag capture scoring', () => {
     expect(state.endReason).toBe('no_spare');
   });
 
-  it('resolves own-flag first — never stacks 3× and 2× on the capturing word', () => {
+  it('resolves own-flag first — never stacks two multipliers on the capturing word', () => {
     const state = initializeGame(mockTileData);
     state.flags.P1 = 'NW';
     state.flags.P2 = 'NE';
@@ -496,6 +502,215 @@ describe('flag capture scoring', () => {
   });
 });
 
+describe('leftover rack scoring', () => {
+  function artSetup(state: GameState) {
+    state.flags.P1 = 'NW';
+    state.flags.P2 = 'SE';
+    state.board[0][1] = tile('board-r', 'R');
+    state.board[0][2] = tile('board-t', 'T');
+  }
+
+  it('on self_capture: ender adds opponent rack values and opponent is reduced by the same total', () => {
+    const state = initializeGame(mockTileData);
+    artSetup(state);
+    const ender = state.players[0];
+    ender.rack = [tile('a1', 'A')];
+    ender.score = 10;
+    state.players[1].score = 20;
+    state.players[1].rack = [tile('q', 'A', 10), tile('blank', 'A', 0)];
+    state.players[1].rack[1].isBlank = true;
+    state.players[1].rack[1].letter = null;
+
+    executeAction(
+      state,
+      { type: 'play', placements: [{ tileId: 'a1', position: FLAG_POSTS.NW }] },
+      dictionary
+    );
+
+    expect(state.endReason).toBe('self_capture');
+    expect(state.leftoverPoints).toBe(10);
+    expect(ender.score).toBe(10 + 9 + 10); // prior + ART TWS + leftover
+    expect(state.players[1].score).toBe(10);
+  });
+
+  it('does not subtract the ender remaining tiles', () => {
+    const state = initializeGame(mockTileData);
+    artSetup(state);
+    const ender = state.players[0];
+    ender.rack = [tile('a1', 'A'), tile('kept', 'A', 8)];
+    state.players[1].rack = [tile('x', 'A', 4)];
+
+    executeAction(
+      state,
+      { type: 'play', placements: [{ tileId: 'a1', position: FLAG_POSTS.NW }] },
+      dictionary
+    );
+
+    expect(ender.rack).toHaveLength(1);
+    expect(ender.rack[0].id).toBe('kept');
+    expect(state.leftoverPoints).toBe(4);
+    expect(ender.score).toBe(9 + 4);
+  });
+
+  it('applies leftover once when own-flag also empties the rack with bag and market empty', () => {
+    const state = initializeGame(mockTileData);
+    artSetup(state);
+    state.bag = [];
+    state.market.forEach(s => {
+      s.tile = null;
+    });
+    const ender = state.players[0];
+    ender.rack = [tile('a1', 'A')];
+    state.players[1].rack = [tile('x', 'A', 5)];
+
+    executeAction(
+      state,
+      { type: 'play', placements: [{ tileId: 'a1', position: FLAG_POSTS.NW }] },
+      dictionary
+    );
+
+    expect(state.endReason).toBe('self_capture');
+    expect(state.leftoverPoints).toBe(5);
+    expect(ender.score).toBe(9 + 5);
+  });
+
+  it('on second_steal applies leftover', () => {
+    const state = initializeGame(mockTileData);
+    state.flags.P1 = 'NW';
+    state.flags.P2 = 'NE';
+    state.players[1].flagsLost = 1;
+    state.board[0][6] = tile('a', 'A');
+    state.board[0][7] = tile('r', 'R');
+    const hunter = state.players[0];
+    hunter.rack = [tile('t1', 'T')];
+    hunter.score = 0;
+    state.players[1].score = 12;
+    state.players[1].rack = [tile('v', 'A', 5)];
+
+    executeAction(
+      state,
+      { type: 'play', placements: [{ tileId: 't1', position: FLAG_POSTS.NE }] },
+      dictionary
+    );
+
+    expect(state.endReason).toBe('second_steal');
+    expect(state.leftoverPoints).toBe(5);
+    expect(hunter.score).toBe(9 + 5);
+    expect(state.players[1].score).toBe(7);
+  });
+
+  it('on no_spare applies leftover', () => {
+    const state = initializeGame(mockTileData);
+    state.flags.P1 = 'NW';
+    state.flags.P2 = 'SE';
+    state.board[0][8] = tile('block-ne', 'A');
+    state.board[8][0] = tile('block-sw', 'A');
+    state.board[8][6] = tile('board-a', 'A');
+    state.board[8][7] = tile('board-r', 'R');
+    const hunter = state.players[0];
+    hunter.rack = [tile('t1', 'T')];
+    state.players[1].score = 8;
+    state.players[1].rack = [tile('v', 'A', 3)];
+
+    executeAction(
+      state,
+      { type: 'play', placements: [{ tileId: 't1', position: FLAG_POSTS.SE }] },
+      dictionary
+    );
+
+    expect(state.endReason).toBe('no_spare');
+    expect(state.leftoverPoints).toBe(3);
+    expect(hunter.score).toBe(9 + 3);
+    expect(state.players[1].score).toBe(5);
+  });
+
+  it('on going_out applies leftover when bag and market are empty and the player plays their last tiles', () => {
+    const state = initializeGame(mockTileData);
+    state.bag = [];
+    state.market.forEach(s => {
+      s.tile = null;
+    });
+    const ender = state.players[0];
+    ender.rack = [tile('a1', 'A'), tile('t1', 'T')];
+    ender.score = 4;
+    state.players[1].score = 15;
+    state.players[1].rack = [tile('v', 'A', 6)];
+
+    executeAction(
+      state,
+      {
+        type: 'play',
+        placements: [
+          { tileId: 'a1', position: { row: 5, col: 5 } },
+          { tileId: 't1', position: { row: 5, col: 6 } },
+        ],
+      },
+      dictionary
+    );
+
+    expect(state.endReason).toBe('going_out');
+    expect(state.leftoverPoints).toBe(6);
+    expect(ender.score).toBe(4 + 2 + 6);
+    expect(state.players[1].score).toBe(9);
+  });
+
+  it('does not apply leftover on exchange_three', () => {
+    const state = initializeGame(mockTileData);
+    for (let i = 0; i < 40; i++) state.bag.push(tile(`bag-${i}`, 'A'));
+    state.players[0].score = 11;
+    state.players[1].score = 22;
+    state.players[1].rack = [tile('q', 'A', 10)];
+
+    for (let i = 0; i < 3; i++) {
+      const player = state.players[state.currentPlayer];
+      player.rack = Array.from({ length: RACK_MAX }, (_, n) => tile(`ex-${i}-${n}`, 'T'));
+      executeAction(
+        state,
+        {
+          type: 'draw',
+          marketTiles: marketIds(state),
+          discardTiles: player.rack.slice(0, DRAW_COUNT).map(t => t.id),
+        },
+        dictionary
+      );
+    }
+
+    expect(state.endReason).toBe('exchange_three');
+    expect(state.leftoverPoints).toBeUndefined();
+    expect(state.players[0].score).toBe(11);
+    expect(state.players[1].score).toBe(22);
+  });
+
+  it('does not apply leftover on double_pass', () => {
+    const state = initializeGame(mockTileData);
+    state.market.forEach(s => {
+      s.tile = null;
+    });
+    state.players[0].rack = [];
+    state.players[1].rack = [tile('q', 'A', 10)];
+    state.players[0].score = 7;
+    state.players[1].score = 9;
+
+    executeAction(state, { type: 'pass' }, dictionary);
+    executeAction(state, { type: 'pass' }, dictionary);
+
+    expect(state.endReason).toBe('double_pass');
+    expect(state.leftoverPoints).toBeUndefined();
+    expect(state.players[0].score).toBe(7);
+    expect(state.players[1].score).toBe(9);
+  });
+
+  it('awards no +10 end bonus', () => {
+    const src = [
+      readFileSync(resolve(__dirname, './actions.ts'), 'utf-8'),
+      readFileSync(resolve(__dirname, './game.ts'), 'utf-8'),
+      readFileSync(resolve(__dirname, './types.ts'), 'utf-8'),
+    ].join('\n');
+    expect(src).not.toMatch(/endBonus/);
+    expect(src).not.toMatch(/\+ 10\b|\+10\b/);
+  });
+});
+
 describe('play scoring', () => {
   it('scores crosswords normally without flag multipliers', () => {
     const state = initializeGame(mockTileData);
@@ -507,8 +722,8 @@ describe('play scoring', () => {
       {
         type: 'play',
         placements: [
-          { tileId: 'a1', position: { row: 6, col: 6 } },
-          { tileId: 't1', position: { row: 6, col: 7 } },
+          { tileId: 'a1', position: { row: 5, col: 5 } },
+          { tileId: 't1', position: { row: 5, col: 6 } },
         ],
       },
       dictionary
@@ -579,7 +794,7 @@ describe('market face-down slots', () => {
       expect(state.market.filter(s => !s.faceUp)).toHaveLength(MARKET_FACE_DOWN);
       seen.add(state.market.map(s => (s.faceUp ? 'u' : 'd')).join(''));
     }
-    expect([...seen]).toEqual(['uuuudd']);
+    expect([...seen]).toEqual(['uuudd']);
   });
 
   it('refills a slot in place, keeping its face-up or face-down identity', () => {

@@ -84,3 +84,10 @@
   font-size: 0.98rem;
   font-weight: 800;
 }
+
+.game-over-leftover {
+  margin: 0;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--color-text-dim);
+}

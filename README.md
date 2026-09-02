@@ -8,7 +8,7 @@ An **11×11 large layout (v0)** remains documented for lab use — not the defau
 
 ## Status
 
-v0.1 docs landed; engine still on prior v0 constants until Ada implements. Solo vs Hunter/Greedy/Sleeper and Hotseat play now; Remote 2-player is engine-complete but waiting on a PartyKit deployment.
+v0.1 engine shipped: 9×9 board, 69-tile bag, rack max 6, leftover scoring on closer ends (no +10). Solo vs Hunter/Greedy/Sleeper and Hotseat play now; Remote 2-player is engine-complete but waiting on a PartyKit deployment.
 
 **Play it:** https://huntit.github.io/flag-game/ — built for iPhone Safari, Add to Home Screen for the feel-test.
 
@@ -24,13 +24,13 @@ npm run sim -- --games 200 --p1 greedy --p2 hunter --seed 1 --out ./out
 
 **Data files:**
 - ✅ Word list available at `data/words.txt` (175,030 words from Word Eagle) — phone v0.1 validates length 2–9 at load
-- ✅ Tile set at `data/tiles.json` — **Ada updates to 69-tile v0.1 bag** per [prototype-spec.md](docs/prototype-spec.md#5-tiles) (currently still 104-tile WWF + Word Eagle values)
+- ✅ Tile set at `data/tiles.json` — 69-tile v0.1 bag (~⅔ WWF English) with Word Eagle WWF letter values
 
 ## Documentation
 
 - [How to Play](docs/how-to-play.md) — Human-readable rules for v0.1 (phone default)
 - [Prototype Specification](docs/prototype-spec.md) — Technical build spec for Ada
-- [Assets](docs/assets.md) — Word list ✅, tile set ✅ (WWF values; bag counts updating to 69 in code)
+- [Assets](docs/assets.md) — Word list ✅, tile set ✅ (69-tile bag, WWF values)
 - [Cloudflare Pages + GitHub autodeploy](docs/cloudflare-pages.md) — Hosting setup walkthrough
 
 ## Distinctiveness
