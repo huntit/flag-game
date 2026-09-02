@@ -28,7 +28,7 @@ There is **no first-player menu** in v0.1. Before the first action, a one-line b
 - **Market** showing **5 tiles:** 3 face-up + 2 face-down
 - **Bag** with remaining tiles. Show bag remaining (count) near the market
 
-The board has no premium squares (no double/triple letter or word scores on the grid), no bingo bonus, and no capture bonus beyond the flag multipliers and the +10 end bonus described below.
+The board has no premium squares (no double/triple letter or word scores on the grid), no bingo bonus, and no capture bonus beyond the flag multipliers and leftover scoring on closer ends (see Game End).
 
 ## The Board
 
@@ -53,23 +53,23 @@ A flag is **captured** by covering its cell with a tile as part of a legal cross
 
 ### Own flag
 
-Covering **your own** flag scores a **Triple-Word** on **that capturing word only** (other words formed in the same play score normally) and **ends the game immediately**. The ending player receives a **+10 flat bonus** (see Game End). Winner is highest total score after bonuses; tie = draw. You can lose by capturing your own flag cheaply if you were behind.
+Covering **your own** flag scores a **Triple-Word** on **that capturing word only** (other words formed in the same play score normally) and **ends the game immediately**. Apply **leftover scoring** (see Game End). Winner is highest total score after adjustment; tie = draw. You can lose by capturing your own flag cheaply if you were behind.
 
 ### Opponent's flag (first steal)
 
-Covering the **opponent's** flag scores a **Triple-Word** on **that capturing word only** (not double-word). That flag is removed. The opponent cannot use that captured flag to self-end or take a triple-word. They immediately get a **replacement flag** of their colour in a random **spare true corner** that is empty (no tile, no flag). They may still self-capture the replacement (triple-word + end + +10).
+Covering the **opponent's** flag scores a **Triple-Word** on **that capturing word only** (not double-word). That flag is removed. The opponent cannot use that captured flag to self-end or take a triple-word. They immediately get a **replacement flag** of their colour in a random **spare true corner** that is empty (no tile, no flag). They may still self-capture the replacement (triple-word + end + leftover).
 
 ### Second steal
 
-If the opponent later captures that replacement too, score **triple-word** on that word and **end the game** (no third flag). The ending player receives **+10**. Track `flagsLost` per player; the **second time** a given player's flag is captured **by an opponent**, the game ends. Self-capture always ends (triple-word + +10) regardless of `flagsLost`.
+If the opponent later captures that replacement too, score **triple-word** on that word and **end the game** (no third flag). Apply **leftover scoring**. Track `flagsLost` per player; the **second time** a given player's flag is captured **by an opponent**, the game ends. Self-capture always ends (triple-word + leftover) regardless of `flagsLost`.
 
-If a steal happens and no empty spare true corner exists, score the triple-word and **end** (no replacement). Same as a decisive steal; ending player gets **+10**.
+If a steal happens and no empty spare true corner exists, score the triple-word and **end** (no replacement). Same as a finishing capture; apply **leftover scoring**.
 
 ### Multiple flags in one play
 
 If one play covers more than one flag:
 
-1. Resolve **own-flag first** (triple-word + end + +10 if applicable)
+1. Resolve **own-flag first** (triple-word + end + leftover if applicable)
 2. If no own-flag but opponent's flag, triple-word as usual
 3. Never stack two multipliers on one word
 
@@ -112,7 +112,7 @@ On your turn, choose one:
 
 There is no optional +1 draw from the bag. There is no separate facedown-from-bag action.
 
-**Exchange stall:** The game ends immediately after **three consecutive Exchanges** (full-rack Draw 2 + Discard 2 turns in a row, counted across both players); highest score wins, tie = draw. Any **Play**, any **Draw that is not an Exchange**, or any **Pass** resets the streak to zero.
+**Exchange stall:** The game ends immediately after **three consecutive Exchanges** (full-rack Draw 2 + Discard 2 turns in a row, counted across both players); highest score wins, tie = draw — **no leftover adjustment** (scores stay as played). Any **Play**, any **Draw that is not an Exchange**, or any **Pass** resets the streak to zero.
 
 Examples (6 = Exchange from a full rack; 5 = Draw from a 5-tile rack, not an Exchange):
 
@@ -155,10 +155,10 @@ On a short bag, **exchange-three** (fishing stall) and **double-pass** (empty-ma
 **After you pass:**
 
 - Pass resets any **Exchange** streak (see Draw)
-- The game ends only after **two consecutive explicit Passes** (one from each player)
+- The game ends only after **two consecutive explicit Passes** (one from each player) — **no leftover adjustment** (scores stay as played)
 - A Draw or Play between Passes breaks the streak
 
-**Important:** Draw OR Play is the normal turn. Pass is a stuck-only escape valve when the market has fewer than 2 tiles showing — not a stalling tactic. **Exchange stall** (three consecutive full-rack Exchanges while Draw is still legal) is the separate end condition for rack-fishing; it does not replace double-pass.
+**Important:** Draw OR Play is the normal turn. Pass is a stuck-only escape valve when the market has fewer than 2 tiles showing — not a stalling tactic. **Exchange stall** (three consecutive full-rack Exchanges while Draw is still legal) is the separate end condition for rack-fishing; it does not replace double-pass. Neither stall end applies leftover scoring.
 
 ## Game End
 
@@ -173,15 +173,28 @@ The game ends when:
 
 After any end, **highest score wins**; tie = draw.
 
-### +10 flat end bonus
+### Leftover tiles (locked — closer ends only)
 
-The **ending player** receives **+10** on these ends only:
+On **closer** ends only, apply Scrabble-style leftover scoring:
 
 1. Covering your own flag
-2. Capturing the opponent's flag the **second** time
-3. **Going out** (playing your last tile(s) when bag and market are both empty)
+2. Capturing the opponent's flag the **second** time (two steals)
+3. **Going out** (see below)
+4. A steal that ends because there is **no empty spare corner** (finishing capture — same as a closer)
 
-**One +10 per game**, not stacked — if two of these would fire on the same play (e.g. last tile covers own flag), award +10 once.
+When leftover applies:
+
+- The **ending player** adds the sum of the **opponent's** unplayed rack tile values to their score
+- The **opponent's** score is reduced by that same total
+- **Blanks count 0**
+- The ender's **own** remaining tiles are **not** subtracted (when you go out you have 0 anyway; when you capture with tiles left, you keep them unpenalized)
+
+**Do not** apply leftover on **stall** ends:
+
+- Three consecutive Exchanges
+- Two consecutive explicit Passes (stuck-only double-pass)
+
+Those still end the game; scores stay as they are (no rack transfer).
 
 ### Going out
 
@@ -191,16 +204,7 @@ You **go out** only when **all three** are true on your turn:
 - The **market is empty** (no tiles showing)
 - You **play your last tile(s)** this turn
 
-Then award **+10** to the ending player and end the game. If the bag or market is not both empty, playing your last tile is **not** going out — the game continues unless another end condition applies.
-
-### Leftover tiles (open question)
-
-**Leftover tiles in racks at game end are NOT locked in v0.1.** Peter has not yet chosen how to handle them. Options under consideration:
-
-- **Ignore leftovers** — final scores are totals as played, with no adjustment for unplayed tiles
-- **Scrabble-style** — e.g. winner/ender adds opponent remaining tile values, or each player subtracts their own unplayed tiles
-
-**Do not apply any leftover-tile rule until Peter chooses.** Implementers: leave a TODO hook; do not invent scoring for leftovers.
+Then apply **leftover scoring** and end the game. If the bag or market is not both empty, playing your last tile is **not** going out — the game continues unless another end condition applies.
 
 ## Large Layout (v0 — not default)
 
@@ -216,7 +220,7 @@ An **11×11** board remains documented for lab / large-layout play but is **not*
 | Word length at load | 2–9 | 2–11 |
 | Opening deal | P1=2, P2=3 | P1=2, P2=3 |
 
-Same flags, +10 ends, exchange-three (full rack = 6 or 7 respectively), double-pass, and going-out rules apply to both layouts.
+Same flags, leftover on closer ends, exchange-three (full rack = 6 or 7 respectively), double-pass, and going-out rules apply to both layouts.
 
 ## 3–4 Player Note (Not v0.1)
 
@@ -235,7 +239,6 @@ There are only four true corners. Two-player uses a diagonal pair so two spares 
 - Accounts
 - Push/email notifications
 - Matchmaking
-- Locked leftover-tile scoring (open question — see Game End)
 
 ## Example Start
 
@@ -249,7 +252,7 @@ Solo vs Hunter. The game randomly made **you P1**. Banner: **“You play first.�
 
 **Turn 4 (Hunter):** Play a word that covers your flag at (1,1). That word scores triple-word. Your flag is removed; you get a replacement on a random empty spare corner.
 
-**Later:** If Hunter steals your replacement too, the game ends on that triple-word (+10 to Hunter). Or you might capture your own flag for triple-word and an immediate end (+10) — win only if you're ahead after the bonus.
+**Later:** If Hunter steals your replacement too, the game ends on that triple-word and leftover scoring transfers the value of your unplayed tiles. Or you might capture your own flag for triple-word and an immediate end — win only if you're ahead after leftover adjustment.
 
 In a rematch the game might assign Hunter as P1 instead; the banner would read **“Hunter plays first”** and Hunter would start with 2 tiles while you start with 3.
 

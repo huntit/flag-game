@@ -2,7 +2,7 @@
 
 **Working title** — Private prototype repository
 
-A two-player word game combining crossword mechanics with a five-tile market (three face-up, two face-down) and per-player corner flags. **Phone v0.1 (default):** 9×9 board, centre star at (5,5), rack max 6, 69-tile bag (~⅔ Words With Friends English). Player 1 starts with two tiles from the bag; Player 2 starts with three (second-player compensation — unchanged on the smaller rack). Each new game randomly assigns who is P1. Players build a rack by drawing exactly two tiles from the market, then spend those tiles to form words on the grid. Each player has a coloured flag on a true corner; covering flags applies triple-word multipliers and can end the game (+10 flat bonus to the ender, at most once). Highest score wins.
+A two-player word game combining crossword mechanics with a five-tile market (three face-up, two face-down) and per-player corner flags. **Phone v0.1 (default):** 9×9 board, centre star at (5,5), rack max 6, 69-tile bag (~⅔ Words With Friends English). Player 1 starts with two tiles from the bag; Player 2 starts with three (second-player compensation — unchanged on the smaller rack). Each new game randomly assigns who is P1. Players build a rack by drawing exactly two tiles from the market, then spend those tiles to form words on the grid. Each player has a coloured flag on a true corner; covering flags applies triple-word multipliers and can end the game. On closer ends, Scrabble-style leftover scoring transfers the opponent's unplayed rack value. Highest score wins.
 
 An **11×11 large layout (v0)** remains documented for lab use — not the default playtest Ada ships now. See [prototype-spec.md](docs/prototype-spec.md#32-large-layout-v0-not-default).
 
@@ -41,7 +41,7 @@ Flag is a distinct game, not a variant of commercial crossword products:
 - **9×9 board with no premium squares** — Odd size so there is a centre cell (5,5). Simple grid, no double/triple letter or word scores on the board. (11×11 large layout documented separately.)
 - **Opening tiles from the bag** — P1 starts with 2 tiles; P2 starts with 3 (second-player compensation). First action may be Draw or Play. Who is P1 is randomised each new game (remote: when the second seat sits)
 - **Draw XOR Play** — Draw exactly 2 tiles from a 5-tile market (3 face-up + 2 face-down) OR play tiles to score; playing does not refill your rack
-- **Per-player corner flags** — Each player has a flag on a true corner; any cover of a flag cell scores triple-word; own-flag capture ends the game; opponent steals can end on a second steal; +10 to the ender (once per game)
+- **Per-player corner flags** — Each player has a flag on a true corner; any cover of a flag cell scores triple-word; own-flag capture ends the game; opponent steals can end on a second steal; leftover scoring on closer ends transfers opponent rack value
 - **Public rack count, hidden letters** — Opponent (and AI) rack letters stay hidden; tile count is public as 0–6 facedown backs with empty slots plus a readable count number
 
 The crossword-on-a-grid mechanic is shared with games like Scrabble and Words With Friends, but Flag's five-tile market, asymmetric opening deal (P1=2, P2=3), random first player, per-player flag scoring, and custom tile set make it a different game.
