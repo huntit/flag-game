@@ -9,8 +9,8 @@ export async function loadTileData(): Promise<TileData> {
 }
 
 /**
- * The full word list ships as-is; Dictionary keeps only the lengths that fit an
- * 11x11 board (2-11). No network lookup happens during play.
+ * The full word list ships as-is; Dictionary keeps only the lengths that fit
+ * a 9×9 board (2–9). No network lookup happens during play.
  */
 export async function loadDictionary(): Promise<Dictionary> {
   const base = import.meta.env.BASE_URL || '/';

@@ -36,7 +36,7 @@ for (const mode of modes) {
     opponentCount: document.querySelector('.opponent-count')?.textContent.trim() ?? null,
     opponentLetters: [...document.querySelectorAll('.opponent-inner .tile-letter')].length,
     myTiles: document.querySelectorAll('.rack-row .tray-tile').length,
-    // Six slots: four face up, two face down.
+    // Five slots: three face up, two face down.
     marketTiles: document.querySelectorAll('.market-row .tray-tile').length,
     marketFaceUp: document.querySelectorAll('.market-tile:not(.is-facedown)').length,
     marketFaceDown: document.querySelectorAll('.market-tile.is-facedown').length,
@@ -63,10 +63,10 @@ for (const mode of modes) {
   if (state.opponent !== mode.opponent) problems.push(`${mode.opponent}: opponent shown as ${state.opponent}`);
   if (state.opponentLetters !== 0) problems.push(`${mode.opponent}: opponent letters rendered`);
   if (state.myTiles < 2 || state.myTiles > 3) problems.push(`${mode.opponent}: opening rack should be 2–3, got ${state.myTiles}`);
-  if (state.marketTiles !== 6) problems.push(`${mode.opponent}: market should be 6, got ${state.marketTiles}`);
-  if (state.marketFaceUp !== 4) problems.push(`${mode.opponent}: 4 face-up expected, got ${state.marketFaceUp}`);
+  if (state.marketTiles !== 5) problems.push(`${mode.opponent}: market should be 5, got ${state.marketTiles}`);
+  if (state.marketFaceUp !== 3) problems.push(`${mode.opponent}: 3 face-up expected, got ${state.marketFaceUp}`);
   if (state.marketFaceDown !== 2) problems.push(`${mode.opponent}: 2 face-down expected, got ${state.marketFaceDown}`);
-  if (state.boardCells !== 121) problems.push(`${mode.opponent}: board should be 11x11=121 cells, got ${state.boardCells}`);
+  if (state.boardCells !== 81) problems.push(`${mode.opponent}: board should be 9x9=81 cells, got ${state.boardCells}`);
   if (!state.centreStar) problems.push(`${mode.opponent}: centre star not shown on an empty board`);
 
   const byLabel = Object.fromEntries(state.buttons.map(b => [b.label, b.disabled]));

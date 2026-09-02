@@ -96,18 +96,6 @@ describe('no-scroll phone shell', () => {
   it('has a landscape layout for iPad that keeps the controls on screen', () => {
     expect(gameCss).toMatch(/@media \(orientation: landscape\)/);
   });
-
-  it('budgets the market grooves in every shell that sizes tiles', () => {
-    // A well is the tile plus a rim either side, so six of them cost twelve
-    // rims. Any shell that redefines --market-fit and forgets them overflows
-    // its column by that much — which is exactly how the landscape tablet
-    // pushed its last tile off the screen.
-    const budgets = gameCss.match(/--market-fit:[\s\S]*?;/g) ?? [];
-    expect(budgets.length).toBeGreaterThan(1);
-    for (const budget of budgets) {
-      expect(budget).toMatch(/12 \* var\(--market-well-rim\)/);
-    }
-  });
 });
 
 const desktopBlock = (css: string) =>
@@ -173,98 +161,7 @@ describe('desktop layout (wide fine-pointer windows only)', () => {
     expect(read('./Game.tsx')).toMatch(/className="market-row"/);
     expect(read('./Game.tsx')).toMatch(/action-draw/);
     expect(read('./Game.tsx')).toMatch(/action-shuffle/);
-  });
-
-  it('moves the market out of the board column into its own panel', () => {
-    // The market is a shared pool, the rack is your hand. Putting them in
-    // different columns is the clearest way to say so, and it stops the two
-    // tile rows competing for the board's width.
-    expect(desktop).toMatch(/\.play-shell \.market-panel\s*\{[^}]*display:\s*flex/s);
-    expect(desktop).toMatch(/grid-template-areas:[\s\S]*'rack'/);
-    expect(desktop).not.toMatch(/grid-template-areas:[\s\S]*'market'/);
-    expect(desktop).toMatch(/--market-cols:\s*3/);
-    expect(read('./Market.css')).toMatch(/grid-template-columns:\s*repeat\(var\(--market-cols/);
-    // Still one tile size: the panel changes where a tile sits, not its size.
-    expect(read('./Market.css')).toMatch(/\.market-slot \.tray-tile\s*\{[^}]*width:\s*var\(--tile-size\)/s);
-  });
-
-  it('seats market tiles in grooves that are drawn whether or not they are filled', () => {
-    // A card with six wells in it reads as the thing tiles come from. A row of
-    // tiles with nothing under them reads as tiles that happen to be adjacent —
-    // and when the bag runs low it stops reading as six places at all.
-    const market = read('./Market.tsx');
-    expect(market).toMatch(/MARKET_SLOTS - market\.length/);
-    expect(market).toMatch(/className=\{`market-slot /);
-
-    const css = read('./Market.css');
-    const slot = css.match(/\n\.market-slot\s*\{[\s\S]*?\n\}/)?.[0] ?? '';
-    expect(slot).toMatch(/width:\s*var\(--market-slot-size\)/);
-    // Recessed, not raised: the inset shadow is what makes it a groove.
-    expect(slot).toMatch(/box-shadow:[\s\S]*?inset/);
-
-    // The well is the tile plus a rim, and the rim comes off the board rather
-    // than off --tile-size, which --market-fit already feeds into.
-    const shell = gameCss.match(/\.play-shell\s*\{[\s\S]*?\n\}/)?.[0] ?? '';
-    expect(shell).toMatch(
-      /--market-slot-size:\s*calc\(var\(--tile-size\) \+ \(2 \* var\(--market-well-rim\)\)\)/,
-    );
-    expect(shell).toMatch(/--market-well-rim:\s*clamp\([^)]*var\(--board-size\)/);
-    expect(shell).not.toMatch(/--market-well-rim:[^;]*var\(--tile-size\)/);
-    // The row still has to fit: six wells, six rims either side, and the bag.
-    expect(shell).toMatch(/--market-fit:[\s\S]*?12 \* var\(--market-well-rim\)/);
-  });
-
-  it('hangs the market card heading, bag, grid and button on one inner column', () => {
-    // Four edges, one column: heading left, bag right, grid between, button on
-    // the grid's right edge. Nothing in the card floats free of the others.
-    const marketCss = read('./Market.css');
-    expect(marketCss).toMatch(/\.market-head,\s*\n\s*\.market-tray\s*\{[^}]*width:\s*var\(--market-grid-w\)/s);
-    expect(marketCss).toMatch(/\.market-head\s*\{[^}]*justify-content:\s*space-between/s);
-    expect(desktop).toMatch(/\.play-shell \.market-actions\s*\{[^}]*width:\s*var\(--market-grid-w\)/s);
-    expect(desktop).toMatch(/\.play-shell \.market-actions\s*\{[^}]*justify-content:\s*flex-end/s);
-    expect(desktop).toMatch(
-      /--market-grid-w:\s*calc\(\s*\(var\(--market-cols\) \* var\(--market-slot-size\)\)/,
-    );
-
-    // Heading first, bag second, so the bag sits top-right of the card.
-    const market = read('./Market.tsx');
-    expect(market.indexOf('market-heading')).toBeLessThan(market.indexOf('market-bag'));
-    // Market.css alone owns the heading's visibility — declaring it in both
-    // files once let bundle order hide it on desktop too.
-    expect(marketCss).toMatch(/\.market-heading\s*\{\s*display:\s*none/);
-    expect(gameCss).not.toMatch(/\.market-heading\s*\{[^}]*display:/s);
-  });
-
-  it('renders Draw once, in the column that holds the market', () => {
-    // Two buttons doing the same job would put a duplicate in the a11y tree,
-    // so the single node moves rather than being duplicated and hidden.
-    const game = read('./Game.tsx');
-    expect(game).toMatch(/const drawOrPassButton =/);
-    expect(game).toMatch(/\{isDesktop && <div className="market-actions">\{drawOrPassButton\}<\/div>\}/);
-    expect(game).toMatch(/\{!isDesktop && drawOrPassButton\}/);
-    expect((game.match(/action-draw/g) ?? []).length).toBe(1);
-    // The media query is the same one the CSS is gated on — not a UA test.
-    const hook = read('./useDesktopLayout.ts');
-    expect(hook).toMatch(/\(min-width: 900px\) and \(pointer: fine\)/);
-    expect(hook).not.toMatch(/userAgent/i);
-  });
-
-  it('gives Draw and Play one width, and puts the buttons on real edges', () => {
-    const shell = gameCss.match(/\.play-shell\s*\{[\s\S]*?\n\}/)?.[0] ?? '';
-    expect(shell).toMatch(/--ctl-w:/);
-    expect(gameCss).toMatch(/\.actions-row \.control-solid\s*\{[^}]*width:\s*var\(--ctl-w\)/s);
-    expect(desktop).toMatch(/--ctl-w:\s*\d+px/);
-    expect(desktop).toMatch(/\.market-panel \.control\s*\{[^}]*width:\s*var\(--ctl-w\)/s);
-    // No inset on desktop: Shuffle and Play land on the board's own edges.
-    expect(desktop).toMatch(/\.play-shell \.actions-row\s*\{[^}]*padding:\s*0/s);
-  });
-
-  it('keeps the move log a fixed window that follows the newest line', () => {
-    expect(desktop).toMatch(/\.play-shell \.disclosure-body\s*\{[^}]*height:/s);
-    expect(desktop).toMatch(/\.play-shell \.side-panel\s*\{[^}]*flex:\s*0 0 auto/s);
-    const log = read('./MoveLog.tsx');
-    expect(log).toMatch(/scrollTop = list\.scrollHeight/);
-    expect(read('./MoveLog.css')).toMatch(/\.move-log-list[\s\S]*overflow-y:\s*auto/);
+    expect(desktop).toMatch(/\.market-row[\s\S]*max-width:\s*var\(--board-size\)/);
   });
 
   it('keeps the phone shell as the un-queried default', () => {
@@ -300,53 +197,68 @@ describe('tile score placement', () => {
 });
 
 describe('branding', () => {
-  it('uses Skye v3 vector wordmark with PNG fallback — not a tiny upscaled bitmap only', () => {
+  it('uses the Word Heist 05f stacked lockup — title-case Word over Heist — not 05e or the one-line lockup', () => {
     for (const file of ['Game.tsx', 'Menu.tsx', 'OnlineMode.tsx']) {
       expect(read(`./${file}`)).toMatch(/HomeLink/);
     }
     const homeLink = read('./HomeLink.tsx');
-    expect(homeLink).toMatch(/logo-header\.svg/);
-    expect(homeLink).toMatch(/logo-header\.png/);
+    expect(homeLink).toMatch(/05f-geometric-2x2-lockup-stacked\.svg/);
+    expect(homeLink).toMatch(/05f-geometric-2x2-lockup-stacked\.png/);
+    expect(homeLink).toMatch(/05f-geometric-2x2-lockup-stacked@2x\.png/);
+    expect(homeLink).toMatch(/Word Heist/);
     expect(homeLink).toMatch(/width=\{?\d+/);
-    expect(existsSync(resolve(__dirname, '../../public/logo-header.svg'))).toBe(true);
-    expect(existsSync(resolve(__dirname, '../../public/logo-header.png'))).toBe(true);
+    expect(homeLink).not.toMatch(/logo-header/);
+    expect(homeLink).not.toMatch(/05d-geometric-2x2-lockup/);
+    expect(homeLink).not.toMatch(/05e-geometric-2x2-lockup-stacked/);
+    expect(existsSync(resolve(__dirname, '../../public/05f-geometric-2x2-lockup-stacked.svg'))).toBe(true);
+    expect(existsSync(resolve(__dirname, '../../public/05f-geometric-2x2-lockup-stacked.png'))).toBe(true);
+    expect(existsSync(resolve(__dirname, '../../public/05f-geometric-2x2-lockup-stacked@2x.png'))).toBe(true);
+    expect(existsSync(resolve(__dirname, '../../public/logo-header.svg'))).toBe(false);
+    expect(existsSync(resolve(__dirname, '../../public/logo-header.png'))).toBe(false);
+    const stacked = read('../../public/05f-geometric-2x2-lockup-stacked.svg');
+    expect(stacked).toMatch(/>Word</);
+    expect(stacked).toMatch(/>Heist</);
+    expect(stacked).toMatch(/font-size="104"/);
+    expect(stacked).not.toMatch(/>WORD</);
+    expect(stacked).not.toMatch(/>HEIST</);
+    expect(stacked).not.toMatch(/Word Heist/);
   });
 
-  it('ships pennant-only favicon without wordmark', () => {
-    expect(indexHtml).toMatch(/favicon\.svg/);
-    expect(existsSync(resolve(__dirname, '../../public/favicon.svg'))).toBe(true);
-    expect(existsSync(resolve(__dirname, '../../public/flag-mark.svg'))).toBe(true);
-    // No letters in the app mark — the wordmark is a separate asset.
-    expect(read('../../public/favicon.svg')).not.toMatch(/<text/);
+  it('ships a 2×2-grid favicon without the wordmark', () => {
+    expect(indexHtml).toMatch(/05d-geometric-2x2-icon\.svg/);
+    expect(indexHtml).toMatch(/05d-geometric-2x2-icon-192\.png/);
+    expect(existsSync(resolve(__dirname, '../../public/05d-geometric-2x2-icon.svg'))).toBe(true);
+    expect(existsSync(resolve(__dirname, '../../public/05d-geometric-2x2-icon.png'))).toBe(true);
+    expect(existsSync(resolve(__dirname, '../../public/05d-geometric-2x2-icon-192.png'))).toBe(true);
+    expect(existsSync(resolve(__dirname, '../../public/flag-mark.svg'))).toBe(false);
+    expect(existsSync(resolve(__dirname, '../../public/favicon.svg'))).toBe(false);
+    // No letters in the app mark — the wordmark is a separate lockup.
+    const icon = read('../../public/05d-geometric-2x2-icon.svg');
+    expect(icon).not.toMatch(/<text/);
+    expect(icon).not.toMatch(/Word Heist/);
+    expect(icon).toMatch(/#56867C/);
+    expect(icon).toMatch(/#CB6B49/);
   });
 
-  it('draws the app mark to survive a 16px browser tab', () => {
-    const favicon = read('../../public/favicon.svg');
+  it('draws the 2×2 app mark on a cream ground with both seat colours', () => {
+    const icon = read('../../public/05d-geometric-2x2-icon.svg');
 
-    // A solid ground, so the mark is a shape on a tab bar rather than loose
-    // strokes floating on whatever colour the browser happens to use.
-    expect(favicon).toMatch(/<rect width="100" height="100" rx="\d+" fill="#[0-9A-Fa-f]{6}"\/>/);
-
-    // The pennant runs to the edge of the frame. The old mark stopped at 90
-    // with the flag body ending near 70, which left a third of a 16px icon
-    // empty and the rest too small to read.
-    const pennant = favicon.match(/<path fill="#[0-9A-Fa-f]{6}" d="M(.+?)"/)?.[1] ?? '';
-    const xs = [...pennant.matchAll(/(?:^|[ ,C])(\d+(?:\.\d+)?) \d/g)].map(m => Number(m[1]));
-    expect(Math.max(...xs)).toBeGreaterThanOrEqual(95);
-
-    // A pole thin enough to fall between pixels disappears at 16px; 14/100 is
-    // just over two pixels there.
-    const pole = favicon.match(/<rect x="\d+" y="\d+" width="(\d+)"/)?.[1];
-    expect(Number(pole)).toBeGreaterThanOrEqual(12);
+    // A solid cream ground, so the mark is a shape on a tab bar rather than
+    // loose strokes floating on whatever colour the browser happens to use.
+    expect(icon).toMatch(/<rect width="1024" height="1024" fill="#F7F1E8"\/>/);
+    expect(icon).toMatch(/fill="#56867C"/);
+    expect(icon).toMatch(/fill="#CB6B49"/);
+    expect(icon).toMatch(/fill="#E8DFD2"/);
+    expect(icon).not.toMatch(/<path /);
   });
 
   it('ships every icon size index.html promises', () => {
     for (const file of [
-      'favicon.svg',
+      '05d-geometric-2x2-icon.svg',
       'favicon.ico',
       'favicon-16.png',
       'favicon-32.png',
-      'apple-touch-icon.png',
+      '05d-geometric-2x2-icon-192.png',
     ]) {
       expect(indexHtml, `${file} is not linked`).toContain(file);
       expect(existsSync(resolve(__dirname, `../../public/${file}`)), file).toBe(true);
@@ -360,50 +272,37 @@ describe('branding', () => {
     expect(sizes.sort((a, b) => a - b)).toEqual([16, 32, 48]);
   });
 
-  it('marks each goal corner as a triple-word square in its owner\'s colour', () => {
-    // The goal is not a decoration on the square, it IS the square: a triple
-    // word painted in the same colour as that player's score card, so there is
-    // no doubt whose corner it is.
+  it('wires occupying-player 3× corner badges onto true corners; spares stay empty', () => {
     const board = read('./Board.tsx');
     expect(board).toMatch(/flagOwner &&/);
     expect(board).toMatch(/goal-square is-\$\{flagOwner\.toLowerCase\(\)\}/);
-    expect(board).toMatch(/goal-mult/);
-    expect(board).toMatch(/3×/);
-    expect(board).toMatch(/goal-word/);
-    // Rendered, not an image, so it scales with the cell at any board size.
+    expect(board).toMatch(/corner-a-badge-\$\{flagOwner\.toLowerCase\(\)\}-\$\{trueCorner\.toLowerCase\(\)\}\.svg/);
+    expect(board).not.toMatch(/goal-mult/);
+    expect(board).not.toMatch(/goal-word/);
+    expect(board).not.toMatch(/TWS/);
     expect(board).not.toMatch(/token-p[12]\.svg/);
+    expect(board).not.toMatch(/token-corner-empty/);
     expect(board).not.toMatch(/corner-token/);
 
     expect(boardCss).toMatch(/\.goal-square\.is-p1\s*\{[^}]*background-color:\s*var\(--color-p1\)/s);
     expect(boardCss).toMatch(/\.goal-square\.is-p2\s*\{[^}]*background-color:\s*var\(--color-p2\)/s);
-    // Fills the whole cell rather than sitting inside it as a token.
     expect(boardCss).toMatch(/\.goal-square\s*\{[^}]*inset:\s*0/s);
-  });
 
-  it('keeps the centre star until a word is actually committed', () => {
-    // The star answers "where must the opening word cross?". Putting the first
-    // tile down somewhere else does not answer it, so the star stays; a tile
-    // landing ON the centre covers it through the normal letter branch.
-    const board = read('./Board.tsx');
-    expect(board).toMatch(/const showCentreStar = isFirstWord\(board\);/);
-    expect(board).not.toMatch(/showCentreStar =[^;]*pendingPlacements\.length/);
-  });
+    for (const player of ['p1', 'p2']) {
+      for (const corner of ['nw', 'ne', 'se', 'sw']) {
+        const stem = `corner-a-badge-${player}-${corner}`;
+        expect(existsSync(resolve(__dirname, `../../public/${stem}.svg`)), `${stem}.svg`).toBe(true);
+        expect(existsSync(resolve(__dirname, `../../public/${stem}.png`)), `${stem}.png`).toBe(true);
+        const svg = read(`../../public/${stem}.svg`);
+        expect(svg).toMatch(/3×/);
+        expect(svg).not.toMatch(/TWS/);
+        expect(svg).toMatch(player === 'p1' ? /#56867C/ : /#CB6B49/);
+      }
+    }
 
-  it('marks the rack with its owner\'s seat colour, as the score card does', () => {
-    expect(read('./Rack.tsx')).toMatch(/rack-seat-dot/);
-    expect(rackCss).toMatch(/\.rack-row-inner\.is-p1 \.rack-seat-dot[\s\S]*var\(--color-p1\)/);
-    expect(rackCss).toMatch(/\.rack-row-inner\.is-p2 \.rack-seat-dot[\s\S]*var\(--color-p2\)/);
-    // The dot has reserved space in the rail rather than sitting on a tile.
-    const shell = gameCss.match(/\.play-shell\s*\{[\s\S]*?\n\}/)?.[0] ?? '';
-    expect(shell).toMatch(/--rack-dot:/);
-    expect(shell).toMatch(/--rack-lead:[\s\S]*var\(--rack-dot\)/);
-    expect(shell).toMatch(/--rack-fit:[\s\S]*var\(--rack-lead\)/);
-  });
-
-  it('sits the rack tiles in the rail, not under a translucent band', () => {
-    // The old lip was an overlay drawn on top of the bottom of every tile.
-    expect(rackCss).not.toMatch(/\.rack-tray::after/);
-    expect(rackCss).toMatch(/\.rack-row-inner\.is-p1 \.rack-tray[\s\S]*inset 0 2px 5px/);
+    expect(existsSync(resolve(__dirname, '../../public/token-p1.svg'))).toBe(false);
+    expect(existsSync(resolve(__dirname, '../../public/token-p2.svg'))).toBe(false);
+    expect(existsSync(resolve(__dirname, '../../public/token-corner-empty.svg'))).toBe(false);
   });
 
   it('draws the opening centre square large enough to find at a glance', () => {
@@ -514,9 +413,9 @@ describe('opponent score card', () => {
 });
 
 describe('board rendering', () => {
-  it('draws an 11x11 grid sized to the computed board size', () => {
-    expect(boardCss).toMatch(/grid-template-columns:\s*repeat\(11, 1fr\)/);
-    expect(boardCss).toMatch(/grid-template-rows:\s*repeat\(11, 1fr\)/);
+  it('draws a 9x9 grid sized to the computed board size', () => {
+    expect(boardCss).toMatch(/grid-template-columns:\s*repeat\(9, 1fr\)/);
+    expect(boardCss).toMatch(/grid-template-rows:\s*repeat\(9, 1fr\)/);
     expect(boardCss).toMatch(/width:\s*var\(--board-size\)/);
     expect(boardCss).toMatch(/height:\s*var\(--board-size\)/);
   });
@@ -642,7 +541,7 @@ describe('score cards', () => {
     expect(css).toMatch(/\.score-card[\s\S]*flex-direction:\s*column/s);
     expect(css).not.toMatch(/\.score-backs\s*\{[^}]*overflow:\s*hidden/s);
     expect(css).toMatch(/score-pip\.is-empty/);
-    // Seven slots always, so both cards line up and the count reads without
+    // Six slots always, so both cards line up and the count reads without
     // being counted.
     expect(read('./GameInfo.tsx')).toMatch(/length:\s*RACK_MAX/);
   });

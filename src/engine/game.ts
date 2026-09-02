@@ -179,6 +179,10 @@ function dealMarket(bag: Tile[]): MarketSlot[] {
   return slots;
 }
 
+export function rackLetterValueSum(rack: Tile[]): number {
+  return rack.reduce((sum, t) => sum + (t.isBlank ? 0 : t.value), 0);
+}
+
 export function marketShowingCount(market: MarketSlot[]): number {
   return market.filter(slot => slot.tile !== null).length;
 }

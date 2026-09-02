@@ -9,7 +9,8 @@ Flag v0 will **NOT use a third-party crossword publisher's tile bag, letter valu
 Instead, Flag uses:
 
 - A **custom word list** (Peter's ENABLE-based list with additions and exclusions) ✅
-- **Words With Friends English bag** (104 tiles, 2 blanks) paired with **Word Eagle's WWF letter values** ✅
+- **Phone v0.1 bag:** 69 tiles (~⅔ Words With Friends English, 1 blank) paired with **Word Eagle's WWF letter values** ✅
+  - Large 11×11 layout keeps the full 104-tile WWF bag as a lab reference only
   - **NOT** NYT Crossplay bag (100 tiles / 3 blanks / different values)
   - **NOT** Scrabble bag (100 tiles)
 
@@ -19,7 +20,7 @@ Instead, Flag uses:
 
 - Text file, one word per line
 - Uppercase A–Z only
-- Length 2–11 playable on v0's 11×11 board
+- Length 2–9 playable on phone v0.1's 9×9 board (2–11 on the lab 11×11 layout)
 - No network lookup at runtime
 
 **Path:** `data/words.txt` ✅
@@ -30,10 +31,11 @@ Instead, Flag uses:
 - Total words: 175,030
 - Unique words: 175,030
 - Length range: 2–28 characters
+- Playable on 9×9 board (length 2–9): loaded at runtime from the full file
 - Playable on 11×11 board (length 2–11): 143,261 words
 - Longer words (12+): 31,769 words
 
-The full source file is preserved in `data/words.txt`. Do not shrink the file. For v0 (11×11 board), Ada should accept words of length 2–11 at load for gameplay validation. Longer words stay in the file for potential future use.
+The full source file is preserved in `data/words.txt`. Do not shrink the file. Phone v0.1 accepts words of length 2–9 at load. For large layout v0 (11×11), accept 2–11. Longer words stay in the file for potential future use.
 
 ## Tile Set
 
@@ -41,11 +43,11 @@ The full source file is preserved in `data/words.txt`. Do not shrink the file. F
 
 **Source:**
 - **Letter values:** Word Eagle TILE_SETS.wwf (huntit/web-apps/wordgame/index.html lines ~997–1002)
-- **Bag counts:** Published Words With Friends English distribution (104 tiles, 2 blanks)
+- **Bag counts:** Phone v0.1 ~⅔ WWF English (69 tiles, 1 blank). Large layout keeps 104 / 2 blanks.
 
-### Complete WWF English Tile Set ✅
+### Complete WWF English Tile Set (large layout lab reference)
 
-**104 tiles total** (102 letter tiles + 2 blanks):
+**104 tiles total** (102 letter tiles + 2 blanks) — not the phone default:
 
 | Letter | Count | Value |
 |--------|-------|-------|
@@ -89,13 +91,13 @@ A9 B2 C2 D5 E13 F2 G3 H4 I8 J1 K1 L4 M2 N5 O8 P2 Q1 R6 S5 T7 U4 V2 W2 X1 Y2 Z1 B
 A1 B4 C4 D2 E1 F4 G3 H3 I1 J10 K5 L2 M4 N2 O1 P4 Q10 R1 S1 T1 U2 V5 W4 X8 Y3 Z10
 ```
 
-**Blanks:** Score 0 when played. Blanks may appear in face-up or face-down market slots and are taken as part of a normal Draw (exactly 2 tiles from the 6 showing).
+**Blanks:** Score 0 when played. Blanks may appear in face-up or face-down market slots and are taken as part of a normal Draw (exactly 2 tiles from the 5 showing).
 
 ### Important Notes
 
 - **NOT NYT Crossplay bag** (100 tiles / 3 blanks / different values)
 - **NOT Scrabble bag** (100 tiles / different counts)
-- Flag uses the **WWF English bag (104 tiles)** paired with **Word Eagle's WWF letter values**
+- Flag phone v0.1 uses the **69-tile bag** in `data/tiles.json` with **Word Eagle's WWF letter values**. The 104-tile table above is the large-layout lab reference.
 
 ## UI Notes (for Ada)
 
@@ -116,6 +118,7 @@ Peter's other game [Word Eagle](https://www.huntit.com.au/apps/wordgame/) ([sour
 - ✅ WWF letter values from TILE_SETS.wwf (index.html lines ~997–1002) recorded in `data/tiles.json`
 
 **From published WWF English distribution:**
-- ✅ Bag counts (104 tiles, 2 blanks) recorded in `data/tiles.json`
+- ✅ Phone v0.1 bag counts (69 tiles, 1 blank) recorded in `data/tiles.json`
+- ✅ Large-layout 104-tile WWF counts kept as lab reference in this file
 
 **Ada:** Do NOT vendor Word Eagle application code. The word list and complete tile set (counts + values) are now available as data files in this repository.

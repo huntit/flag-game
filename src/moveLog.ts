@@ -43,12 +43,12 @@ function captureSuffix(state: GameState): string {
   }
   if (play.capturesOpponentFlag) {
     if (state.endReason === 'second_steal') {
-      return ' — stole opponent flag (DWS), game over';
+      return ' — stole opponent flag (TWS), game over';
     }
     if (state.endReason === 'no_spare') {
-      return ' — stole opponent flag (DWS), no spare corner';
+      return ' — stole opponent flag (TWS), no spare corner';
     }
-    return ' — stole opponent flag (DWS), flag replaced';
+    return ' — stole opponent flag (TWS), flag replaced';
   }
   return '';
 }
@@ -57,8 +57,8 @@ function drawSuffix(state: GameState): string {
   if (state.endReason === 'exchange_three') {
     return ' — three consecutive Exchanges, game over';
   }
-  if (state.endReason === 'bag_empty') {
-    return ' — bag empty, game over';
+  if (state.endReason === 'going_out') {
+    return ' — went out, game over';
   }
   return '';
 }

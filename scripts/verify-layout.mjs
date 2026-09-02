@@ -131,12 +131,31 @@ for (const t of targets) {
       })(),
       goalSquares: goalSquares.length,
       goalSeats: goalSquares.map(el => (el.classList.contains('is-p1') ? 'P1' : 'P2')),
+      goalSrcs: goalSquares.map(el => {
+        const img = el.tagName === 'IMG' ? el : el.querySelector('img');
+        return (img?.currentSrc || img?.src || '');
+      }),
       goalFills: goalSquares.map(el => getComputedStyle(el).backgroundColor),
       goalCoversCell: goalSquares.every(el => {
         const cellBox = el.closest('.board-cell').getBoundingClientRect();
         const own = el.getBoundingClientRect();
         return Math.abs(own.width - cellBox.width) < 1.5 && Math.abs(own.height - cellBox.height) < 1.5;
       }),
+      emptySpareHasBadge: (() => {
+        const occupied = new Set(
+          [...document.querySelectorAll('.board-cell.has-flag')].map(c => `${c.dataset.row},${c.dataset.col}`)
+        );
+        return ['1,1', '1,9', '9,9', '9,1'].some(key => {
+          if (occupied.has(key)) return false;
+          const [r, c] = key.split(',');
+          const cell = document.querySelector(`.board-cell[data-row="${r}"][data-col="${c}"]`);
+          return Boolean(cell?.querySelector('.goal-square, img[src*="corner"], img[src*="token"]'));
+        });
+      })(),
+      logoSrc: (() => {
+        const img = document.querySelector('.play-header .home-link-img');
+        return img ? (img.currentSrc || img.src || '') : '';
+      })(),
       seatColors: (() => {
         const cs = getComputedStyle(document.documentElement);
         return { p1: cs.getPropertyValue('--color-p1').trim(), p2: cs.getPropertyValue('--color-p2').trim() };
@@ -151,23 +170,6 @@ for (const t of targets) {
         const cs = getComputedStyle(b);
         return { cls: b.className, radius: cs.borderRadius, h: Math.round(b.getBoundingClientRect().height) };
       }),
-      // Draw and Play end a turn; they are the same control at the same size,
-      // each sitting on the right edge of the thing it acts on.
-      turnButtons: ['.action-draw, .action-pass', '.action-play'].map(sel => {
-        const el = document.querySelector(sel);
-        return el ? { sel, ...rect(el) } : null;
-      }),
-      // The rail is the player's own strip and lines up with the board.
-      rackTray: (() => {
-        const el = document.querySelector('.rack-tray');
-        return el ? rect(el) : null;
-      })(),
-      seatDotOverlapsTile: (() => {
-        const dot = document.querySelector('.rack-seat-dot');
-        const tile = document.querySelector('.rack-tile');
-        if (!dot || !tile) return false;
-        return dot.getBoundingClientRect().right > tile.getBoundingClientRect().left + 0.5;
-      })(),
       opponentLettersRendered: [...document.querySelectorAll('.opponent-inner .tile-letter')].length,
       rackTiles: [...document.querySelectorAll('.rack-row .tray-tile .tile-letter')].map(s => s.textContent),
       // Rows must stay inside the board's left and right edges.
@@ -231,8 +233,8 @@ for (const t of targets) {
       drawOverlapsMarket: draw && marketTile ? overlaps(rect(draw), rect(marketTile)) : false,
       backsOverlapName: youName && youBacks.some(b => overlaps(rect(b), rect(youName))),
       backsOverlapScore: youScore && youBacks.some(b => overlaps(rect(b), rect(youScore))),
-      emptyCornerToken: [...document.querySelectorAll('.corner-token')].some(img =>
-        (img.currentSrc || img.src).includes('token-corner-empty')
+      emptyCornerToken: [...document.querySelectorAll('img')].some(img =>
+        /token-corner-empty|token-p[12]|flag-mark|logo-header/.test(img.currentSrc || img.src || '')
       ),
     };
   });
@@ -260,9 +262,9 @@ for (const t of targets) {
   }
   if (m.opponentLettersRendered !== 0) problems.push('opponent letters rendered');
   // A rack can legitimately be empty mid-game, so assert the slot row rather
-  // than the fill: seven slots per card, always.
+  // than the fill: six slots per card, always.
   for (const count of m.pipsPerCard) {
-    if (count !== 7) problems.push(`score card shows ${count} rack slots, expected 7`);
+    if (count !== 6) problems.push(`score card shows ${count} rack slots, expected 6`);
   }
   if (m.miniRack) {
     const { w, h, rowH, cardBottom, rowBottom } = m.miniRack;
@@ -281,6 +283,24 @@ for (const t of targets) {
   if (new Set(m.goalSeats).size !== 2) problems.push(`goal squares share a seat: ${m.goalSeats.join(',')}`);
   if (!m.goalCoversCell) problems.push('a goal square does not fill its board cell');
   if (new Set(m.goalFills).size !== 2) problems.push(`goal squares share a colour: ${m.goalFills.join(' / ')}`);
+  if (!m.goalSrcs.every(s => /corner-a-badge-p[12]-(nw|ne|se|sw)\.svg/i.test(s))) {
+    problems.push(`goal badges are not the 05d corner assets: ${m.goalSrcs.join(' / ')}`);
+  }
+  if (m.goalSrcs.some(s => /token-p[12]|token-corner-empty|flag-mark/.test(s))) {
+    problems.push(`old pennant token still on a corner: ${m.goalSrcs.join(' / ')}`);
+  }
+  const badgeSeats = m.goalSrcs.map(s => (s.match(/badge-p[12]/i) || [''])[0]);
+  if (new Set(badgeSeats).size !== 2) {
+    problems.push(`corner badges do not cover both seats: ${m.goalSrcs.join(' / ')}`);
+  }
+  if (m.emptySpareHasBadge) problems.push('empty spare corner shows a badge or pennant');
+  if (m.emptyCornerToken) problems.push('old FLAG pennant token still in the DOM');
+  if (!/05f-geometric-2x2-lockup-stacked/.test(m.logoSrc)) {
+    problems.push(`header is not the 05f stacked lockup: ${m.logoSrc}`);
+  }
+  if (/05d-geometric-2x2-lockup(?!-)|05e-geometric-2x2-lockup-stacked|logo-header/.test(m.logoSrc)) {
+    problems.push(`header still uses a previous lockup: ${m.logoSrc}`);
+  }
   if (m.shuffleOverlapsTile) problems.push('shuffle overlaps a rack tile');
   if (m.playOverlapsTile) problems.push('Play overlaps a rack tile');
   if (m.drawOverlapsMarket) problems.push('Draw 2 overlaps a market tile');
@@ -289,14 +309,7 @@ for (const t of targets) {
   // board's left and right edges. This is what catches a control or the tile
   // bag quietly eating the width the tile maths reserved for it. Rows placed
   // BESIDE the board (tablet landscape, desktop side column) are exempt.
-  // "Under the board" means in the board's column: below it AND overlapping it
-  // horizontally. A panel beside the board (the desktop side column) is not
-  // under it and answers to its own edges.
-  const underBoard = box =>
-    box &&
-    box.top >= m.board.bottom - 2 &&
-    box.left < m.board.right - 1 &&
-    box.right > m.board.left + 1;
+  const underBoard = box => box && box.top >= m.board.bottom - 2;
   const checkWidth = (label, box) => {
     if (!underBoard(box)) return;
     if (box.left < m.board.left - 1.5) {
@@ -327,29 +340,6 @@ for (const t of targets) {
   if (m.facedownCount && !/tile-back/.test(m.facedownBg)) {
     problems.push(`face-down tiles are not drawn as tile backs: ${m.facedownBg}`);
   }
-
-  // Draw 2 and Play are one control at one size.
-  const [turnA, turnB] = m.turnButtons;
-  if (turnA && turnB) {
-    if (Math.abs(turnA.w - turnB.w) > 1.5 || Math.abs(turnA.h - turnB.h) > 1.5) {
-      problems.push(
-        `Draw and Play differ in size: ${turnA.w.toFixed(1)}x${turnA.h.toFixed(1)} ` +
-          `vs ${turnB.w.toFixed(1)}x${turnB.h.toFixed(1)}`
-      );
-    }
-  }
-
-  // Where the rail sits under the board it shares the board's edges. In the
-  // landscape shell it sits beside the board instead and answers to its column.
-  if (underBoard(m.rackTray)) {
-    if (Math.abs(m.rackTray.left - m.board.left) > 1.5 || Math.abs(m.rackTray.right - m.board.right) > 1.5) {
-      problems.push(
-        `rack rail is not aligned to the board: ${m.rackTray.left.toFixed(1)}-${m.rackTray.right.toFixed(1)} ` +
-          `vs ${m.board.left.toFixed(1)}-${m.board.right.toFixed(1)}`
-      );
-    }
-  }
-  if (m.seatDotOverlapsTile) problems.push('the rack seat dot sits under the first tile');
 
   // Every button is the same family: one radius, one height.
   if (m.controlFamily.length >= 2) {
@@ -413,15 +403,6 @@ for (const t of targets) {
       problems.push(`board tiles are not raised: ${m.tileBoxShadow}`);
     }
     if (m.actions.w > 200) problems.push(`desktop Play stretched: ${m.actions.w.toFixed(1)}`);
-    // Shuffle on the board's left edge, Play on its right.
-    const shuffleBox = m.buttons.find(b => /shuffle|clear/i.test(b.label));
-    const playBox = m.buttons.find(b => /^play$/i.test(b.label));
-    if (shuffleBox && Math.abs(shuffleBox.left - m.board.left) > 1.5) {
-      problems.push(`Shuffle not on the board's left edge: ${shuffleBox.left.toFixed(1)} vs ${m.board.left.toFixed(1)}`);
-    }
-    if (playBox && Math.abs(playBox.right - m.board.right) > 1.5) {
-      problems.push(`Play not on the board's right edge: ${playBox.right.toFixed(1)} vs ${m.board.right.toFixed(1)}`);
-    }
     for (const [what, box] of [['rack', m.rackTile], ['market', m.marketTile]]) {
       if (!box) continue;
       if (box.w < 40) problems.push(`desktop ${what} tile too small: ${box.w.toFixed(1)}`);

@@ -1,6 +1,6 @@
 // Score cards: FIRST player left, SECOND player right (true P1/P2 seat order).
 // A player is identified by their name in their own colour — no avatars.
-// The mini-rack below is a scale model of their real rack: seven slots, filled
+// The mini-rack below is a scale model of their real rack: six slots, filled
 // with tile backs for the tiles they hold.
 
 import { RACK_MAX } from '../engine/types';

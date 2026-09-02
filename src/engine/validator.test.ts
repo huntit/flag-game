@@ -164,7 +164,7 @@ describe('word formation', () => {
 describe('scoring', () => {
   it('scores a single word as the sum of its letter values', () => {
     const board = emptyBoard();
-    const result = validatePlay(board, lay('CAT', { row: 6, col: 5 }, 'h'), dictionary, flagCtx());
+    const result = validatePlay(board, lay('CAT', { row: 5, col: 4 }, 'h'), dictionary, flagCtx());
 
     expect(result.valid).toBe(true);
     expect(result.totalScore).toBe(6);
@@ -172,7 +172,7 @@ describe('scoring', () => {
 
   it('does not multiply a vertical word by the number of tiles placed (regression)', () => {
     const board = emptyBoard();
-    const result = validatePlay(board, lay('CAT', { row: 5, col: 6 }, 'v'), dictionary, flagCtx());
+    const result = validatePlay(board, lay('CAT', { row: 4, col: 5 }, 'v'), dictionary, flagCtx());
 
     expect(result.valid).toBe(true);
     expect(result.words?.map(w => w.word)).toEqual(['CAT']);
@@ -181,8 +181,8 @@ describe('scoring', () => {
 
   it('scores horizontal and vertical openings identically', () => {
     const ctx = flagCtx();
-    const across = validatePlay(emptyBoard(), lay('CAT', { row: 6, col: 5 }, 'h'), dictionary, ctx);
-    const down = validatePlay(emptyBoard(), lay('CAT', { row: 5, col: 6 }, 'v'), dictionary, ctx);
+    const across = validatePlay(emptyBoard(), lay('CAT', { row: 5, col: 4 }, 'h'), dictionary, ctx);
+    const down = validatePlay(emptyBoard(), lay('CAT', { row: 4, col: 5 }, 'v'), dictionary, ctx);
     expect(down.totalScore).toBe(across.totalScore);
   });
 
@@ -214,14 +214,14 @@ describe('scoring', () => {
 
   it('scores high-value letters from the tile set', () => {
     const board = emptyBoard();
-    const result = validatePlay(board, lay('JO', { row: 6, col: 6 }, 'h'), dictionary, flagCtx());
+    const result = validatePlay(board, lay('JO', { row: 5, col: 5 }, 'h'), dictionary, flagCtx());
     expect(result.valid).toBe(true);
     expect(result.totalScore).toBe(11);
   });
 
   it('scores a two-letter word', () => {
     const board = emptyBoard();
-    const result = validatePlay(board, lay('OX', { row: 6, col: 6 }, 'h'), dictionary, flagCtx());
+    const result = validatePlay(board, lay('OX', { row: 5, col: 5 }, 'h'), dictionary, flagCtx());
     expect(result.valid).toBe(true);
     expect(result.totalScore).toBe(9);
   });
@@ -229,8 +229,8 @@ describe('scoring', () => {
   it('scores a blank as zero but validates its assigned letter', () => {
     const board = emptyBoard();
     const placements: Placement[] = [
-      { tile: tile('O'), position: { row: 6, col: 6 } },
-      { tile: blank(), position: { row: 6, col: 7 }, assignedLetter: 'X' as Letter },
+      { tile: tile('O'), position: { row: 5, col: 5 } },
+      { tile: blank(), position: { row: 5, col: 6 }, assignedLetter: 'X' as Letter },
     ];
 
     const result = validatePlay(board, placements, dictionary, flagCtx());
@@ -244,8 +244,8 @@ describe('scoring', () => {
     const result = validatePlay(
       board,
       [
-        { tile: tile('O'), position: { row: 6, col: 6 } },
-        { tile: blank(), position: { row: 6, col: 7 } },
+        { tile: tile('O'), position: { row: 5, col: 5 } },
+        { tile: blank(), position: { row: 5, col: 6 } },
       ],
       dictionary,
       flagCtx()
@@ -272,11 +272,11 @@ describe('scoring', () => {
     expect(result.totalScore).toBe(letterSum('ART') * 3);
   });
 
-  it('applies no bingo bonus for emptying a seven-tile rack', () => {
+  it('applies no bingo bonus for emptying a six-tile rack', () => {
     const board = emptyBoard();
     const result = validatePlay(
       board,
-      lay('QUARTZ', { row: 6, col: 4 }, 'h'),
+      lay('QUARTZ', { row: 5, col: 3 }, 'h'),
       dictionary,
       flagCtx()
     );
@@ -288,7 +288,7 @@ describe('scoring', () => {
 
 describe('placement rules', () => {
   it('requires the first word to cover the centre star', () => {
-    expect(CENTRE_STAR).toEqual({ row: 6, col: 6 });
+    expect(CENTRE_STAR).toEqual({ row: 5, col: 5 });
 
     const offCentre = validatePlay(
       emptyBoard(),
@@ -301,7 +301,7 @@ describe('placement rules', () => {
 
     const onCentre = validatePlay(
       emptyBoard(),
-      lay('CAT', { row: 6, col: 6 }, 'h'),
+      lay('CAT', { row: 5, col: 5 }, 'h'),
       dictionary,
       flagCtx()
     );

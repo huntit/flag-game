@@ -1,4 +1,4 @@
-// Skye v3 wordmark home link — vector SVG, PNG fallback (never upscale a tiny bitmap).
+// Word Heist 05f stacked lockup — 2×2 + title-case Word over Heist.
 
 import './HomeLink.css';
 
@@ -20,16 +20,17 @@ function HomeLink({ variant, onNavigate }: HomeLinkProps) {
           onNavigate();
         }
       }}
-      aria-label="Flag home"
+      aria-label="Word Heist home"
     >
       <picture>
-        <source srcSet={`${base}logo-header.svg`} type="image/svg+xml" />
+        <source srcSet={`${base}05f-geometric-2x2-lockup-stacked.svg`} type="image/svg+xml" />
         <img
-          src={`${base}logo-header.png`}
-          alt="Flag"
+          src={`${base}05f-geometric-2x2-lockup-stacked.png`}
+          srcSet={`${base}05f-geometric-2x2-lockup-stacked.png 1x, ${base}05f-geometric-2x2-lockup-stacked@2x.png 2x`}
+          alt="Word Heist"
           className="home-link-img"
-          width={1179}
-          height={292}
+          width={690}
+          height={360}
         />
       </picture>
     </a>

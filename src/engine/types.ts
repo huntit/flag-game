@@ -24,15 +24,15 @@ export type Position = {
 
 export type FlagPost = 'NW' | 'NE' | 'SE' | 'SW';
 
-export const BOARD_SIZE = 11;
-export const RACK_MAX = 7;
-export const MARKET_FACE_UP = 4;
+export const BOARD_SIZE = 9;
+export const RACK_MAX = 6;
+export const MARKET_FACE_UP = 3;
 export const MARKET_FACE_DOWN = 2;
 export const MARKET_SLOTS = MARKET_FACE_UP + MARKET_FACE_DOWN;
 export const DRAW_COUNT = 2;
 /** Three consecutive Exchange turns (full-rack Draw 2 + Discard 2), counted across both players. */
 export const MAX_CONSECUTIVE_EXCHANGES = 3;
-/** Opening deal from bag — P1 acts first; P2 gets one extra tile (no points bonus). */
+/** Opening deal from bag — P1 acts first; P2 gets one extra tile (no points bonus). Do not scale. */
 export const P1_STARTING_RACK_TILES = 2;
 export const P2_STARTING_RACK_TILES = 3;
 
@@ -41,17 +41,17 @@ export const SEAT_COLOR_NAMES = {
   P2: 'Terracotta',
 } as const;
 export const MIN_WORD_LENGTH = 2;
-export const MAX_WORD_LENGTH = 11;
+export const MAX_WORD_LENGTH = 9;
 
-/** True corners (1-indexed). No inland posts. */
+/** True corners (1-indexed). No inland posts. Phone v0.1 9×9. */
 export const FLAG_POSTS: Record<FlagPost, Position> = {
   NW: { row: 1, col: 1 },
-  NE: { row: 1, col: 11 },
-  SE: { row: 11, col: 11 },
-  SW: { row: 11, col: 1 },
+  NE: { row: 1, col: 9 },
+  SE: { row: 9, col: 9 },
+  SW: { row: 9, col: 1 },
 };
 
-export const CENTRE_STAR: Position = { row: 6, col: 6 };
+export const CENTRE_STAR: Position = { row: 5, col: 5 };
 
 export const PLAYER_COLORS = {
   P1: '#56867C',
@@ -121,10 +121,18 @@ export type EndReason =
   | 'self_capture'
   | 'second_steal'
   | 'no_spare'
+  | 'going_out'
   | 'exchange_three'
   | 'double_pass'
-  | 'stuck_out'
-  | 'bag_empty';
+  | 'stuck_out';
+
+/** Ends that apply Scrabble leftover (ender adds opponent rack; opponent loses that sum). */
+export const LEFTOVER_END_REASONS: readonly EndReason[] = [
+  'self_capture',
+  'second_steal',
+  'going_out',
+  'no_spare',
+];
 
 export interface GameState {
   board: Board;
@@ -141,6 +149,8 @@ export interface GameState {
   gameOver: boolean;
   endReason?: EndReason;
   winner?: 'P1' | 'P2' | 'draw';
+  /** Opponent rack letter-value sum transferred on leftover ends. Undefined if leftover did not apply. */
+  leftoverPoints?: number;
   turnCount: number;
   moveHistory: { player: 'P1' | 'P2'; action: GameAction }[];
   /** Result of the most recent Play, for the turn readout. */

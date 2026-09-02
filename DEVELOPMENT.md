@@ -28,7 +28,7 @@ Development server runs at `http://localhost:5173`
 
 The game is phone-first and optimized for iPhone Safari, but works on desktop browsers too.
 
-Tap-to-place must keep working on the 11×11 board on iPhone Safari (smaller cells are OK). Dragging is additive, never a replacement, and is built on **pointer events only** — HTML5 `dragstart` never fires on touch, so it is banned outright (`src/components/useTileDrag.ts`, locked by `layout.test.ts`).
+Tap-to-place must keep working on the 9×9 board on iPhone Safari (smaller cells are OK). Dragging is additive, never a replacement, and is built on **pointer events only** — HTML5 `dragstart` never fires on touch, so it is banned outright (`src/components/useTileDrag.ts`, locked by `layout.test.ts`).
 
 ## Deployment
 
@@ -141,9 +141,9 @@ npm run test src/engine/engine.test.ts
 ### UI (`src/components/`)
 - `Menu.tsx` - Main menu
 - `Game.tsx` - Game orchestration
-- `Board.tsx` - 11×11 board display, incl. the per-player triple-word goal corners
+- `Board.tsx` - 9×9 board display, incl. the per-player triple-word goal corners
 - `Rack.tsx` - Player tile rack
-- `Market.tsx` - Market row: 6 slots (4 face up, then 2 face down) plus the bag
+- `Market.tsx` - Market row: 5 slots (3 face up, then 2 face down) plus the bag
 - `GameInfo.tsx` - Score card: name, score, and a mini-rack of tile backs
 - `useTileDrag.ts` - Pointer-event dragging (rack reorder, drag to board)
 - `SidePanel.tsx` / `MoveLog.tsx` - Move log and its disclosure
@@ -173,24 +173,12 @@ npm run test src/engine/engine.test.ts
   phones the board runs to the screen edges; only the actions row insets itself. On a
   short phone the board is limited by the height the chrome rows leave behind, not by
   screen width, so the *lower* bounds of those clamps matter as much as the upper ones.
-- **Two columns on desktop.** The board, rack and actions form one column; the score
-  cards, move log and market panel form another. Everything in the left column aligns
-  to the board's edges — Shuffle on its left, Play on its right — and everything in
-  the right column aligns to the panel's. Draw 2 and Play are the same pill at the
-  same width, each on the right edge of the thing it acts on. `verify-layout` asserts
-  all of it.
-- **Where Draw 2 lives.** Drawing acts on the market, so the button follows it: into
-  the market panel on desktop, and into the actions row on phone where the market row
-  has no space. It is one node either way (`useDesktopLayout`), never two controls
-  doing the same job — a hidden duplicate would still be in the accessibility tree.
 - **Seat identity.** A player is their name in their own colour — no avatars. One fill
   per seat (`--seat-card-bg-p1/p2`) is shared by their score card and their rack, so
   the rack reads as an extension of the card.
 - **Rack vs market.** Rack tiles stand in a tinted rail and cast a shadow; market
-  tiles lie flat with no tray. Held versus on the table is the whole distinction. The
-  rail also carries its owner's seat dot — the same dot as their score card — and on
-  desktop the market moves to the other column entirely. The dot has reserved space in
-  the rail (`--rack-lead`), so it never lands on top of the first tile.
+  tiles lie flat on the bare page with no tray. Held versus on the table is the whole
+  distinction, and it carries no caption.
 - **Scores.** Every score in the game uses `--color-score` and the `.score-value`
   class: score cards, the play preview, the move log, the final result. Plays read
   "ABHORS + AD + BO + HE for 22", never "+22".

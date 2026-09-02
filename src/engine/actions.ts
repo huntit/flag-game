@@ -1,7 +1,7 @@
 // Action executor - validates then applies game actions
 
-import type { GameState, GameAction, DrawAction, PlayAction, Tile, Letter, Position } from './types';
-import { DRAW_COUNT, RACK_MAX, MAX_CONSECUTIVE_EXCHANGES } from './types';
+import type { GameState, GameAction, DrawAction, PlayAction, Tile, Letter, Position, EndReason } from './types';
+import { DRAW_COUNT, RACK_MAX, MAX_CONSECUTIVE_EXCHANGES, LEFTOVER_END_REASONS } from './types';
 import {
   returnToBag,
   shuffleBag,
@@ -10,6 +10,7 @@ import {
   refillMarketSlot,
   randomEmptySpareCorner,
   emptySpareCorners,
+  rackLetterValueSum,
 } from './game';
 import { validatePlay, type FlagContext } from './validator';
 import { hasLegalPlay } from './moveGenerator';
@@ -56,14 +57,28 @@ function buildFlagContext(state: GameState, playerId: 'P1' | 'P2'): FlagContext 
   };
 }
 
-function endIfBagEmpty(state: GameState): boolean {
-  if (state.bag.length === 0) {
-    state.gameOver = true;
-    state.endReason = 'bag_empty';
-    determineWinner(state);
-    return true;
+function applyLeftover(state: GameState, endingPlayerIndex: 0 | 1): void {
+  if (!state.endReason || !(LEFTOVER_END_REASONS as readonly string[]).includes(state.endReason)) {
+    return;
   }
-  return false;
+  if (state.leftoverPoints !== undefined) return;
+  const ender = state.players[endingPlayerIndex];
+  const opponent = state.players[endingPlayerIndex === 0 ? 1 : 0];
+  const leftover = rackLetterValueSum(opponent.rack);
+  ender.score += leftover;
+  opponent.score -= leftover;
+  state.leftoverPoints = leftover;
+}
+
+function finishGame(state: GameState, reason: EndReason, endingPlayerIndex: 0 | 1): void {
+  state.gameOver = true;
+  state.endReason = reason;
+  applyLeftover(state, endingPlayerIndex);
+  determineWinner(state);
+}
+
+function wentOut(state: GameState, player: GameState['players'][number]): boolean {
+  return player.rack.length === 0 && state.bag.length === 0 && marketShowingCount(state.market) === 0;
 }
 
 export function executeAction(
@@ -73,15 +88,6 @@ export function executeAction(
 ): ActionResult {
   if (state.gameOver) {
     return { success: false, error: 'Game is over' };
-  }
-
-  // Bag-empty ends Draw/Play immediately; Pass remains the stuck-only escape
-  // when the market cannot refill (market showing < 2).
-  if (state.bag.length === 0 && action.type !== 'pass') {
-    state.gameOver = true;
-    state.endReason = 'bag_empty';
-    determineWinner(state);
-    return { success: false, error: 'The tile bag is empty' };
   }
 
   switch (action.type) {
@@ -201,13 +207,7 @@ function executeDraw(state: GameState, action: DrawAction): ActionResult {
   state.moveHistory.push({ player: player.id, action });
 
   if (state.consecutiveExchanges >= MAX_CONSECUTIVE_EXCHANGES) {
-    state.gameOver = true;
-    state.endReason = 'exchange_three';
-    determineWinner(state);
-    return { success: true };
-  }
-
-  if (endIfBagEmpty(state)) {
+    finishGame(state, 'exchange_three', state.currentPlayer);
     return { success: true };
   }
 
@@ -274,9 +274,7 @@ function executePlay(state: GameState, action: PlayAction, dictionary: Dictionar
 
   if (result.capturesOwnFlag) {
     state.flags[player.id] = null;
-    state.gameOver = true;
-    state.endReason = 'self_capture';
-    determineWinner(state);
+    finishGame(state, 'self_capture', state.currentPlayer);
     return { success: true };
   }
 
@@ -287,9 +285,7 @@ function executePlay(state: GameState, action: PlayAction, dictionary: Dictionar
     opponent.flagsLost++;
 
     if (opponent.flagsLost >= 2) {
-      state.gameOver = true;
-      state.endReason = 'second_steal';
-      determineWinner(state);
+      finishGame(state, 'second_steal', state.currentPlayer);
       return { success: true };
     }
 
@@ -297,16 +293,13 @@ function executePlay(state: GameState, action: PlayAction, dictionary: Dictionar
     if (spare) {
       state.flags[opponent.id] = spare;
     } else {
-      state.gameOver = true;
-      state.endReason = 'no_spare';
-      determineWinner(state);
+      finishGame(state, 'no_spare', state.currentPlayer);
       return { success: true };
     }
   }
 
-  if (result.endsGame) {
-    state.gameOver = true;
-    determineWinner(state);
+  if (wentOut(state, player)) {
+    finishGame(state, 'going_out', state.currentPlayer);
     return { success: true };
   }
 
@@ -331,9 +324,7 @@ function executePass(state: GameState, dictionary: Dictionary): ActionResult {
   state.moveHistory.push({ player: player.id, action: { type: 'pass' } });
 
   if (state.consecutivePasses >= 2) {
-    state.gameOver = true;
-    state.endReason = state.bag.length === 0 ? 'stuck_out' : 'double_pass';
-    determineWinner(state);
+    finishGame(state, state.bag.length === 0 ? 'stuck_out' : 'double_pass', state.currentPlayer);
     return { success: true };
   }
 

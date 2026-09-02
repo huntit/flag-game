@@ -49,6 +49,8 @@ interface GameResult {
   captureCorner: FlagPost | null;
   captureType: 'self_triple' | 'opponent_first' | 'opponent_second' | null;
   captureTurn: number | null;
+  leftoverApplied: boolean;
+  leftoverTotal: number;
   seatOfP1Personality: 'P1' | 'P2';
 }
 
@@ -67,7 +69,7 @@ function cornerFromPlay(state: ReturnType<typeof initializeGame>, _seat: 0 | 1):
     for (const pos of word.positions) {
       for (const corner of ['NW', 'NE', 'SE', 'SW'] as FlagPost[]) {
         const p = { row: pos.row, col: pos.col };
-        const flagPos = { NW: { row: 1, col: 1 }, NE: { row: 1, col: 11 }, SE: { row: 11, col: 11 }, SW: { row: 11, col: 1 } }[corner];
+        const flagPos = { NW: { row: 1, col: 1 }, NE: { row: 1, col: 9 }, SE: { row: 9, col: 9 }, SW: { row: 9, col: 1 } }[corner];
         if (p.row === flagPos.row && p.col === flagPos.col) return corner;
       }
     }
@@ -185,6 +187,8 @@ function runGame(
     captureCorner,
     captureType,
     captureTurn,
+    leftoverApplied: state.leftoverPoints !== undefined,
+    leftoverTotal: state.leftoverPoints ?? 0,
     seatOfP1Personality: seatPersonalities[0] === options.p1 ? 'P1' : 'P2',
   };
 }
@@ -235,7 +239,7 @@ function computeSummary(results: GameResult[], options: CLIOptions) {
     selfCaptureEndRate: results.filter(r => r.endReason === 'self_capture').length / games,
     secondStealEndRate: results.filter(r => r.endReason === 'second_steal').length / games,
     noSpareEndRate: results.filter(r => r.endReason === 'no_spare').length / games,
-    bagEmptyEndRate: results.filter(r => r.endReason === 'bag_empty').length / games,
+    goingOutEndRate: results.filter(r => r.endReason === 'going_out').length / games,
     exchangeThreeEndRate: results.filter(r => r.endReason === 'exchange_three').length / games,
     doublePassEndRate: results.filter(r => r.endReason === 'double_pass').length / games,
     stuckOutEndRate: results.filter(r => r.endReason === 'stuck_out').length / games,
@@ -319,7 +323,7 @@ function main() {
   console.log(`Self-capture end      ${pct(summary.selfCaptureEndRate)}`);
   console.log(`Second-steal end      ${pct(summary.secondStealEndRate)}`);
   console.log(`No-spare end          ${pct(summary.noSpareEndRate)}`);
-  console.log(`Bag-empty end         ${pct(summary.bagEmptyEndRate)}`);
+  console.log(`Going-out end         ${pct(summary.goingOutEndRate)}`);
   console.log(`Exchange-three end    ${pct(summary.exchangeThreeEndRate)}`);
   console.log(`Double-pass end       ${pct(summary.doublePassEndRate)}`);
   console.log(`Stuck-out end         ${pct(summary.stuckOutEndRate)}`);

@@ -1,6 +1,5 @@
 // Scrolling move log — entries coloured by player, scores in the score colour.
 
-import { useEffect, useRef } from 'react';
 import type { MoveLogEntry } from '../moveLog';
 import './MoveLog.css';
 
@@ -30,16 +29,6 @@ export function MoveLogText({ entry }: { entry: MoveLogEntry }) {
 }
 
 function MoveLog({ entries }: MoveLogProps) {
-  const listRef = useRef<HTMLOListElement>(null);
-
-  // The panel is a fixed-height window onto a growing list, so it follows the
-  // newest line rather than leaving the player to scroll for what just
-  // happened.
-  useEffect(() => {
-    const list = listRef.current;
-    if (list) list.scrollTop = list.scrollHeight;
-  }, [entries.length]);
-
   if (entries.length === 0) {
     return (
       <div className="move-log is-empty" aria-label="Move log">
@@ -50,7 +39,7 @@ function MoveLog({ entries }: MoveLogProps) {
 
   return (
     <div className="move-log" aria-label="Move log">
-      <ol className="move-log-list" ref={listRef}>
+      <ol className="move-log-list">
         {entries.map((entry, i) => (
           <li
             key={i}
