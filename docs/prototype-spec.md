@@ -77,7 +77,7 @@ All criteria below describe **phone v0.1 (9×9)** unless noted.
   - Opening deal: P1 gets 2 tiles from the bag, P2 gets 3; market 5 tiles; P1 acts first; first action may be Draw or Play
   - Random P1 assignment: solo vs AI, hotseat, and remote (remote randomises when second seat sits)
   - Dictionary load accepts length 2–9 without shrinking `data/words.txt`
-  - Bag: 69 tiles per section 5 count table (update `data/tiles.json` — not in docs-only PR)
+  - Bag: 69 tiles per section 5 count table (`data/tiles.json`)
 - **Out of scope:** Board premium squares, bingo, 3–4 player, secret goals, turn clocks/timeouts, spectators, accounts, push/email notifications
 
 ## 3. Board
@@ -157,7 +157,7 @@ Only four true corners exist. Two-player uses a diagonal pair leaving two spares
 
 **DO NOT use a third-party crossword publisher's bag composition or letter values.**
 
-**Tile set:** ✅ Available at `data/tiles.json` — **Ada updates this file to match the v0.1 bag table below.** The docs-only PR does not change `data/tiles.json`.
+**Tile set:** ✅ Available at `data/tiles.json` — matches the v0.1 bag table below.
 
 **Source:**
 - **Letter values:** Word Eagle TILE_SETS.wwf (huntit/web-apps/wordgame/index.html lines ~997–1002) — **unchanged**

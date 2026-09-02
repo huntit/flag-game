@@ -5,8 +5,8 @@
   width: var(--board-size);
   height: var(--board-size);
   display: grid;
-  grid-template-columns: repeat(11, 1fr);
-  grid-template-rows: repeat(11, 1fr);
+  grid-template-columns: repeat(9, 1fr);
+  grid-template-rows: repeat(9, 1fr);
   gap: max(1px, calc(var(--cell) * 0.035));
   padding: max(2px, calc(var(--cell) * 0.05));
   background-color: var(--color-board);

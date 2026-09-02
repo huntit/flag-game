@@ -14,7 +14,7 @@ function Menu({ onSelectMode }: MenuProps) {
       <div className="screen-panel menu-panel">
         <div className="menu-head">
           <HomeLink variant="menu" />
-          <p className="menu-subtitle">11×11 · steal flags or self-capture to end</p>
+          <p className="menu-subtitle">9×9 · steal flags or self-capture to end</p>
         </div>
 
         <div className="menu-buttons">

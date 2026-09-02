@@ -32,8 +32,8 @@ describe('tile data', () => {
   it('is the WWF English bag with Word Eagle values', () => {
     const tiles = tileData.tileSets.wwf.tiles;
     const letterCount = tiles.reduce((sum, t) => sum + t.count, 0);
-    expect(letterCount + tileData.tileSets.wwf.blanks.count).toBe(104);
-    expect(tileData.tileSets.wwf.blanks.count).toBe(2);
+    expect(letterCount + tileData.tileSets.wwf.blanks.count).toBe(69);
+    expect(tileData.tileSets.wwf.blanks.count).toBe(1);
     expect(tileData.tileSets.wwf.blanks.value).toBe(0);
 
     // Spot-check the values the scoring tests rely on.
@@ -117,7 +117,7 @@ describe('real games', () => {
         }
 
         expect(state.gameOver).toBe(true);
-        expect(['self_capture', 'second_steal', 'no_spare', 'exchange_three', 'double_pass', 'stuck_out', 'bag_empty']).toContain(state.endReason);
+        expect(['self_capture', 'second_steal', 'no_spare', 'going_out', 'exchange_three', 'double_pass', 'stuck_out']).toContain(state.endReason);
       }
 
       expect(playsChecked).toBeGreaterThan(20);
@@ -129,7 +129,7 @@ describe('real games', () => {
   it('never exceeds the rack maximum or loses a tile', () => {
     setRandomSource(mulberry32(3571));
     const state = initializeGame(tileData);
-    const totalTiles = 104;
+    const totalTiles = 69;
 
     let guard = 0;
     while (!state.gameOver && guard < 600) {

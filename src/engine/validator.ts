@@ -3,7 +3,7 @@
 // Every new straight-line word of two or more letters formed by a play must be
 // in the dictionary, and each such word scores the sum of the letter values of
 // every tile in it (blanks score 0). Flag multipliers apply to the capturing
-// word only — TWS for own flag, DWS for opponent flag.
+// word only — TWS for whoever covers a flag cell (own or steal).
 
 import type { Board, Position, PlacedTile, Tile, Letter } from './types';
 import { getBoardTile, setBoardTile, isValidPosition, positionEquals, isFirstWord } from './game';
@@ -256,7 +256,7 @@ function applyFlagMultipliers(
       if (oppCorner && positionEquals(placement.position, FLAG_POSTS[oppCorner])) {
         capturesOpponentFlag = true;
         capturingWord = wordContainingPosition(words, placement.position);
-        multiplier = 2;
+        multiplier = 3;
         break;
       }
     }

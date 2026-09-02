@@ -145,7 +145,7 @@ for (const t of targets) {
         const occupied = new Set(
           [...document.querySelectorAll('.board-cell.has-flag')].map(c => `${c.dataset.row},${c.dataset.col}`)
         );
-        return ['1,1', '1,11', '11,11', '11,1'].some(key => {
+        return ['1,1', '1,9', '9,9', '9,1'].some(key => {
           if (occupied.has(key)) return false;
           const [r, c] = key.split(',');
           const cell = document.querySelector(`.board-cell[data-row="${r}"][data-col="${c}"]`);
@@ -262,9 +262,9 @@ for (const t of targets) {
   }
   if (m.opponentLettersRendered !== 0) problems.push('opponent letters rendered');
   // A rack can legitimately be empty mid-game, so assert the slot row rather
-  // than the fill: seven slots per card, always.
+  // than the fill: six slots per card, always.
   for (const count of m.pipsPerCard) {
-    if (count !== 7) problems.push(`score card shows ${count} rack slots, expected 7`);
+    if (count !== 6) problems.push(`score card shows ${count} rack slots, expected 6`);
   }
   if (m.miniRack) {
     const { w, h, rowH, cardBottom, rowBottom } = m.miniRack;

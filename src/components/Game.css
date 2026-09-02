@@ -9,8 +9,8 @@
  * The player-interaction area is three plain rows rather than a mixed bag of
  * tiles and buttons:
  *
- *   market   bag + six tiles lying on the table
- *   rack     your seven tiles standing in a seat-coloured rail
+ *   market   bag + five tiles lying on the table
+ *   rack     your six tiles standing in a seat-coloured rail
  *   actions  every button, one family, one baseline
  *
  * Tiles are ONE size everywhere. --tile-size is the largest square that fits
@@ -52,7 +52,7 @@
     calc(var(--shell-w) - (2 * var(--shell-pad-x))),
     calc(var(--app-h) - var(--chrome-h))
   );
-  --cell: calc(var(--board-size) / 11);
+  --cell: calc(var(--board-size) / 9);
 
   /* ---- One tile size for the whole game ------------------------------- */
   --tile-gap: clamp(3px, calc(var(--board-size) * 0.014), 9px);
@@ -60,12 +60,12 @@
   /* The bag and its count, reserved out of the market row. The bag stacks its
      count underneath so this stays a narrow, predictable column. */
   --bag-block: clamp(40px, calc(var(--board-size) * 0.115), 76px);
-  /* Widest a tile can be and still fit seven across the rack… */
+  /* Widest a tile can be and still fit six across the rack… */
   --rack-fit: calc(
-    (var(--board-size) - (2 * var(--tray-pad)) - (6 * var(--tile-gap))) / 7
+    (var(--board-size) - (2 * var(--tray-pad)) - (5 * var(--tile-gap))) / 6
   );
-  /* …and six across the market beside the bag. */
-  --market-fit: calc((var(--board-size) - var(--bag-block) - (6 * var(--tile-gap))) / 6);
+  /* …and five across the market beside the bag. */
+  --market-fit: calc((var(--board-size) - var(--bag-block) - (5 * var(--tile-gap))) / 5);
   --tile-size: min(
     var(--rack-fit),
     var(--market-fit),
@@ -336,8 +336,8 @@
       calc(var(--app-h) - (2 * var(--shell-pad-y)) - var(--safe-top) - var(--safe-bottom) - 2px)
     );
     /* The rows beside the board budget their tiles against the side column. */
-    --rack-fit: calc((var(--side-w) - (2 * var(--tray-pad)) - (6 * var(--tile-gap))) / 7);
-    --market-fit: calc((var(--side-w) - var(--bag-block) - (6 * var(--tile-gap))) / 6);
+    --rack-fit: calc((var(--side-w) - (2 * var(--tray-pad)) - (5 * var(--tile-gap))) / 6);
+    --market-fit: calc((var(--side-w) - var(--bag-block) - (5 * var(--tile-gap))) / 5);
 
     max-width: var(--shell-max-w);
     grid-template-columns: var(--board-size) minmax(0, 1fr);

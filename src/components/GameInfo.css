@@ -114,9 +114,9 @@
   white-space: nowrap;
 }
 
-/* Mini-rack: a scale model of the player's real rack. Seven fixed slots so
+/* Mini-rack: a scale model of the player's real rack. Six fixed slots so
    both cards line up with each other and the count reads without counting.
-   Sized to be read at a glance rather than squinted at — seven tiles is the
+   Sized to be read at a glance rather than squinted at — six tiles is the
    card's widest row, so they take whatever width is left after the padding. */
 .score-backs {
   display: flex;

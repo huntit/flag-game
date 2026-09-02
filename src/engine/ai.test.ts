@@ -67,12 +67,12 @@ describe('draw policy', () => {
 
     // Full rack that can make SANDER (8 points) on an opening board.
     player.rack = [
-      tile('S'), tile('A'), tile('N', 2), tile('D', 2), tile('E'), tile('R'), tile('O'),
+      tile('S'), tile('A'), tile('N', 2), tile('D', 2), tile('E'), tile('R'),
     ];
     expect(player.rack).toHaveLength(RACK_MAX);
     state.market = marketSlots([
-      tile('A'), tile('E'), tile('T'), tile('S'),
-      tile('N'), tile('O'),
+      tile('A'), tile('E'), tile('T'),
+      tile('S'), tile('N'),
     ]);
 
     const action = selectAIAction(state, 'greedy', dictionary, 8);
@@ -84,13 +84,13 @@ describe('draw policy', () => {
     const state = initializeGame(tileData);
     const player = state.players[0];
     player.rack = [
-      tile('S'), tile('T'), tile('A'), tile('R'), tile('E'), tile('O'), tile('D', 2),
+      tile('S'), tile('T'), tile('A'), tile('R'), tile('E'), tile('O'),
     ];
 
     const theBlank = blank();
     state.market = marketSlots([
-      theBlank, tile('A'), tile('E'), tile('T'),
-      tile('N'), tile('O'),
+      theBlank, tile('A'), tile('E'),
+      tile('T'), tile('N'),
     ]);
 
     const action = selectAIAction(state, 'greedy', dictionary, 8);
@@ -173,7 +173,7 @@ describe.sequential('games terminate on the shipping data', () => {
   ];
 
   it.each(matchups)('%s vs %s reaches a game-end condition', (p1, p2) => {
-    const validEndings = ['self_capture', 'second_steal', 'no_spare', 'exchange_three', 'double_pass', 'stuck_out', 'bag_empty'];
+    const validEndings = ['self_capture', 'second_steal', 'no_spare', 'going_out', 'exchange_three', 'double_pass', 'stuck_out'];
 
     for (let seed = 2; seed <= 4; seed++) {
       setRandomSource(mulberry32(seed * 977));

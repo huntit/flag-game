@@ -28,7 +28,7 @@ Development server runs at `http://localhost:5173`
 
 The game is phone-first and optimized for iPhone Safari, but works on desktop browsers too.
 
-Tap-to-place must keep working on the 11×11 board on iPhone Safari (smaller cells are OK). Dragging is additive, never a replacement, and is built on **pointer events only** — HTML5 `dragstart` never fires on touch, so it is banned outright (`src/components/useTileDrag.ts`, locked by `layout.test.ts`).
+Tap-to-place must keep working on the 9×9 board on iPhone Safari (smaller cells are OK). Dragging is additive, never a replacement, and is built on **pointer events only** — HTML5 `dragstart` never fires on touch, so it is banned outright (`src/components/useTileDrag.ts`, locked by `layout.test.ts`).
 
 ## Deployment
 
@@ -141,9 +141,9 @@ npm run test src/engine/engine.test.ts
 ### UI (`src/components/`)
 - `Menu.tsx` - Main menu
 - `Game.tsx` - Game orchestration
-- `Board.tsx` - 11×11 board display, incl. the per-player triple-word goal corners
+- `Board.tsx` - 9×9 board display, incl. the per-player triple-word goal corners
 - `Rack.tsx` - Player tile rack
-- `Market.tsx` - Market row: 6 slots (4 face up, then 2 face down) plus the bag
+- `Market.tsx` - Market row: 5 slots (3 face up, then 2 face down) plus the bag
 - `GameInfo.tsx` - Score card: name, score, and a mini-rack of tile backs
 - `useTileDrag.ts` - Pointer-event dragging (rack reorder, drag to board)
 - `SidePanel.tsx` / `MoveLog.tsx` - Move log and its disclosure

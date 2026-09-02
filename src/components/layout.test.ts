@@ -413,9 +413,9 @@ describe('opponent score card', () => {
 });
 
 describe('board rendering', () => {
-  it('draws an 11x11 grid sized to the computed board size', () => {
-    expect(boardCss).toMatch(/grid-template-columns:\s*repeat\(11, 1fr\)/);
-    expect(boardCss).toMatch(/grid-template-rows:\s*repeat\(11, 1fr\)/);
+  it('draws a 9x9 grid sized to the computed board size', () => {
+    expect(boardCss).toMatch(/grid-template-columns:\s*repeat\(9, 1fr\)/);
+    expect(boardCss).toMatch(/grid-template-rows:\s*repeat\(9, 1fr\)/);
     expect(boardCss).toMatch(/width:\s*var\(--board-size\)/);
     expect(boardCss).toMatch(/height:\s*var\(--board-size\)/);
   });
@@ -541,7 +541,7 @@ describe('score cards', () => {
     expect(css).toMatch(/\.score-card[\s\S]*flex-direction:\s*column/s);
     expect(css).not.toMatch(/\.score-backs\s*\{[^}]*overflow:\s*hidden/s);
     expect(css).toMatch(/score-pip\.is-empty/);
-    // Seven slots always, so both cards line up and the count reads without
+    // Six slots always, so both cards line up and the count reads without
     // being counted.
     expect(read('./GameInfo.tsx')).toMatch(/length:\s*RACK_MAX/);
   });

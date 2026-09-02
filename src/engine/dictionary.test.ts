@@ -1,7 +1,7 @@
 // Dictionary loading and lookup locks.
 //
 // The live word list is data/words.txt. It stays whole in the repo (words of
-// length 2-28); the loader is what narrows to 2-11 for the 11x11 board.
+// length 2-28); the loader is what narrows to 2-9 for the 9x9 board.
 
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'fs';
@@ -12,18 +12,19 @@ import { MIN_WORD_LENGTH, MAX_WORD_LENGTH, BOARD_SIZE } from './types';
 const WORDS_PATH = resolve(__dirname, '../../data/words.txt');
 
 describe('load filter', () => {
-  it('accepts word lengths 2 through 11', () => {
+  it('accepts word lengths 2 through 9', () => {
     expect(MIN_WORD_LENGTH).toBe(2);
-    expect(MAX_WORD_LENGTH).toBe(11);
+    expect(MAX_WORD_LENGTH).toBe(9);
     expect(MAX_WORD_LENGTH).toBe(BOARD_SIZE);
 
     expect(isLoadableWord('AT')).toBe(true);
-    expect(isLoadableWord('ABCDEFGHIJK')).toBe(true); // 11
+    expect(isLoadableWord('ABCDEFGHI')).toBe(true); // 9
   });
 
   it('rejects words that cannot fit on the board or are not A-Z', () => {
     expect(isLoadableWord('A')).toBe(false);
-    expect(isLoadableWord('ABCDEFGHIJKL')).toBe(false); // 12
+    expect(isLoadableWord('ABCDEFGHIJ')).toBe(false); // 10
+    expect(isLoadableWord('ABCDEFGHIJK')).toBe(false); // 11
     expect(isLoadableWord('CO-OP')).toBe(false);
     expect(isLoadableWord("DON'T")).toBe(false);
     expect(isLoadableWord('')).toBe(false);
@@ -93,8 +94,8 @@ describe('data/words.txt', () => {
 
   it('loads only the words that fit the board', () => {
     const dictionary = Dictionary.fromText(raw);
-    expect(dictionary.size()).toBeLessThan(allLines.length);
-    expect(dictionary.size()).toBe(143261);
+    expect(dictionary.size()).toBeLessThan(143261);
+    expect(dictionary.size()).toBeGreaterThan(100000);
   });
 
   it('validates real words a player would try', () => {
@@ -109,11 +110,12 @@ describe('data/words.txt', () => {
     for (const word of ['CD', 'AO', 'TG', 'ZQX', 'ASDFG']) {
       expect(dictionary.isValid(word), `${word} should not be a word`).toBe(false);
     }
-    // Present in the source file, but 12 letters cannot fit on an 11x11 board.
+    // Present in the source file, but 11 letters cannot fit on a 9×9 board.
     expect(allLines.map(w => w.trim()).includes('ABBREVIATED')).toBe(true);
-    expect(dictionary.isValid('ABBREVIATED')).toBe(true); // 11 letters
-    expect(dictionary.isValid('ABBREVIATES')).toBe(true); // 11 letters
+    expect(dictionary.isValid('ABBREVIATED')).toBe(false); // 11 letters
+    expect(dictionary.isValid('ABBREVIATES')).toBe(false); // 11 letters
     expect(dictionary.isValid('ABBREVIATING')).toBe(false); // 12 letters
+    expect(dictionary.isValid('ABDICATED')).toBe(true); // 9 letters
   });
 });
 
