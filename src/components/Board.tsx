@@ -8,6 +8,8 @@ import { effectiveLetter, tileScore } from '../engine/validator';
 import { TileFace } from './TileFace';
 import './Board.css';
 
+const base = import.meta.env.BASE_URL;
+
 export interface PendingPlacement {
   tileId: string;
   position: Position;
@@ -30,6 +32,13 @@ interface BoardProps {
   onTilePointerDown?: (event: React.PointerEvent, tileId: string) => void;
   /** Names shown on each goal square, so "whose corner is this" needs no legend. */
   seatNames?: { P1: string; P2: string };
+}
+
+function trueCornerAt(position: Position): FlagPost | null {
+  for (const corner of ['NW', 'NE', 'SE', 'SW'] as const) {
+    if (positionEquals(position, FLAG_POSTS[corner])) return corner;
+  }
+  return null;
 }
 
 function cornerFlagOwner(
@@ -63,6 +72,7 @@ function Board({
     const pending = pendingPlacements.find(p => positionEquals(p.position, position));
 
     const isCorner = cornerPositions.some(p => positionEquals(p, position));
+    const trueCorner = trueCornerAt(position);
     const flagOwner = cornerFlagOwner(position, flags);
     const isCentre = positionEquals(position, CENTRE_STAR);
     const isHighlighted = highlight.some(p => positionEquals(p, position));
@@ -126,14 +136,15 @@ function Board({
         ) : (
           <>
             {showCentreStar && isCentre && <span className="cell-mark">★</span>}
-            {flagOwner && (
-              /* The goal is a triple-word square painted in its owner's
-                 colour — the same colour as their score card — so there is
-                 no doubt about whose corner it is. */
-              <span className={`goal-square is-${flagOwner.toLowerCase()}`}>
-                <span className="goal-mult">3×</span>
-                <span className="goal-word">WORD</span>
-              </span>
+            {flagOwner && trueCorner && (
+              /* Occupied true corner: the occupying player's matching
+                 NW/NE/SE/SW 3× badge. Spare empty corners stay empty. */
+              <img
+                className={`goal-square is-${flagOwner.toLowerCase()}`}
+                src={`${base}corner-a-badge-${flagOwner.toLowerCase()}-${trueCorner.toLowerCase()}.svg`}
+                alt=""
+                draggable={false}
+              />
             )}
           </>
         )}

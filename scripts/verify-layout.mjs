@@ -131,12 +131,31 @@ for (const t of targets) {
       })(),
       goalSquares: goalSquares.length,
       goalSeats: goalSquares.map(el => (el.classList.contains('is-p1') ? 'P1' : 'P2')),
+      goalSrcs: goalSquares.map(el => {
+        const img = el.tagName === 'IMG' ? el : el.querySelector('img');
+        return (img?.currentSrc || img?.src || '');
+      }),
       goalFills: goalSquares.map(el => getComputedStyle(el).backgroundColor),
       goalCoversCell: goalSquares.every(el => {
         const cellBox = el.closest('.board-cell').getBoundingClientRect();
         const own = el.getBoundingClientRect();
         return Math.abs(own.width - cellBox.width) < 1.5 && Math.abs(own.height - cellBox.height) < 1.5;
       }),
+      emptySpareHasBadge: (() => {
+        const occupied = new Set(
+          [...document.querySelectorAll('.board-cell.has-flag')].map(c => `${c.dataset.row},${c.dataset.col}`)
+        );
+        return ['1,1', '1,11', '11,11', '11,1'].some(key => {
+          if (occupied.has(key)) return false;
+          const [r, c] = key.split(',');
+          const cell = document.querySelector(`.board-cell[data-row="${r}"][data-col="${c}"]`);
+          return Boolean(cell?.querySelector('.goal-square, img[src*="corner"], img[src*="token"]'));
+        });
+      })(),
+      logoSrc: (() => {
+        const img = document.querySelector('.play-header .home-link-img');
+        return img ? (img.currentSrc || img.src || '') : '';
+      })(),
       seatColors: (() => {
         const cs = getComputedStyle(document.documentElement);
         return { p1: cs.getPropertyValue('--color-p1').trim(), p2: cs.getPropertyValue('--color-p2').trim() };
@@ -214,8 +233,8 @@ for (const t of targets) {
       drawOverlapsMarket: draw && marketTile ? overlaps(rect(draw), rect(marketTile)) : false,
       backsOverlapName: youName && youBacks.some(b => overlaps(rect(b), rect(youName))),
       backsOverlapScore: youScore && youBacks.some(b => overlaps(rect(b), rect(youScore))),
-      emptyCornerToken: [...document.querySelectorAll('.corner-token')].some(img =>
-        (img.currentSrc || img.src).includes('token-corner-empty')
+      emptyCornerToken: [...document.querySelectorAll('img')].some(img =>
+        /token-corner-empty|token-p[12]|flag-mark|logo-header/.test(img.currentSrc || img.src || '')
       ),
     };
   });
@@ -264,6 +283,24 @@ for (const t of targets) {
   if (new Set(m.goalSeats).size !== 2) problems.push(`goal squares share a seat: ${m.goalSeats.join(',')}`);
   if (!m.goalCoversCell) problems.push('a goal square does not fill its board cell');
   if (new Set(m.goalFills).size !== 2) problems.push(`goal squares share a colour: ${m.goalFills.join(' / ')}`);
+  if (!m.goalSrcs.every(s => /corner-a-badge-p[12]-(nw|ne|se|sw)\.svg/i.test(s))) {
+    problems.push(`goal badges are not the 05d corner assets: ${m.goalSrcs.join(' / ')}`);
+  }
+  if (m.goalSrcs.some(s => /token-p[12]|token-corner-empty|flag-mark/.test(s))) {
+    problems.push(`old pennant token still on a corner: ${m.goalSrcs.join(' / ')}`);
+  }
+  const badgeSeats = m.goalSrcs.map(s => (s.match(/badge-p[12]/i) || [''])[0]);
+  if (new Set(badgeSeats).size !== 2) {
+    problems.push(`corner badges do not cover both seats: ${m.goalSrcs.join(' / ')}`);
+  }
+  if (m.emptySpareHasBadge) problems.push('empty spare corner shows a badge or pennant');
+  if (m.emptyCornerToken) problems.push('old FLAG pennant token still in the DOM');
+  if (!/05e-geometric-2x2-lockup-stacked/.test(m.logoSrc)) {
+    problems.push(`header is not the 05e stacked lockup: ${m.logoSrc}`);
+  }
+  if (/05d-geometric-2x2-lockup(?!-)|logo-header/.test(m.logoSrc)) {
+    problems.push(`header still uses the one-line lockup: ${m.logoSrc}`);
+  }
   if (m.shuffleOverlapsTile) problems.push('shuffle overlaps a rack tile');
   if (m.playOverlapsTile) problems.push('Play overlaps a rack tile');
   if (m.drawOverlapsMarket) problems.push('Draw 2 overlaps a market tile');

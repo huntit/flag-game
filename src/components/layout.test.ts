@@ -197,53 +197,64 @@ describe('tile score placement', () => {
 });
 
 describe('branding', () => {
-  it('uses Skye v3 vector wordmark with PNG fallback — not a tiny upscaled bitmap only', () => {
+  it('uses the Word Heist 05e stacked lockup — WORD over HEIST — not the one-line lockup', () => {
     for (const file of ['Game.tsx', 'Menu.tsx', 'OnlineMode.tsx']) {
       expect(read(`./${file}`)).toMatch(/HomeLink/);
     }
     const homeLink = read('./HomeLink.tsx');
-    expect(homeLink).toMatch(/logo-header\.svg/);
-    expect(homeLink).toMatch(/logo-header\.png/);
+    expect(homeLink).toMatch(/05e-geometric-2x2-lockup-stacked\.svg/);
+    expect(homeLink).toMatch(/05e-geometric-2x2-lockup-stacked\.png/);
+    expect(homeLink).toMatch(/05e-geometric-2x2-lockup-stacked@2x\.png/);
+    expect(homeLink).toMatch(/Word Heist/);
     expect(homeLink).toMatch(/width=\{?\d+/);
-    expect(existsSync(resolve(__dirname, '../../public/logo-header.svg'))).toBe(true);
-    expect(existsSync(resolve(__dirname, '../../public/logo-header.png'))).toBe(true);
+    expect(homeLink).not.toMatch(/logo-header/);
+    expect(homeLink).not.toMatch(/05d-geometric-2x2-lockup/);
+    expect(existsSync(resolve(__dirname, '../../public/05e-geometric-2x2-lockup-stacked.svg'))).toBe(true);
+    expect(existsSync(resolve(__dirname, '../../public/05e-geometric-2x2-lockup-stacked.png'))).toBe(true);
+    expect(existsSync(resolve(__dirname, '../../public/05e-geometric-2x2-lockup-stacked@2x.png'))).toBe(true);
+    expect(existsSync(resolve(__dirname, '../../public/logo-header.svg'))).toBe(false);
+    expect(existsSync(resolve(__dirname, '../../public/logo-header.png'))).toBe(false);
+    const stacked = read('../../public/05e-geometric-2x2-lockup-stacked.svg');
+    expect(stacked).toMatch(/>WORD</);
+    expect(stacked).toMatch(/>HEIST</);
+    expect(stacked).not.toMatch(/Word Heist/);
   });
 
-  it('ships pennant-only favicon without wordmark', () => {
-    expect(indexHtml).toMatch(/favicon\.svg/);
-    expect(existsSync(resolve(__dirname, '../../public/favicon.svg'))).toBe(true);
-    expect(existsSync(resolve(__dirname, '../../public/flag-mark.svg'))).toBe(true);
-    // No letters in the app mark — the wordmark is a separate asset.
-    expect(read('../../public/favicon.svg')).not.toMatch(/<text/);
+  it('ships a 2×2-grid favicon without the wordmark', () => {
+    expect(indexHtml).toMatch(/05d-geometric-2x2-icon\.svg/);
+    expect(indexHtml).toMatch(/05d-geometric-2x2-icon-192\.png/);
+    expect(existsSync(resolve(__dirname, '../../public/05d-geometric-2x2-icon.svg'))).toBe(true);
+    expect(existsSync(resolve(__dirname, '../../public/05d-geometric-2x2-icon.png'))).toBe(true);
+    expect(existsSync(resolve(__dirname, '../../public/05d-geometric-2x2-icon-192.png'))).toBe(true);
+    expect(existsSync(resolve(__dirname, '../../public/flag-mark.svg'))).toBe(false);
+    expect(existsSync(resolve(__dirname, '../../public/favicon.svg'))).toBe(false);
+    // No letters in the app mark — the wordmark is a separate lockup.
+    const icon = read('../../public/05d-geometric-2x2-icon.svg');
+    expect(icon).not.toMatch(/<text/);
+    expect(icon).not.toMatch(/Word Heist/);
+    expect(icon).toMatch(/#56867C/);
+    expect(icon).toMatch(/#CB6B49/);
   });
 
-  it('draws the app mark to survive a 16px browser tab', () => {
-    const favicon = read('../../public/favicon.svg');
+  it('draws the 2×2 app mark on a cream ground with both seat colours', () => {
+    const icon = read('../../public/05d-geometric-2x2-icon.svg');
 
-    // A solid ground, so the mark is a shape on a tab bar rather than loose
-    // strokes floating on whatever colour the browser happens to use.
-    expect(favicon).toMatch(/<rect width="100" height="100" rx="\d+" fill="#[0-9A-Fa-f]{6}"\/>/);
-
-    // The pennant runs to the edge of the frame. The old mark stopped at 90
-    // with the flag body ending near 70, which left a third of a 16px icon
-    // empty and the rest too small to read.
-    const pennant = favicon.match(/<path fill="#[0-9A-Fa-f]{6}" d="M(.+?)"/)?.[1] ?? '';
-    const xs = [...pennant.matchAll(/(?:^|[ ,C])(\d+(?:\.\d+)?) \d/g)].map(m => Number(m[1]));
-    expect(Math.max(...xs)).toBeGreaterThanOrEqual(95);
-
-    // A pole thin enough to fall between pixels disappears at 16px; 14/100 is
-    // just over two pixels there.
-    const pole = favicon.match(/<rect x="\d+" y="\d+" width="(\d+)"/)?.[1];
-    expect(Number(pole)).toBeGreaterThanOrEqual(12);
+    // A solid cream ground, so the mark is a shape on a tab bar rather than
+    // loose strokes floating on whatever colour the browser happens to use.
+    expect(icon).toMatch(/<rect width="1024" height="1024" fill="#F7F1E8"\/>/);
+    expect(icon).toMatch(/fill="#56867C"/);
+    expect(icon).toMatch(/fill="#CB6B49"/);
+    expect(icon).toMatch(/fill="#E8DFD2"/);
+    expect(icon).not.toMatch(/<path /);
   });
 
   it('ships every icon size index.html promises', () => {
     for (const file of [
-      'favicon.svg',
+      '05d-geometric-2x2-icon.svg',
       'favicon.ico',
       'favicon-16.png',
       'favicon-32.png',
-      'apple-touch-icon.png',
+      '05d-geometric-2x2-icon-192.png',
     ]) {
       expect(indexHtml, `${file} is not linked`).toContain(file);
       expect(existsSync(resolve(__dirname, `../../public/${file}`)), file).toBe(true);
@@ -257,24 +268,37 @@ describe('branding', () => {
     expect(sizes.sort((a, b) => a - b)).toEqual([16, 32, 48]);
   });
 
-  it('marks each goal corner as a triple-word square in its owner\'s colour', () => {
-    // The goal is not a decoration on the square, it IS the square: a triple
-    // word painted in the same colour as that player's score card, so there is
-    // no doubt whose corner it is.
+  it('wires occupying-player 3× corner badges onto true corners; spares stay empty', () => {
     const board = read('./Board.tsx');
     expect(board).toMatch(/flagOwner &&/);
     expect(board).toMatch(/goal-square is-\$\{flagOwner\.toLowerCase\(\)\}/);
-    expect(board).toMatch(/goal-mult/);
-    expect(board).toMatch(/3×/);
-    expect(board).toMatch(/goal-word/);
-    // Rendered, not an image, so it scales with the cell at any board size.
+    expect(board).toMatch(/corner-a-badge-\$\{flagOwner\.toLowerCase\(\)\}-\$\{trueCorner\.toLowerCase\(\)\}\.svg/);
+    expect(board).not.toMatch(/goal-mult/);
+    expect(board).not.toMatch(/goal-word/);
+    expect(board).not.toMatch(/TWS/);
     expect(board).not.toMatch(/token-p[12]\.svg/);
+    expect(board).not.toMatch(/token-corner-empty/);
     expect(board).not.toMatch(/corner-token/);
 
     expect(boardCss).toMatch(/\.goal-square\.is-p1\s*\{[^}]*background-color:\s*var\(--color-p1\)/s);
     expect(boardCss).toMatch(/\.goal-square\.is-p2\s*\{[^}]*background-color:\s*var\(--color-p2\)/s);
-    // Fills the whole cell rather than sitting inside it as a token.
     expect(boardCss).toMatch(/\.goal-square\s*\{[^}]*inset:\s*0/s);
+
+    for (const player of ['p1', 'p2']) {
+      for (const corner of ['nw', 'ne', 'se', 'sw']) {
+        const stem = `corner-a-badge-${player}-${corner}`;
+        expect(existsSync(resolve(__dirname, `../../public/${stem}.svg`)), `${stem}.svg`).toBe(true);
+        expect(existsSync(resolve(__dirname, `../../public/${stem}.png`)), `${stem}.png`).toBe(true);
+        const svg = read(`../../public/${stem}.svg`);
+        expect(svg).toMatch(/3×/);
+        expect(svg).not.toMatch(/TWS/);
+        expect(svg).toMatch(player === 'p1' ? /#56867C/ : /#CB6B49/);
+      }
+    }
+
+    expect(existsSync(resolve(__dirname, '../../public/token-p1.svg'))).toBe(false);
+    expect(existsSync(resolve(__dirname, '../../public/token-p2.svg'))).toBe(false);
+    expect(existsSync(resolve(__dirname, '../../public/token-corner-empty.svg'))).toBe(false);
   });
 
   it('draws the opening centre square large enough to find at a glance', () => {
