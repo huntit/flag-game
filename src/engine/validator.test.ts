@@ -7,7 +7,13 @@ import { Dictionary } from './dictionary';
 import { validatePlay, findWordsFormed, readWord, type FlagContext } from './validator';
 import type { Placement } from './validator';
 import type { Board, Letter, Position, Tile } from './types';
-import { BOARD_SIZE, CENTRE_STAR, FLAG_POSTS } from './types';
+import { PHONE_9, centreStar, flagPosts } from './variants';
+
+// These tests exercise the phone default; the geometry comes from its rule set.
+const BOARD_SIZE = PHONE_9.boardSize;
+const CENTRE_STAR = centreStar(BOARD_SIZE);
+const FLAG_POSTS = flagPosts(BOARD_SIZE);
+
 
 const VALUES: Record<string, number> = {
   A: 1, B: 4, C: 4, D: 2, E: 1, F: 4, G: 3, H: 3, I: 1, J: 10, K: 5, L: 2, M: 4,

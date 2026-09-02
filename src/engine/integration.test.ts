@@ -10,13 +10,17 @@ import { executeAction } from './actions';
 import { selectAIAction } from './ai';
 import { readWord, effectiveLetter } from './validator';
 import type { AIPersonality, Letter, TileData } from './types';
-import { BOARD_SIZE, RACK_MAX } from './types';
+import { PHONE_9 } from './variants';
+
+const BOARD_SIZE = PHONE_9.boardSize;
+const RACK_MAX = PHONE_9.rackMax;
 
 const tileData: TileData = JSON.parse(
   readFileSync(resolve(__dirname, '../../data/tiles.json'), 'utf-8')
 );
 const dictionary = Dictionary.fromText(
-  readFileSync(resolve(__dirname, '../../data/words.txt'), 'utf-8')
+  readFileSync(resolve(__dirname, '../../data/words.txt'), 'utf-8'),
+  BOARD_SIZE
 );
 
 /** Letter values straight from data/tiles.json — the only source of truth. */

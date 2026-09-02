@@ -7,7 +7,13 @@ import { Dictionary } from './dictionary';
 import { generateLegalPlays, hasLegalPlay } from './moveGenerator';
 import { validatePlay, type FlagContext } from './validator';
 import type { Board, FlagPost, GameState, Letter, Position, Tile } from './types';
-import { BOARD_SIZE, CENTRE_STAR, FLAG_POSTS } from './types';
+import { PHONE_9, centreStar, flagPosts } from './variants';
+
+// These tests exercise the phone default; the geometry comes from its rule set.
+const BOARD_SIZE = PHONE_9.boardSize;
+const CENTRE_STAR = centreStar(BOARD_SIZE);
+const FLAG_POSTS = flagPosts(BOARD_SIZE);
+
 import { emptySpareCorners } from './game';
 
 const VALUES: Record<string, number> = {
@@ -46,6 +52,7 @@ function mockState(
   flags: { P1: FlagPost | null; P2: FlagPost | null } = { P1: 'NW', P2: 'SE' }
 ): GameState {
   return {
+    rules: PHONE_9,
     board,
     players: [
       { id: 'P1', rack: [], score: 0, flagsLost: 0 },

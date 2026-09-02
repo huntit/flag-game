@@ -3,7 +3,10 @@ import { describeMove, firstPlayerLogEntry, joinWords, playSummaryText, seatDisp
 import { initializeGame } from './engine/game';
 import { executeAction } from './engine/actions';
 import type { TileData } from './engine/types';
-import { DRAW_COUNT, RACK_MAX } from './engine/types';
+import { DRAW_COUNT } from './engine/types';
+import { PHONE_9 } from './engine/variants';
+
+const RACK_MAX = PHONE_9.rackMax;
 import { Dictionary } from './engine/dictionary';
 
 const mockTileData: TileData = {

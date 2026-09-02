@@ -9,7 +9,13 @@ import { initializeGame, mulberry32, setRandomSource, resetRandomSource } from '
 import { executeAction } from './actions';
 import { planAIAction, selectAIAction } from './ai';
 import type { AIPersonality, Letter, MarketSlot, TileData, Tile } from './types';
-import { DRAW_COUNT, FLAG_POSTS, MARKET_FACE_UP, RACK_MAX } from './types';
+import { DRAW_COUNT } from './types';
+import { PHONE_9, flagPosts } from './variants';
+
+// The AI is exercised on the phone default.
+const RACK_MAX = PHONE_9.rackMax;
+const MARKET_FACE_UP = PHONE_9.marketFaceUp;
+const FLAG_POSTS = flagPosts(PHONE_9.boardSize);
 
 const tileData: TileData = {
   source: { values: 'test', counts: 'test' },

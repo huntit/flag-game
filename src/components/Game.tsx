@@ -40,6 +40,7 @@ import {
   firstPlayerLogEntry,
   joinWords,
   playSummaryText,
+  describeFinalMove,
   type MoveLogEntry,
   type SeatNameContext,
 } from '../moveLog';
@@ -695,7 +696,21 @@ function Game({ tileData, dictionary, mode, aiOpponent, onBackToMenu }: GameProp
   }
 
   return (
-    <div className={`play-shell ${drag.isDragging ? 'is-dragging' : ''}`}>
+    <div
+      className={`play-shell ${drag.isDragging ? 'is-dragging' : ''}`}
+      /* The three counts the layout is built from, published once at the top
+         of the tree so every row below budgets itself against the same rule
+         set. A 9x9 game deals 6 rack slots and 5 market slots, an 11x11 game
+         7 and 6; reading either number out of module scope would give one of
+         the two variants tiles that do not fit the row they are in. */
+      style={
+        {
+          '--board-cells': rules.boardSize,
+          '--rack-slots': rules.rackMax,
+          '--market-slots': marketSlots(rules),
+        } as React.CSSProperties
+      }
+    >
       <header className="play-header">
         <HomeLink variant="play" onNavigate={onBackToMenu} />
       </header>
@@ -844,6 +859,7 @@ function Game({ tileData, dictionary, mode, aiOpponent, onBackToMenu }: GameProp
       {gameState.gameOver && (
         <GameOverOverlay
           gameState={gameState}
+          finalMove={describeFinalMove(gameState, seatCtx)}
           youLabel={youLabel}
           otherLabel={otherLabel}
           viewerIndex={viewerIndex}

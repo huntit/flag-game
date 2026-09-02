@@ -23,11 +23,17 @@ function Market({ market, capacity, selectedTileIds, bagCount, disabled, onTileC
 
   return (
     <div className="market-row-inner" data-market-count={market.length}>
-      <div className="market-bag" aria-label={`${bagCount} tiles left in the bag`}>
-        <img className="market-bag-art" src={`${base}market-bag.svg`} alt="" />
-        <span className="market-bag-count" aria-hidden="true">
-          {bagCount}
-        </span>
+      {/* Heading and bag share one row wherever the market is a card of its
+          own; on the phone the wrapper collapses and the bag simply sits at
+          the head of the row, as it always has. */}
+      <div className="market-head">
+        <span className="market-heading">Market</span>
+        <div className="market-bag" aria-label={`${bagCount} tiles left in the bag`}>
+          <img className="market-bag-art" src={`${base}market-bag.svg`} alt="" />
+          <span className="market-bag-count" aria-hidden="true">
+            {bagCount}
+          </span>
+        </div>
       </div>
       <div className="tray market-tray" aria-label="Market">
         {market.map((slot, index) => {
