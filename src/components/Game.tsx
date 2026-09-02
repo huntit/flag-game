@@ -718,7 +718,6 @@ function Game({ tileData, dictionary, mode, aiOpponent, onBackToMenu }: GameProp
             say "these tiles are not yours yet". On phone the wrapper collapses
             and the row takes its own place in the single-column shell. */}
         <div className="market-panel">
-          <h2 className="market-heading">Market</h2>
           <div className="market-row">
             <Market
               market={gameState.market}
@@ -728,7 +727,7 @@ function Game({ tileData, dictionary, mode, aiOpponent, onBackToMenu }: GameProp
               onTileClick={handleMarketTileClick}
             />
           </div>
-          {isDesktop && drawOrPassButton}
+          {isDesktop && <div className="market-actions">{drawOrPassButton}</div>}
         </div>
       </div>
 

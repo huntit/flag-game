@@ -1,17 +1,33 @@
-/* Market row: bag, then six slots lying on the bare table.
+/* Market: six slots the bag refills.
  *
- * There is no panel behind the tiles on purpose. Your rack has a tinted rail
- * and lifted tiles; market tiles lie flat on the page with the faintest of
- * shadows. That contrast — held vs lying on the table — is what separates
- * "these are mine" from "these are for sale", without a caption.
+ * The slots are grooves — shallow wells a tile sits down into — so the market
+ * reads as a physical card holding tiles, not a row of tiles floating on the
+ * page. Every slot is drawn whether or not it holds a tile, which is what
+ * makes the six places legible when the bag runs low.
+ *
+ * On phone this is a strip beside the bag. On desktop it becomes a card in the
+ * side column: heading on the left of the top line, bag on the right, a 3x2
+ * grid below, and Draw 2 on the right edge. Those four edges are the card's
+ * whole alignment story.
  */
 
-/* Bag and tiles read as one group, centred on the same axis as the rack
-   below it and the board above it. */
 .market-row-inner {
   gap: var(--tile-gap);
   align-items: center;
   justify-content: center;
+}
+
+.market-head {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+/* The card's title. Desktop only: on phone the row's own look already
+   separates it from the rack, and a caption would only cost tile width. */
+.market-heading {
+  display: none;
 }
 
 .market-tray {
@@ -23,19 +39,14 @@
   align-items: center;
 }
 
-/* The bag is a fixed-width column — art above, count below — so the space it
-   takes is exactly the space --bag-block reserved for it in the tile maths.
-   An inline count would widen unpredictably with the number and push the last
-   market tile off the board's right edge. */
 .market-bag {
-  flex: 0 0 var(--bag-block);
-  width: var(--bag-block);
-  height: 100%;
+  flex: 0 0 auto;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: calc(var(--tile-gap) * 0.35);
+  width: var(--bag-block);
   min-width: 0;
   overflow: hidden;
 }
@@ -50,9 +61,7 @@
   pointer-events: none;
 }
 
-/* Plain text on the page background, not a badge on the bag. */
-/* Plain text on the page background — no white disc on the bag — with
-   enough weight and contrast to read as a count at a glance. */
+/* Plain text beside the bag — no white disc stamped on the art. */
 .market-bag-count {
   flex: 0 0 auto;
   font-size: clamp(0.8rem, calc(var(--bag-block) * 0.34), 1.25rem);
@@ -63,7 +72,33 @@
   pointer-events: none;
 }
 
-/* Market tiles lie flat: the same tile stock as the rack, barely raised. */
+/* ---- Slots --------------------------------------------------------------
+   The groove. Recessed rather than raised, so a tile in it reads as sitting
+   down in the card, and an empty one reads as a place waiting to be filled. */
+
+.market-slot {
+  position: relative;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--market-slot-size);
+  aspect-ratio: 1;
+  border-radius: calc(var(--market-slot-size) * 0.2);
+  background-color: color-mix(in srgb, var(--color-ink) 8%, transparent);
+  box-shadow:
+    inset 0 1.5px 3px color-mix(in srgb, var(--color-ink) 22%, transparent),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.55);
+}
+
+/* The tile sits inside the well, leaving the rim visible all round. */
+.market-slot .tray-tile {
+  width: var(--tile-size);
+  height: var(--tile-size);
+}
+
+/* Market tiles lie in their groove: the same tile stock as the rack, seated
+   rather than lifted. */
 .market-tile {
   box-shadow:
     inset 0 0 0 1px var(--tile-edge),
@@ -75,8 +110,7 @@
   cursor: default;
 }
 
-/* Face down is the same tile, turned over — same size, stock, radius and
-   edge, with the pennant emboss instead of a letter. */
+/* Face down is the same tile, turned over. */
 .market-tile.is-facedown {
   background-color: var(--color-tile);
   background-image: var(--tile-back-url);
@@ -85,18 +119,14 @@
   background-repeat: no-repeat;
 }
 
-.market-slot-empty.is-face-down {
-  background-color: color-mix(in srgb, var(--color-ink) 4%, transparent);
-}
-
 .market-tile .tile-face {
   width: 100%;
   height: 100%;
 }
 
-/* Picked up off the table, ready to take. */
+/* Picked up out of the groove, ready to take. */
 .market-tile.is-selected {
-  transform: translateY(-14%);
+  transform: translateY(-12%);
   box-shadow:
     inset 0 0 0 1px var(--tile-edge),
     0 0 0 2px var(--color-chrome),
@@ -105,71 +135,77 @@
 
 @media (min-width: 900px) and (pointer: fine) {
   .market-tile:hover:not(:disabled):not(.is-selected) {
-    transform: translateY(-6%);
+    transform: translateY(-5%);
     box-shadow:
       inset 0 0 0 1px var(--tile-edge),
       0 3px 7px rgba(44, 58, 61, 0.18);
   }
 
-  /* ---- Market panel layout ---------------------------------------------
-     In its own column the market is a block, not a strip: the bag heads the
-     panel with its count beside it, and the six slots sit in a 3x2 grid whose
-     edges align with the panel. A grid also makes the two face-down slots on
-     the end read as a pair rather than as the tail of a queue. */
+  /* ---- The card ---------------------------------------------------------
+     Everything inside shares one inner column exactly as wide as the grid, so
+     the heading's left edge, the grid's edges, the bag's right edge and the
+     button's right edge all line up. */
 
-  /* height:100% is a phone rule — it makes sense in a fixed-height row. Here
-     the panel sizes itself from its content, and inheriting 100% made the
-     column overflow and centre its overflow, which is what put the bag on top
-     of the heading. */
   .market-row-inner {
     flex-direction: column;
-    align-items: stretch;
+    align-items: center;
     justify-content: flex-start;
     gap: 10px;
     height: auto;
+    width: 100%;
   }
 
-  .market-row-inner,
+  .market-head,
   .market-tray {
-    height: auto;
+    width: var(--market-grid-w);
   }
 
+  .market-head {
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  .market-heading {
+    display: block;
+    margin: 0;
+    font-size: 0.78rem;
+    font-weight: 800;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--color-text-dim);
+  }
+
+  /* Bag on the top right, count beside the art rather than under it. */
   .market-bag {
-    flex: 0 0 auto;
     flex-direction: row;
     align-items: center;
-    justify-content: flex-start;
-    gap: 8px;
+    justify-content: flex-end;
+    gap: 7px;
     width: auto;
     height: auto;
   }
 
   .market-bag-art {
-    height: 38px;
-    width: auto;
+    height: 34px;
   }
 
   .market-bag-count {
     font-size: 1rem;
   }
 
-  /* Tiles size themselves from the panel width, not the board's. */
+  /* Tiles fill their grooves and the grooves fill the grid, so the only white
+     space left between them is the gap itself. */
   .market-tray {
     display: grid;
-    grid-template-columns: repeat(var(--market-cols, 3), 1fr);
-    gap: 10px;
-    width: 100%;
-    justify-items: center;
+    grid-template-columns: repeat(var(--market-cols, 3), var(--market-slot-size));
+    gap: var(--market-gap);
+    justify-content: center;
     align-items: center;
+    height: auto;
     padding: 0;
   }
 
-  /* Still one tile size: a market tile and a rack tile are the same object,
-     and the panel changes where they sit, not how big they are. */
-  .market-tray .tray-tile,
-  .market-tray .tray-slot-empty {
-    width: 100%;
-    max-width: var(--tile-size);
-    height: auto;
+  .market-slot {
+    width: var(--market-slot-size);
   }
 }

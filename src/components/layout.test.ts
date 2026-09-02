@@ -96,6 +96,18 @@ describe('no-scroll phone shell', () => {
   it('has a landscape layout for iPad that keeps the controls on screen', () => {
     expect(gameCss).toMatch(/@media \(orientation: landscape\)/);
   });
+
+  it('budgets the market grooves in every shell that sizes tiles', () => {
+    // A well is the tile plus a rim either side, so six of them cost twelve
+    // rims. Any shell that redefines --market-fit and forgets them overflows
+    // its column by that much — which is exactly how the landscape tablet
+    // pushed its last tile off the screen.
+    const budgets = gameCss.match(/--market-fit:[\s\S]*?;/g) ?? [];
+    expect(budgets.length).toBeGreaterThan(1);
+    for (const budget of budgets) {
+      expect(budget).toMatch(/12 \* var\(--market-well-rim\)/);
+    }
+  });
 });
 
 const desktopBlock = (css: string) =>
@@ -173,7 +185,54 @@ describe('desktop layout (wide fine-pointer windows only)', () => {
     expect(desktop).toMatch(/--market-cols:\s*3/);
     expect(read('./Market.css')).toMatch(/grid-template-columns:\s*repeat\(var\(--market-cols/);
     // Still one tile size: the panel changes where a tile sits, not its size.
-    expect(read('./Market.css')).toMatch(/max-width:\s*var\(--tile-size\)/);
+    expect(read('./Market.css')).toMatch(/\.market-slot \.tray-tile\s*\{[^}]*width:\s*var\(--tile-size\)/s);
+  });
+
+  it('seats market tiles in grooves that are drawn whether or not they are filled', () => {
+    // A card with six wells in it reads as the thing tiles come from. A row of
+    // tiles with nothing under them reads as tiles that happen to be adjacent —
+    // and when the bag runs low it stops reading as six places at all.
+    const market = read('./Market.tsx');
+    expect(market).toMatch(/MARKET_SLOTS - market\.length/);
+    expect(market).toMatch(/className=\{`market-slot /);
+
+    const css = read('./Market.css');
+    const slot = css.match(/\n\.market-slot\s*\{[\s\S]*?\n\}/)?.[0] ?? '';
+    expect(slot).toMatch(/width:\s*var\(--market-slot-size\)/);
+    // Recessed, not raised: the inset shadow is what makes it a groove.
+    expect(slot).toMatch(/box-shadow:[\s\S]*?inset/);
+
+    // The well is the tile plus a rim, and the rim comes off the board rather
+    // than off --tile-size, which --market-fit already feeds into.
+    const shell = gameCss.match(/\.play-shell\s*\{[\s\S]*?\n\}/)?.[0] ?? '';
+    expect(shell).toMatch(
+      /--market-slot-size:\s*calc\(var\(--tile-size\) \+ \(2 \* var\(--market-well-rim\)\)\)/,
+    );
+    expect(shell).toMatch(/--market-well-rim:\s*clamp\([^)]*var\(--board-size\)/);
+    expect(shell).not.toMatch(/--market-well-rim:[^;]*var\(--tile-size\)/);
+    // The row still has to fit: six wells, six rims either side, and the bag.
+    expect(shell).toMatch(/--market-fit:[\s\S]*?12 \* var\(--market-well-rim\)/);
+  });
+
+  it('hangs the market card heading, bag, grid and button on one inner column', () => {
+    // Four edges, one column: heading left, bag right, grid between, button on
+    // the grid's right edge. Nothing in the card floats free of the others.
+    const marketCss = read('./Market.css');
+    expect(marketCss).toMatch(/\.market-head,\s*\n\s*\.market-tray\s*\{[^}]*width:\s*var\(--market-grid-w\)/s);
+    expect(marketCss).toMatch(/\.market-head\s*\{[^}]*justify-content:\s*space-between/s);
+    expect(desktop).toMatch(/\.play-shell \.market-actions\s*\{[^}]*width:\s*var\(--market-grid-w\)/s);
+    expect(desktop).toMatch(/\.play-shell \.market-actions\s*\{[^}]*justify-content:\s*flex-end/s);
+    expect(desktop).toMatch(
+      /--market-grid-w:\s*calc\(\s*\(var\(--market-cols\) \* var\(--market-slot-size\)\)/,
+    );
+
+    // Heading first, bag second, so the bag sits top-right of the card.
+    const market = read('./Market.tsx');
+    expect(market.indexOf('market-heading')).toBeLessThan(market.indexOf('market-bag'));
+    // Market.css alone owns the heading's visibility — declaring it in both
+    // files once let bundle order hide it on desktop too.
+    expect(marketCss).toMatch(/\.market-heading\s*\{\s*display:\s*none/);
+    expect(gameCss).not.toMatch(/\.market-heading\s*\{[^}]*display:/s);
   });
 
   it('renders Draw once, in the column that holds the market', () => {
@@ -181,7 +240,7 @@ describe('desktop layout (wide fine-pointer windows only)', () => {
     // so the single node moves rather than being duplicated and hidden.
     const game = read('./Game.tsx');
     expect(game).toMatch(/const drawOrPassButton =/);
-    expect(game).toMatch(/\{isDesktop && drawOrPassButton\}/);
+    expect(game).toMatch(/\{isDesktop && <div className="market-actions">\{drawOrPassButton\}<\/div>\}/);
     expect(game).toMatch(/\{!isDesktop && drawOrPassButton\}/);
     expect((game.match(/action-draw/g) ?? []).length).toBe(1);
     // The media query is the same one the CSS is gated on — not a UA test.
