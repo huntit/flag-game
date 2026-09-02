@@ -143,7 +143,6 @@ function Board({
                 className={`goal-square is-${flagOwner.toLowerCase()}`}
                 src={`${base}corner-a-badge-${flagOwner.toLowerCase()}-${trueCorner.toLowerCase()}.svg`}
                 alt=""
-                draggable={false}
               />
             )}
           </>

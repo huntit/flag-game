@@ -79,6 +79,8 @@
   display: block;
   border-radius: inherit;
   pointer-events: none;
+  -webkit-user-drag: none;
+  user-select: none;
 }
 
 .goal-square.is-p1 {
