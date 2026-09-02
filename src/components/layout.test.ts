@@ -197,26 +197,30 @@ describe('tile score placement', () => {
 });
 
 describe('branding', () => {
-  it('uses the Word Heist 05e stacked lockup — WORD over HEIST — not the one-line lockup', () => {
+  it('uses the Word Heist 05f stacked lockup — title-case Word over Heist — not 05e or the one-line lockup', () => {
     for (const file of ['Game.tsx', 'Menu.tsx', 'OnlineMode.tsx']) {
       expect(read(`./${file}`)).toMatch(/HomeLink/);
     }
     const homeLink = read('./HomeLink.tsx');
-    expect(homeLink).toMatch(/05e-geometric-2x2-lockup-stacked\.svg/);
-    expect(homeLink).toMatch(/05e-geometric-2x2-lockup-stacked\.png/);
-    expect(homeLink).toMatch(/05e-geometric-2x2-lockup-stacked@2x\.png/);
+    expect(homeLink).toMatch(/05f-geometric-2x2-lockup-stacked\.svg/);
+    expect(homeLink).toMatch(/05f-geometric-2x2-lockup-stacked\.png/);
+    expect(homeLink).toMatch(/05f-geometric-2x2-lockup-stacked@2x\.png/);
     expect(homeLink).toMatch(/Word Heist/);
     expect(homeLink).toMatch(/width=\{?\d+/);
     expect(homeLink).not.toMatch(/logo-header/);
     expect(homeLink).not.toMatch(/05d-geometric-2x2-lockup/);
-    expect(existsSync(resolve(__dirname, '../../public/05e-geometric-2x2-lockup-stacked.svg'))).toBe(true);
-    expect(existsSync(resolve(__dirname, '../../public/05e-geometric-2x2-lockup-stacked.png'))).toBe(true);
-    expect(existsSync(resolve(__dirname, '../../public/05e-geometric-2x2-lockup-stacked@2x.png'))).toBe(true);
+    expect(homeLink).not.toMatch(/05e-geometric-2x2-lockup-stacked/);
+    expect(existsSync(resolve(__dirname, '../../public/05f-geometric-2x2-lockup-stacked.svg'))).toBe(true);
+    expect(existsSync(resolve(__dirname, '../../public/05f-geometric-2x2-lockup-stacked.png'))).toBe(true);
+    expect(existsSync(resolve(__dirname, '../../public/05f-geometric-2x2-lockup-stacked@2x.png'))).toBe(true);
     expect(existsSync(resolve(__dirname, '../../public/logo-header.svg'))).toBe(false);
     expect(existsSync(resolve(__dirname, '../../public/logo-header.png'))).toBe(false);
-    const stacked = read('../../public/05e-geometric-2x2-lockup-stacked.svg');
-    expect(stacked).toMatch(/>WORD</);
-    expect(stacked).toMatch(/>HEIST</);
+    const stacked = read('../../public/05f-geometric-2x2-lockup-stacked.svg');
+    expect(stacked).toMatch(/>Word</);
+    expect(stacked).toMatch(/>Heist</);
+    expect(stacked).toMatch(/font-size="104"/);
+    expect(stacked).not.toMatch(/>WORD</);
+    expect(stacked).not.toMatch(/>HEIST</);
     expect(stacked).not.toMatch(/Word Heist/);
   });
 

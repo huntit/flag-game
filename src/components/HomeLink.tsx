@@ -1,4 +1,4 @@
-// Word Heist 05e stacked lockup — 2×2 + WORD over HEIST. Vector SVG, PNG fallback.
+// Word Heist 05f stacked lockup — 2×2 + title-case Word over Heist.
 
 import './HomeLink.css';
 
@@ -23,13 +23,13 @@ function HomeLink({ variant, onNavigate }: HomeLinkProps) {
       aria-label="Word Heist home"
     >
       <picture>
-        <source srcSet={`${base}05e-geometric-2x2-lockup-stacked.svg`} type="image/svg+xml" />
+        <source srcSet={`${base}05f-geometric-2x2-lockup-stacked.svg`} type="image/svg+xml" />
         <img
-          src={`${base}05e-geometric-2x2-lockup-stacked.png`}
-          srcSet={`${base}05e-geometric-2x2-lockup-stacked.png 1x, ${base}05e-geometric-2x2-lockup-stacked@2x.png 2x`}
+          src={`${base}05f-geometric-2x2-lockup-stacked.png`}
+          srcSet={`${base}05f-geometric-2x2-lockup-stacked.png 1x, ${base}05f-geometric-2x2-lockup-stacked@2x.png 2x`}
           alt="Word Heist"
           className="home-link-img"
-          width={1007}
+          width={690}
           height={360}
         />
       </picture>

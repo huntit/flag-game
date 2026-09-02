@@ -295,11 +295,11 @@ for (const t of targets) {
   }
   if (m.emptySpareHasBadge) problems.push('empty spare corner shows a badge or pennant');
   if (m.emptyCornerToken) problems.push('old FLAG pennant token still in the DOM');
-  if (!/05e-geometric-2x2-lockup-stacked/.test(m.logoSrc)) {
-    problems.push(`header is not the 05e stacked lockup: ${m.logoSrc}`);
+  if (!/05f-geometric-2x2-lockup-stacked/.test(m.logoSrc)) {
+    problems.push(`header is not the 05f stacked lockup: ${m.logoSrc}`);
   }
-  if (/05d-geometric-2x2-lockup(?!-)|logo-header/.test(m.logoSrc)) {
-    problems.push(`header still uses the one-line lockup: ${m.logoSrc}`);
+  if (/05d-geometric-2x2-lockup(?!-)|05e-geometric-2x2-lockup-stacked|logo-header/.test(m.logoSrc)) {
+    problems.push(`header still uses a previous lockup: ${m.logoSrc}`);
   }
   if (m.shuffleOverlapsTile) problems.push('shuffle overlaps a rack tile');
   if (m.playOverlapsTile) problems.push('Play overlaps a rack tile');
