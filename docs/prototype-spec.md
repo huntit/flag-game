@@ -57,10 +57,10 @@ All criteria below describe **phone v0.1 (9×9)** unless noted.
   - 2-letter play rate
 - Tests verify:
   - Per-player flags on diagonally opposite true corners at setup
-  - Own-flag capture: triple-word on capturing word only, immediate end, +10 to ender
+  - Own-flag capture: triple-word on capturing word only, immediate end, leftover applied
   - Opponent first steal: triple-word (not double-word), flag removed, replacement on random empty spare corner
-  - Opponent second steal: triple-word, immediate end, +10 to ender, no third flag
-  - Steal with no spare corner: triple-word, immediate end, no replacement, +10 to ender
+  - Opponent second steal: triple-word, immediate end, leftover applied, no third flag
+  - Steal with no spare corner: triple-word, immediate end, no replacement, leftover applied
   - Multi-flag play resolves own-flag first
   - Flag multiplier applies to whichever player covers the flag cell (not own-colour-only)
   - Market: 3 face-up + 2 face-down; Draw takes exactly 2 from showing tiles; orientation-preserving refill
@@ -69,16 +69,16 @@ All criteria below describe **phone v0.1 (9×9)** unless noted.
   - Exchange: Draw when rack size was 6 before taking (Draw 2 + discard 2); three consecutive Exchanges end the game
   - `consecutiveExchanges` resets on Play, non-Exchange Draw, and Pass
   - Pass legal only when no legal Play AND Draw illegal
-  - Going out: bag empty AND market empty AND player plays last tile(s); +10 to ender; end
-  - +10 awarded at most once per game even if multiple +10 triggers on same play
+  - Going out: bag empty AND market empty AND player plays last tile(s); leftover applied; end
+  - Leftover: ender adds opponent rack tile values; opponent subtracts same total; blanks 0; ender's own rack not subtracted
+  - Leftover NOT applied on exchange-three or double-pass (stall ends)
   - Remote game persistence across disconnects/days
   - Opponent rack letters not leaked in URL or client payload; rack count is public
   - Opening deal: P1 gets 2 tiles from the bag, P2 gets 3; market 5 tiles; P1 acts first; first action may be Draw or Play
   - Random P1 assignment: solo vs AI, hotseat, and remote (remote randomises when second seat sits)
   - Dictionary load accepts length 2–9 without shrinking `data/words.txt`
   - Bag: 69 tiles per section 5 count table (update `data/tiles.json` — not in docs-only PR)
-  - **Leftover tiles at end:** TODO hook only — Peter has not chosen ignore vs Scrabble-style; do NOT implement leftover scoring
-- **Out of scope:** Board premium squares, bingo, 3–4 player, secret goals, turn clocks/timeouts, spectators, accounts, push/email notifications, leftover-tile scoring until Peter chooses
+- **Out of scope:** Board premium squares, bingo, 3–4 player, secret goals, turn clocks/timeouts, spectators, accounts, push/email notifications
 
 ## 3. Board
 
@@ -119,7 +119,7 @@ Short reference for lab / future large-board play. **Phone v0.1 is what Ada ship
 | Exchange full rack | 6 | 7 |
 | Opening deal | P1=2, P2=3 | P1=2, P2=3 |
 
-Same flags, +10 ends, exchange-three, double-pass, and going-out rules apply to both layouts.
+Same flags, leftover on closer ends, exchange-three, double-pass, and going-out rules apply to both layouts.
 
 ## 4. Flags (2-player)
 
@@ -139,25 +139,15 @@ Persist each player's flag location, colour, and `flagsLost` (integer, starts at
 
 A flag is captured when a legal play places a tile on that flag's cell. The tile remains; the flag token is removed.
 
-**Own flag:** Apply **triple-word** multiplier to the **capturing word only** (other words in the same play score normally). End game immediately. Award **+10** to the ending player. Winner = highest total score after bonuses; tie = draw. Self-capture always ends regardless of `flagsLost`.
+**Own flag:** Apply **triple-word** multiplier to the **capturing word only** (other words in the same play score normally). End game immediately. Apply **leftover scoring** (section 9.1). Winner = highest total score after adjustment; tie = draw. Self-capture always ends regardless of `flagsLost`.
 
 **Opponent's flag (first steal):** Apply **triple-word** multiplier to the **capturing word only** (NOT double-word). Remove that flag. Increment victim's `flagsLost`. If victim's `flagsLost` < 2, spawn a **replacement flag** of the victim's colour on a uniformly random **spare true corner** that is empty (no tile, no flag). Victim may still self-capture the replacement later.
 
-**Opponent's flag (second steal):** When `flagsLost` reaches 2 for a player (second capture **by an opponent**), apply triple-word on the capturing word, award **+10** to the ending player, and **end immediately** — no third flag.
+**Opponent's flag (second steal):** When `flagsLost` reaches 2 for a player (second capture **by an opponent**), apply triple-word on the capturing word, apply **leftover scoring**, and **end immediately** — no third flag.
 
-**Steal with no spare:** If a steal would grant a replacement but no spare true corner is empty, apply triple-word, award **+10** to the ending player, and **end immediately** (no replacement). Treat as decisive steal.
+**Steal with no spare:** If a steal would grant a replacement but no spare true corner is empty, apply triple-word, apply **leftover scoring**, and **end immediately** (no replacement). Treat as finishing capture (same as a closer).
 
-**Multiple flags in one play:** Resolve own-flag first (triple-word + end + +10 if applicable). If no own-flag but opponent flag(s), apply opponent rules. Never apply two multipliers to the same word.
-
-### +10 flat end bonus (locked)
-
-Award **+10** to the **ending player** on these ends only:
-
-1. Self-capture (own flag)
-2. Second opponent-steal of the same player's flag
-3. Going out (section 9)
-
-**At most one +10 per game.** If two triggers would fire on the same play (e.g. last tile covers own flag while going out), award +10 once.
+**Multiple flags in one play:** Resolve own-flag first (triple-word + end + leftover if applicable). If no own-flag but opponent flag(s), apply opponent rules. Never apply two multipliers to the same word.
 
 ### 3–4 player note (do not implement)
 
@@ -301,7 +291,7 @@ If the bag runs short, refill what you can; unfilled slots stay empty.
 
 **Exchange stall counter:** Maintain `consecutiveExchanges` (integer, starts at 0).
 
-- After an Exchange turn: increment `consecutiveExchanges`. If it reaches **3**, end the game immediately (`endReason = exchange_three`). Winner = highest score; tie = draw.
+- After an Exchange turn: increment `consecutiveExchanges`. If it reaches **3**, end the game immediately (`endReason = exchange_three`). Winner = highest score; tie = draw — **no leftover adjustment**.
 - Reset `consecutiveExchanges` to **0** on any **Play**, on any **Draw that is not an Exchange**, and on any **Pass**.
 - Count Exchanges **across both players** in turn order (not per player, not three Exchanges in the whole game).
 
@@ -368,37 +358,51 @@ If the bag runs short, refill what you can; unfilled slots stay empty.
 **After a pass:**
 
 - Reset `consecutiveExchanges` to 0
-- Consecutive double-pass ends the game **only after two consecutive explicit Passes** (one from each player)
+- Consecutive double-pass ends the game **only after two consecutive explicit Passes** (one from each player) — **no leftover adjustment**
 - A Draw or Play between Passes **breaks the streak**
 
-**Important:** Draw XOR Play remains the normal turn action. Pass is a stuck-only escape valve when Draw is illegal (market showing < 2). **Exchange-three** is the separate stall end when Draw is still legal but players only full-rack Exchange; do not conflate with double-pass. On a short bag, both exchange-three and double-pass remain useful.
+**Important:** Draw XOR Play remains the normal turn action. Pass is a stuck-only escape valve when Draw is illegal (market showing < 2). **Exchange-three** is the separate stall end when Draw is still legal but players only full-rack Exchange; do not conflate with double-pass. On a short bag, both exchange-three and double-pass remain useful. Neither stall end applies leftover scoring.
 
 ## 9. Game End
 
 The game ends when:
 
-- **Self-capture** — Player covers own flag (triple-word on that word, +10, then end)
-- **Second steal** — Opponent captures a player's flag for the second time (`flagsLost === 2`; triple-word on that word, +10, then end)
-- **No spare replacement** — Opponent steals but no empty spare true corner exists (triple-word on that word, +10, then end)
-- **Going out** — Bag empty **and** market empty **and** that player plays their last tile(s) this turn; +10 to ender, then end. If bag or market is not both empty, playing last tile(s) is **not** going out
-- **Exchange three** — Three consecutive Exchanges (full-rack Draw 2 + Discard 2; see section 8.1). Counted across both players. Play, non-Exchange Draw, or Pass between Exchanges resets `consecutiveExchanges` to 0
-- **Double pass** — Two consecutive explicit Passes (one from each player). Stuck-only — Draw illegal because market showing < 2. A Draw or Play between Passes breaks the streak
-- **Stuck out** — Draw permanently illegal for both players and they pass out (both stuck, both Pass)
+- **Self-capture** — Player covers own flag (triple-word on that word, leftover, then end)
+- **Second steal** — Opponent captures a player's flag for the second time (`flagsLost === 2`; triple-word on that word, leftover, then end)
+- **No spare replacement** — Opponent steals but no empty spare true corner exists (triple-word on that word, leftover, then end)
+- **Going out** — Bag empty **and** market empty **and** that player plays their last tile(s) this turn; leftover, then end. If bag or market is not both empty, playing last tile(s) is **not** going out
+- **Exchange three** — Three consecutive Exchanges (full-rack Draw 2 + Discard 2; see section 8.1). Counted across both players. Play, non-Exchange Draw, or Pass between Exchanges resets `consecutiveExchanges` to 0. **No leftover.**
+- **Double pass** — Two consecutive explicit Passes (one from each player). Stuck-only — Draw illegal because market showing < 2. A Draw or Play between Passes breaks the streak. **No leftover.**
+- **Stuck out** — Draw permanently illegal for both players and they pass out (both stuck, both Pass). **No leftover.**
 
-**Winner:** Higher score after all bonuses (including at-most-one +10). Ties are draws (no tiebreaker).
+**Winner:** Higher score after all adjustments (including leftover on closer ends only). Ties are draws (no tiebreaker).
 
 **Log `endReason`:** One of: `self_capture`, `second_steal`, `no_spare`, `going_out`, `exchange_three`, `double_pass`, `stuck_out`.
 
 Do NOT tie-break by who captured.
 
-### 9.1 Leftover tiles (OPEN — do not implement)
+### 9.1 Leftover tiles (locked — closer ends only)
 
-**Leftover tiles in racks at game end are NOT locked in v0.1.** Peter has not chosen:
+Apply Scrabble-style leftover scoring on **closer** ends only:
 
-- **Option A:** Ignore leftovers — scores stand as played
-- **Option B:** Scrabble-style — e.g. winner/ender adds opponent remaining tile values, or each player subtracts their own unplayed tiles
+1. Self-capture (own flag)
+2. Second opponent-steal of the same player's flag
+3. Going out (above)
+4. Steal with no spare replacement corner (finishing capture)
 
-**TODO:** Leave a hook in the engine; do **not** invent or implement leftover-tile scoring until Peter chooses.
+When leftover applies:
+
+- The **ending player** adds the sum of the **opponent's** unplayed rack tile values to their score
+- The **opponent's** score is reduced by that same total
+- **Blanks count 0**
+- The ender's **own** remaining tiles are **not** subtracted (going out leaves 0; capturing with tiles left keeps them unpenalized)
+
+**Do not** apply leftover on **stall** ends:
+
+- `exchange_three` — three consecutive Exchanges
+- `double_pass` — two consecutive explicit Passes (stuck-only)
+
+Those still end the game; scores stay as played (no rack transfer). Ada's default NO on those two is confirmed.
 
 ## 10. UI Requirements (Minimum)
 
@@ -577,12 +581,12 @@ Use the same generator for:
 - If any play captures opponent flag (first or second steal):
   - Play the highest-scoring among those (including triple-word)
 - Else if any self-capture play exists:
-  - Play self-capture only if it would win after triple-word + +10
+  - Play self-capture only if it would win after triple-word and leftover adjustment
 - Else: Greedy behavior
 
 ### Sleeper
 
-- If any self-capture play would put you **strictly ahead** after triple-word + +10:
+- If any self-capture play would put you **strictly ahead** after triple-word and leftover adjustment:
   - Play the highest-scoring among those
 - Else if any opponent-flag steal would end the game in your favour:
   - Play it
@@ -629,7 +633,8 @@ Write one JSON object per line for each game:
 - `scoreP1`
 - `scoreP2`
 - `flagsLostP1`, `flagsLostP2`
-- `endBonus` (+10 or 0 — at most once per game)
+- `leftoverApplied` (boolean)
+- `leftoverTotal` (sum of opponent unplayed rack values transferred; 0 when not applied)
 - `turns` (total)
 - `playsP1`, `drawsP1`, `discardsP1`
 - `playsP2`, `drawsP2`, `discardsP2`
@@ -682,12 +687,11 @@ Other matchups via CLI.
 - Rack max: **6** (7 on large layout only)
 - **Second-player compensation (locked):** P1 opens with 2 tiles from the bag; P2 opens with 3. No points compensation, no one-time draw privilege; do not scale for 6-rack
 - **Random P1 (locked):** Solo, hotseat, and remote (remote: when second seat sits). No first-player menu in v0.1
-- **+10 end bonus (locked):** At most once per game; see section 4 and 9
+- **Leftover on closer ends (locked):** Self-capture, second steal, no-spare steal, going out — see section 9.1
 
 **Hooks for later tuning (commented out, not implemented):**
 
 - *(none for opening deal — P2+1 tile is locked)*
-- **Leftover tiles at end** — OPEN; do not implement until Peter chooses (section 9.1)
 
 **After lab results:**
 
@@ -724,14 +728,13 @@ Other matchups via CLI.
 - Push/email notifications
 - Discord integration
 - Native iOS app
-- **Leftover-tile scoring** until Peter chooses (section 9.1)
 
 ## 17. Design Intent (Do NOT "Fix")
 
 These are intentional design choices:
 
 - **Draw XOR Play, no refill after play** — Playing empties your rack; drawing builds it
-- **Per-player corner flags with triple-word capture multipliers** — Own flag = triple-word + end + +10; opponent steals use triple-word (not double-word); second steal ends (+10)
+- **Per-player corner flags with triple-word capture multipliers** — Own flag = triple-word + end + leftover; opponent steals use triple-word (not double-word); second steal ends with leftover
 - **Two spare corners from diagonal setup** — Replacement flags need empty true corners
 - **Second-player compensation** — P1 opens with 2 tiles from the bag; P2 opens with 3 (no points bonus, no one-time draw privilege). P1 acts first; do not scale for 6-rack
 - **Random P1 every game** — Solo, hotseat, and remote (remote: when second seat sits). Banner before first action; no first-player menu in v0.1
@@ -740,7 +743,7 @@ These are intentional design choices:
 - **Public rack count, hidden letters** — Show facedown backs and empty slots plus a readable count number; never expose opponent letters
 - **Market 5 = 3 up + 2 down; Draw always takes 2** — Exchange via draw-then-discard when rack full (6)
 - **69-tile bag (~⅔ WWF)** — Short bag makes exchange-three and double-pass both matter
-- **+10 end bonus at most once** — Self-capture, second steal, or going out
+- **Leftover on closer ends only** — Self-capture, second steal, no-spare steal, going out; not on exchange-three or double-pass
 - **Going out requires bag AND market empty** — Playing last tile alone is not enough
 
 ## 18. Original Spark (Context, Not v0.1)
@@ -764,8 +767,7 @@ Peter's original idea (2 July 2018):
 - Market 5 (3 up + 2 down); Draw takes exactly 2; no +1 bag
 - 69-tile bag (~⅔ WWF English)
 - P1=2 / P2=3 opening tiles from the bag; random P1 each game; first action may be Draw or Play
-- Second-steal and self-capture end conditions; +10 end bonus (once); going out; exchange-three (full-rack stall), double-pass, and stuck-out backups
-- Leftover tiles at end: **open question** — do not implement until Peter chooses
+- Second-steal and self-capture end conditions; leftover on closer ends; going out; exchange-three (full-rack stall), double-pass, and stuck-out backups (stall ends — no leftover)
 
 ---
 
