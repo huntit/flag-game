@@ -10,7 +10,7 @@ function serveAndCopyData(): Plugin {
     configureServer(server) {
       server.middlewares.use((req: Connect.IncomingMessage, res, next) => {
         const url = req.url?.split('?')[0] || ''
-        const match = url.match(/^(?:\/flag-game)?\/data\/(.+)$/)
+        const match = url.match(/^(?:\/wordheist-game)?\/data\/(.+)$/)
         if (!match) {
           next()
           return
@@ -37,6 +37,6 @@ function serveAndCopyData(): Plugin {
 
 export default defineConfig({
   plugins: [react(), serveAndCopyData()],
-  base: '/flag-game/',
+  base: '/wordheist-game/',
   assetsInclude: ['**/*.txt'],
 })

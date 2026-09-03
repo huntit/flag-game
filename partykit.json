@@ -1,4 +1,4 @@
 {
-  "name": "flag-game-server",
+  "name": "wordheist-game-server",
   "main": "src/server/index.ts"
 }

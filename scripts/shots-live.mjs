@@ -1,7 +1,7 @@
 // Screenshots of the live Pages deployment at an iPhone viewport.
 import { chromium, devices } from 'playwright';
 
-const URL = process.env.FLAG_URL ?? 'https://huntit.github.io/flag-game/';
+const URL = process.env.WORDHEIST_URL ?? 'https://huntit.github.io/wordheist-game/';
 const OUT = process.argv[2] ?? '/opt/cursor/artifacts';
 
 const browser = await chromium.launch();

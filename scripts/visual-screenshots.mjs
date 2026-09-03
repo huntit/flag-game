@@ -1,7 +1,7 @@
 import { chromium, devices } from 'playwright';
 import { mkdirSync } from 'fs';
 
-const URL = process.env.FLAG_URL ?? 'http://127.0.0.1:4173/flag-game/';
+const URL = process.env.WORDHEIST_URL ?? 'http://127.0.0.1:4173/wordheist-game/';
 const OUT = process.argv[2] ?? '/opt/cursor/artifacts/screenshots';
 mkdirSync(OUT, { recursive: true });
 

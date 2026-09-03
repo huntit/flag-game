@@ -1,4 +1,4 @@
-// The two boards Flag ships, and everything that scales with them.
+// The two boards Word Heist ships, and everything that scales with them.
 //
 // A rule set is chosen once, when a game is created, and then travels on the
 // GameState (`state.rules`). Nothing reads a board size out of module scope:

@@ -1,10 +1,10 @@
-# How to Play Flag
+# How to Play Word Heist
 
 **Version 0.1 rules (phone default)** — 2 September 2026
 
 ## Overview
 
-Flag is a **two-player** word game. Each player has a coloured flag on a true corner of a **9×9 board** (phone v0.1 — the default playtest). Drawing from the market builds a better rack for later. Playing tiles scores points immediately — and covering a flag can end the game or steal your opponent's flag. If you're ahead on points, you might capture your own flag for a triple-word bonus and win. If you're behind, keep building and hunt your opponent's flag twice before they self-capture or outscore you.
+Word Heist is a **two-player** word game. Each player has a coloured flag on a true corner of a **9×9 board** (phone v0.1 — the default playtest). Drawing from the market builds a better rack for later. Playing tiles scores points immediately — and covering a flag can end the game or steal your opponent's flag. If you're ahead on points, you might capture your own flag for a triple-word bonus and win. If you're behind, keep building and hunt your opponent's flag twice before they self-capture or outscore you.
 
 ## Play Modes
 
@@ -20,7 +20,7 @@ There is **no first-player menu** in v0.1. Before the first action, a one-line b
 
 - **2 players**
 - **9×9 board** with centre star at (5,5) (odd size so there is a centre cell; not 8×8)
-- **Flag's tile set:**
+- **Word Heist's tile set:**
   - **69 tiles** — a two-thirds Words With Friends English bag (WWF / Word Eagle letter values unchanged). See the full count table in [docs/prototype-spec.md](prototype-spec.md#5-tiles).
   - See [docs/assets.md](assets.md) for letter values (Word Eagle WWF)
 - **Racks** holding maximum **6 tiles** per player. You always see your own letters. Opponent rack **letters** stay hidden; opponent rack **count** is public — 0–6 facedown tile backs with empty slots, **plus the count as a number** so you can plan against it

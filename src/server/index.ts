@@ -1,4 +1,4 @@
-// PartyKit room for Flag remote 2-player.
+// PartyKit room for Word Heist remote 2-player.
 //
 // One Durable Object per game. The room is authoritative: clients send actions
 // and the room validates them with the same rules engine the UI and CLI use.
@@ -17,7 +17,7 @@ import { hotseatFirstPlayerBanner } from '../gameSetup';
 import { markSeatConnected, shouldInitializeRemoteGame } from '../remoteSetup';
 
 /** Where the room fetches its data from; same files the app ships. */
-const DATA_BASE_URL = 'https://huntit.github.io/flag-game';
+const DATA_BASE_URL = 'https://huntit.github.io/wordheist-game';
 
 type Seat = 'P1' | 'P2';
 

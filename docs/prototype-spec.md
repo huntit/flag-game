@@ -1,4 +1,4 @@
-# Flag Prototype Specification
+# Word Heist Prototype Specification
 
 **For Ada** — Build specification v0.1 (phone default)  
 **From Finch** — 2 September 2026
@@ -32,8 +32,8 @@ A two-player digital prototype combining crossword mechanics, a Splendor-style g
 - **Phone-first static web app** — NOT native iOS / TestFlight / App Store for v0.1
 - **TypeScript rules engine** — Shared by UI, CLI, and PartyKit room authority
 - **UI:** Vite + React (tap-to-place input for iPhone Safari; do NOT rely on desktop HTML5 drag). The 9×9 grid must stay tap-to-place on iPhone Safari; smaller cells are OK. Do not switch to desktop drag.
-- **CLI:** Node.js for `flag-sim` headless simulation
-- **Hosting:** Vercel or Cloudflare Pages from huntit/flag-game (every push gets a preview URL)
+- **CLI:** Node.js for `wordheist-sim` headless simulation
+- **Hosting:** Vercel or Cloudflare Pages from huntit/wordheist-game (every push gets a preview URL)
 - **Remote multiplayer:** PartyKit (one Cloudflare Durable Object per game) for rooms
 - **Deployment workflow:** Iterate in iPhone Safari, Add to Home Screen for feel-test
 - **Solo vs Hunter = local** — Dictionary loaded from `data/words.txt` bundled with app
@@ -47,7 +47,7 @@ All criteria below describe **phone v0.1 (9×9)** unless noted.
 - Two humans can complete a legal 9×9 game in hotseat mode
 - Two humans can complete a legal 9×9 game in remote mode via persistent game links (live and correspondence, same mode)
 - Human can play vs Hunter AI on 9×9 with opponent rack **letters** hidden and rack **count** public (0–6 facedown backs with empty slots; local engine, no room)
-- `flag-sim --games 200 --p1 greedy --p2 greedy` writes summary JSON with:
+- `wordheist-sim --games 200 --p1 greedy --p2 greedy` writes summary JSON with:
   - P1 win rate
   - End-reason breakdown (self-capture, second-steal, no-spare-replacement, going_out, exchange-three, double-pass, stuck-out)
   - Self-capturer win rate
@@ -608,7 +608,7 @@ Keep this simple and dumb:
 **Command:**
 
 ```bash
-flag-sim --games 200 --p1 greedy --p2 hunter --threshold 8 --seed 1 --out ./out/
+wordheist-sim --games 200 --p1 greedy --p2 hunter --threshold 8 --seed 1 --out ./out/
 ```
 
 **Matchup swapping:**

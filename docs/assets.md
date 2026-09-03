@@ -1,12 +1,12 @@
-# Flag Tile Set and Dictionary
+# Word Heist Tile Set and Dictionary
 
 **Status:** Word list ✅ | Tile set ✅ (counts + values)
 
 ## Overview
 
-Flag v0 will **NOT use a third-party crossword publisher's tile bag, letter values, board premiums, or official word list.**
+Word Heist v0 will **NOT use a third-party crossword publisher's tile bag, letter values, board premiums, or official word list.**
 
-Instead, Flag uses:
+Instead, Word Heist uses:
 
 - A **custom word list** (Peter's ENABLE-based list with additions and exclusions) ✅
 - **Phone v0.1 bag:** 69 tiles (~⅔ Words With Friends English, 1 blank) paired with **Word Eagle's WWF letter values** ✅
@@ -97,7 +97,7 @@ A1 B4 C4 D2 E1 F4 G3 H3 I1 J10 K5 L2 M4 N2 O1 P4 Q10 R1 S1 T1 U2 V5 W4 X8 Y3 Z10
 
 - **NOT NYT Crossplay bag** (100 tiles / 3 blanks / different values)
 - **NOT Scrabble bag** (100 tiles / different counts)
-- Flag phone v0.1 uses the **69-tile bag** in `data/tiles.json` with **Word Eagle's WWF letter values**. The 104-tile table above is the large-layout lab reference.
+- Word Heist phone v0.1 uses the **69-tile bag** in `data/tiles.json` with **Word Eagle's WWF letter values**. The 104-tile table above is the large-layout lab reference.
 
 ## UI Notes (for Ada)
 
@@ -112,7 +112,7 @@ Placeholder colours are OK until Skye delivers art. See [prototype-spec.md](prot
 
 ## Word Eagle Assets
 
-Peter's other game [Word Eagle](https://www.huntit.com.au/apps/wordgame/) ([source](https://github.com/huntit/web-apps/tree/main/wordgame)) provides the WWF letter values used in Flag.
+Peter's other game [Word Eagle](https://www.huntit.com.au/apps/wordgame/) ([source](https://github.com/huntit/web-apps/tree/main/wordgame)) provides the WWF letter values used in Word Heist.
 
 **Extracted from Word Eagle:**
 - ✅ WWF letter values from TILE_SETS.wwf (index.html lines ~997–1002) recorded in `data/tiles.json`

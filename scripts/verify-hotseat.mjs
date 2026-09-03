@@ -2,7 +2,7 @@
 // only the active seat's letters may ever be on screen.
 import { chromium, devices } from 'playwright';
 
-const URL = process.env.FLAG_URL ?? 'http://localhost:4173/flag-game/';
+const URL = process.env.WORDHEIST_URL ?? 'http://localhost:4173/wordheist-game/';
 
 const browser = await chromium.launch();
 const context = await browser.newContext({

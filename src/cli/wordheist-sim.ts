@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// flag-sim - headless AI-vs-AI simulation for balance analysis.
+// wordheist-sim - headless AI-vs-AI simulation for balance analysis.
 
 import * as fs from 'fs';
 import * as path from 'path';

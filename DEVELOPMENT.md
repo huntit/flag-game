@@ -1,4 +1,4 @@
-# Flag v0 - Development & Deployment Guide
+# Word Heist v0 - Development & Deployment Guide
 
 ## Quick Start
 
@@ -38,7 +38,7 @@ This is what actually ships. Pushing to `main` runs `.github/workflows/deploy.ym
 which typechecks, runs unit tests, builds, checks the bundle is base-path correct,
 and then publishes `dist` to the `gh-pages` branch — the Pages source for this repo.
 
-Live at https://huntit.github.io/flag-game/. There is nothing to run by hand: merge
+Live at https://huntit.github.io/wordheist-game/. There is nothing to run by hand: merge
 to `main` and the deploy follows.
 
 ### Vercel
@@ -81,7 +81,7 @@ partykit deploy
 
 Configure the PartyKit URL in the app after deployment.
 
-## flag-sim CLI
+## wordheist-sim CLI
 
 Run headless AI vs AI simulations for game balance analysis:
 
@@ -160,7 +160,7 @@ npm run test src/engine/engine.test.ts
 - `index.ts` - PartyKit Durable Object for remote multiplayer
 
 ### CLI (`src/cli/`)
-- `flag-sim.ts` - Headless simulation tool
+- `wordheist-sim.ts` - Headless simulation tool
 
 ## Layout and UI notes
 
