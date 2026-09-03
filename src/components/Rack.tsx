@@ -1,11 +1,13 @@
 // Your rack. Your own letters are always visible; an opponent's never are.
-// Tiles stand in a rail tinted with your seat colour — the same fill as your
-// score card — so "these are mine" needs no label. Market tiles, by contrast,
+// Tiles stand in a rail tinted with your seat colour and headed by your seat
+// mark — the same fill and shape as your score card — so "these are mine"
+// needs no label. Market tiles, by contrast,
 // lie flat on the table with no tray behind them.
 
 import type { Tile } from '../engine/types';
 import { TileFace } from './TileFace';
 import { ScoreCard } from './GameInfo';
+import { SeatMark } from './SeatMark';
 import './Rack.css';
 
 interface RackProps {
@@ -50,6 +52,9 @@ export function Rack({
   return (
     <div className={`rack-row-inner is-${playerColor.toLowerCase()}`}>
       <div className="tray rack-tray" data-rack-zone="true" aria-label={`${label}: your tiles`}>
+        {/* The same mark that sits on your score card and your goal square,
+            so the rail is unmistakably yours. */}
+        <SeatMark seat={playerColor} className="rack-seat-mark" />
         {available.map((tile, index) => {
           const classes = [
             'tray-tile',

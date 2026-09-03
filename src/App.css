@@ -279,3 +279,24 @@ button:disabled {
     transition-duration: 0.001ms !important;
   }
 }
+
+/* ---- Seat marks ---------------------------------------------------------
+   The shape that says whose something is: a circle for the first seat, a
+   diamond for the second. Colour is inherited so the same element can be
+   drawn in the seat colour on a card and in cream on a coloured square. */
+.seat-mark {
+  display: block;
+  flex: 0 0 auto;
+  overflow: visible;
+}
+
+.seat-mark path {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linejoin: round;
+}
+
+.seat-mark.is-filled path {
+  fill: currentColor;
+}

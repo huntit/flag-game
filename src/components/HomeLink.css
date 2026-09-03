@@ -35,6 +35,7 @@
   height: auto;
   max-height: none;
   width: 100%;
+  justify-content: flex-start;
 }
 
 .home-link.is-play .home-link-img {
@@ -43,7 +44,7 @@
   max-width: 100%;
   max-height: calc(var(--header-h) - 6px);
   object-fit: contain;
-  object-position: center;
+  object-position: left center;
 }
 
 .home-link.is-hud {

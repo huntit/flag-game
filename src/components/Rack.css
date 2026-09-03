@@ -57,6 +57,27 @@
   touch-action: none;
 }
 
+/* Your seat mark, parked in the rail's left padding. Absolute so it cannot
+   push the tiles around; --rack-lead is what reserves its room in the tile
+   budget. */
+.rack-seat-mark {
+  position: absolute;
+  left: var(--tray-pad);
+  top: 50%;
+  transform: translateY(-50%);
+  width: var(--rack-mark);
+  height: var(--rack-mark);
+  pointer-events: none;
+}
+
+.rack-row-inner.is-p1 .rack-seat-mark {
+  color: var(--color-p1);
+}
+
+.rack-row-inner.is-p2 .rack-seat-mark {
+  color: var(--color-p2);
+}
+
 /* The rack rail spans the board's full width; the tiles sit centred in it, on
    the same axis as the market group above and the board above that. */
 .rack-tray::after {

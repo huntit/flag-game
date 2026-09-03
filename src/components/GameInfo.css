@@ -64,15 +64,13 @@
   min-width: 0;
 }
 
+/* The seat's own shape, hollow until it is their turn. Drawn as SVG rather
+   than a bordered box because a diamond is not a border-radius. */
 .score-card-turn {
-  flex: 0 0 auto;
   align-self: center;
   width: var(--score-turn-w);
-  aspect-ratio: 1;
-  border-radius: 50%;
-  border: 1.5px solid currentColor;
-  background: transparent;
-  transition: background-color var(--dur-quick) ease;
+  height: var(--score-turn-w);
+  transition: fill var(--dur-quick) ease;
 }
 
 .score-card.is-p1 .score-card-turn {
@@ -83,8 +81,8 @@
   color: var(--color-p2);
 }
 
-.score-card.is-active .score-card-turn {
-  background-color: currentColor;
+.score-card.is-active .score-card-turn path {
+  fill: currentColor;
 }
 
 .score-card-name,
