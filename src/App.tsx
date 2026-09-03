@@ -7,11 +7,12 @@ import type { TileData } from './engine/types';
 import { PHONE_9, TABLET_11 } from './engine/variants';
 import { deviceSupportsLargeBoard } from './components/useShell';
 import Menu from './components/Menu';
+import HowToPlay from './components/HowToPlay';
 import Game from './components/Game';
 import OnlineMode from './components/OnlineMode';
 import './App.css';
 
-export type GameMode = 'menu' | 'hotseat' | 'vs-ai' | 'online';
+export type GameMode = 'menu' | 'how-to-play' | 'hotseat' | 'vs-ai' | 'online';
 export type AIOpponent = 'greedy' | 'hunter' | 'sleeper';
 
 function App() {
@@ -80,6 +81,17 @@ function App() {
           if (opponent) setAIOpponent(opponent);
           setGameMode(mode);
         }}
+      />
+    );
+  }
+
+  if (gameMode === 'how-to-play') {
+    // The rules screen quotes the rule set this device will actually deal, so
+    // it never describes a board the player is not about to see.
+    return (
+      <HowToPlay
+        rules={deviceSupportsLargeBoard() ? TABLET_11 : PHONE_9}
+        onBack={() => setGameMode('menu')}
       />
     );
   }

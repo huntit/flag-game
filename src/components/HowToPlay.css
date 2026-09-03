@@ -1,0 +1,123 @@
+/* How to Play. A reading screen, so it scrolls inside its own panel rather
+   than fighting the app's no-scroll play shell. */
+
+.htp-panel {
+  max-width: 560px;
+  gap: 14px;
+  text-align: left;
+}
+
+.htp-head {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+}
+
+.htp-panel .htp-title {
+  font-size: 1.15rem;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  margin: 0;
+}
+
+.htp-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding-right: 4px;
+}
+
+.htp-section h2 {
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--color-text-dim);
+  margin-bottom: 5px;
+}
+
+.htp-section p,
+.htp-section li {
+  font-size: 0.93rem;
+  line-height: 1.45;
+}
+
+.htp-section p + p,
+.htp-section ul + p {
+  margin-top: 7px;
+}
+
+.htp-section ul {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin-top: 6px;
+}
+
+/* A flag rather than a bullet, in the ink colour so it reads as punctuation
+   and not as one of the two seat marks. */
+.htp-section li {
+  position: relative;
+  padding-left: 15px;
+}
+
+.htp-section li::before {
+  content: '';
+  position: absolute;
+  left: 2px;
+  top: 0.6em;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background-color: color-mix(in srgb, var(--color-ink) 35%, transparent);
+}
+
+.htp-note {
+  color: var(--color-text-dim);
+  font-size: 0.85rem;
+}
+
+/* The seat legend: each mark beside the name it belongs to. */
+.htp-seats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 20px;
+  margin-bottom: 7px;
+}
+
+.htp-seat {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-weight: 700;
+}
+
+.htp-seat .seat-mark {
+  width: 14px;
+  height: 14px;
+}
+
+.htp-seat.is-p1 {
+  color: var(--color-p1);
+}
+
+.htp-seat.is-p2 {
+  color: var(--color-p2);
+}
+
+.htp-back {
+  flex: 0 0 auto;
+  align-items: center;
+}
+
+.htp-body + .htp-back {
+  margin-top: 2px;
+  box-shadow: 0 -13px 14px -12px color-mix(in srgb, var(--color-ink) 30%, transparent);
+}

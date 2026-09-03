@@ -147,6 +147,29 @@ const boardSize = await page.evaluate(() =>
 const mid = (boardSize + 1) / 2;
 console.log(`board: ${boardSize}x${boardSize}, centre star at ${mid},${mid}`);
 
+// The opening word has to cover the star, so the star has to still be there
+// while the player is aiming at it. It used to vanish the moment any pending
+// tile landed, taking the target away mid-move.
+const starCount = () => page.locator('.cell-mark').count();
+if ((await starCount()) !== 1) problems.push('centre star missing on an empty board');
+if ((await readState()).boardTiles.length === 0 && (await rackTiles().count()) > 0) {
+  await rackTiles().first().click();
+  await page.waitForTimeout(120);
+  // Deliberately off-centre: same row as the star, two columns over.
+  await cell(mid, mid + 2).click();
+  await page.waitForTimeout(200);
+  const pending = await page.locator('.board-tile.is-pending').count();
+  const stillThere = await starCount();
+  console.log(`centre star with ${pending} pending tile off-centre: ${stillThere ? 'shown' : 'GONE'}`);
+  if (pending > 0 && stillThere !== 1) {
+    problems.push('centre star disappeared while a pending tile sat off-centre');
+  }
+  // Put the board back before the real opening play.
+  const clear = page.locator('.action-shuffle');
+  if ((await clear.textContent())?.trim() === 'Clear') await clear.click();
+  await page.waitForTimeout(150);
+}
+
 let played = null;
 for (let round = 0; round < 10 && !played; round++) {
   const occupied = (await readState()).boardTiles;

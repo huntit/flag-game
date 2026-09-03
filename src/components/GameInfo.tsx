@@ -1,8 +1,10 @@
 // Score cards: FIRST player left, SECOND player right (true P1/P2 seat order).
-// A player is identified by their name in their own colour — no avatars.
+// A player is identified by their name and their seat mark, both in their
+// own colour — no avatars.
 // The mini-rack below is a scale model of their real rack: one slot per tile
 // the variant lets them hold, filled with tile backs for the tiles they have.
 
+import { SeatMark } from './SeatMark';
 import './GameInfo.css';
 
 interface ScoreCardProps {
@@ -33,9 +35,13 @@ export function ScoreCard({
       data-seat={playerColor}
     >
       <div className="score-card-head">
-        <span
+        {/* One element, two jobs: the shape says whose card this is, and the
+            fill says whether it is their turn. */}
+        <SeatMark
+          seat={playerColor}
           className="score-card-turn"
-          aria-label={isActive ? `${name} to play` : undefined}
+          filled={isActive}
+          title={isActive ? `${name} to play` : `${name}'s mark`}
         />
         <span className={`score-card-name ${variant === 'you' ? 'hud-key' : 'opponent-name'}`}>
           {name}

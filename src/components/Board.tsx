@@ -70,7 +70,11 @@ function Board({
   const size = board.length;
   const centre = centreStar(size);
   const posts = flagPosts(size);
-  const showCentreStar = isFirstWord(board) && pendingPlacements.length === 0;
+  // The star marks where the opening word must cross, so it has to stay put
+  // until a tile is actually committed there. Hiding it the moment a pending
+  // tile lands anywhere took away the target while the player was still
+  // aiming at it.
+  const showCentreStar = isFirstWord(board);
   const cornerPositions: Position[] = Object.values(posts);
 
   const renderCell = (row: number, col: number) => {

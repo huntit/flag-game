@@ -632,13 +632,104 @@ describe('stuck-only Pass', () => {
   });
 });
 
-describe('centred logo header', () => {
+describe('logo header', () => {
   it('puts the vector logo in a dedicated top header row', () => {
     expect(read('./Game.tsx')).toMatch(/play-header/);
     expect(read('./Game.tsx')).toMatch(/variant="play"/);
     expect(gameCss).toMatch(/grid-template-areas:[\s\S]*'header'/);
-    expect(gameCss).toMatch(/\.play-header[\s\S]*justify-content:\s*center/);
-    expect(gameCss).toMatch(/\.play-header[\s\S]*overflow:\s*visible/);
+    // Scoped to the rule itself: a whole-file [\s\S]* would match any
+    // justify-content anywhere below and lock in nothing.
+    const header = gameCss.match(/\.play-header\s*\{[\s\S]*?\n\}/)?.[0] ?? '';
+    expect(header).toMatch(/overflow:\s*visible/);
+  });
+
+  it('hangs the wordmark on the left edge, not the centre', () => {
+    // The board's left edge is where the rack rail and Shuffle already start.
+    const header = gameCss.match(/\.play-header\s*\{[\s\S]*?\n\}/)?.[0] ?? '';
+    expect(header).toMatch(/justify-content:\s*flex-start/);
+    expect(header).not.toMatch(/justify-content:\s*center/);
+
+    const homeCss = read('./HomeLink.css');
+    const play = homeCss.match(/\.home-link\.is-play\s*\{[\s\S]*?\n\}/)?.[0] ?? '';
+    expect(play).toMatch(/justify-content:\s*flex-start/);
+    // object-position matters as much as the flex box: a contained image
+    // centres itself inside its own box otherwise.
+    const playImg = homeCss.match(/\.home-link\.is-play \.home-link-img\s*\{[\s\S]*?\n\}/)?.[0] ?? '';
+    expect(playImg).toMatch(/object-position:\s*left/);
+  });
+});
+
+describe('seat marks', () => {
+  it('gives each seat one shape, drawn from a single source', () => {
+    // Colour alone could not say which corner was yours, so a shape carries
+    // it too — and every place it appears must draw the same shape, which is
+    // why there is one component rather than three copies.
+    const mark = read('./SeatMark.tsx');
+    expect(mark).toMatch(/P1:\s*'circle'/);
+    expect(mark).toMatch(/P2:\s*'diamond'/);
+    for (const file of ['GameInfo.tsx', 'Rack.tsx', 'HowToPlay.tsx']) {
+      expect(read(`./${file}`), file).toMatch(/SeatMark/);
+    }
+  });
+
+  it('marks the score card, the rack and the goal square', () => {
+    // The three places a player looks to answer "which one is mine".
+    expect(read('./GameInfo.tsx')).toMatch(/className="score-card-turn"/);
+    expect(read('./Rack.tsx')).toMatch(/className="rack-seat-mark"/);
+
+    // On the board the shape is the plate behind the 3×: a circle for the
+    // first seat, a diamond for the second, in every corner orientation.
+    for (const corner of ['nw', 'ne', 'se', 'sw']) {
+      expect(read(`../../public/corner-a-badge-p1-${corner}.svg`)).toMatch(/<circle /);
+      expect(read(`../../public/corner-a-badge-p2-${corner}.svg`)).toMatch(
+        /<path d="M 512 232 L 792 512 L 512 792 L 232 512 Z"/,
+      );
+    }
+  });
+
+  it('reserves room for the rack mark in every shell that sizes tiles', () => {
+    // The mark is absolutely positioned, so nothing stops a tile sliding under
+    // it unless the tile budget pays for the lead first.
+    const budgets = gameCss.match(/--rack-fit:[\s\S]*?;/g) ?? [];
+    expect(budgets.length).toBeGreaterThan(1);
+    for (const budget of budgets) {
+      expect(budget).toMatch(/var\(--rack-lead\)/);
+    }
+    const shell = gameCss.match(/\.play-shell\s*\{[\s\S]*?\n\}/)?.[0] ?? '';
+    expect(shell).toMatch(/--rack-lead:\s*calc\([^;]*var\(--rack-mark\)/);
+    expect(read('./Rack.css')).toMatch(
+      /\.rack-seat-mark\s*\{[^}]*position:\s*absolute/s,
+    );
+  });
+});
+
+describe('how to play', () => {
+  it('is reachable from the menu and leads back to it', () => {
+    expect(read('./Menu.tsx')).toMatch(/how-to-play/);
+    expect(read('./Menu.tsx')).toMatch(/How to Play/);
+    const app = read('../App.tsx');
+    expect(app).toMatch(/'how-to-play'/);
+    expect(app).toMatch(/<HowToPlay/);
+    expect(read('./HowToPlay.tsx')).toMatch(/onBack/);
+  });
+
+  it('quotes the rule set in play rather than hard-coded numbers', () => {
+    // The 9×9 phone game and the 11×11 large game have different boards,
+    // racks and markets. Writing either set of figures in here would give the
+    // other variant a rules screen describing a game it is not playing.
+    const htp = read('./HowToPlay.tsx');
+    expect(htp).toMatch(/rules: RuleSet/);
+    expect(htp).toMatch(/boardSize/);
+    expect(htp).toMatch(/rackMax/);
+    expect(htp).toMatch(/marketFaceUp/);
+    expect(htp).toMatch(/centreStar/);
+    expect(htp).not.toMatch(/9×9|11×11/);
+  });
+
+  it('scrolls the rules inside the panel, not the page', () => {
+    const css = read('./HowToPlay.css');
+    expect(css).toMatch(/\.htp-body\s*\{[^}]*overflow-y:\s*auto/s);
+    expect(css).toMatch(/\.htp-body\s*\{[^}]*min-height:\s*0/s);
   });
 });
 

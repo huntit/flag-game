@@ -77,3 +77,12 @@
 .menu-note strong {
   color: var(--color-text);
 }
+
+/* A way in, not a way to play: the help button sits below the modes at a
+   lighter weight so it never competes with them for the first tap. */
+.menu-button.is-quiet {
+  background-color: transparent;
+  border-color: color-mix(in srgb, var(--color-ink) 18%, transparent);
+  color: var(--color-text-dim);
+  font-weight: 600;
+}

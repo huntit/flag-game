@@ -37,6 +37,13 @@ function Menu({ onSelectMode }: MenuProps) {
           <button type="button" className="menu-button is-small" onClick={() => onSelectMode('online')}>
             Remote 2-player
           </button>
+          <button
+            type="button"
+            className="menu-button is-small is-quiet"
+            onClick={() => onSelectMode('how-to-play')}
+          >
+            How to Play
+          </button>
         </div>
 
         <p className="menu-note">
