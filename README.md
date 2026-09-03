@@ -41,7 +41,7 @@ Word Heist is a distinct game, not a variant of commercial crossword products:
 - **9×9 board with no premium squares** — Odd size so there is a centre cell (5,5). Simple grid, no double/triple letter or word scores on the board. (11×11 large layout documented separately.)
 - **Opening tiles from the bag** — P1 starts with 2 tiles; P2 starts with 3 (second-player compensation). First action may be Draw or Play. Who is P1 is randomised each new game (remote: when the second seat sits)
 - **Draw XOR Play** — Draw exactly 2 tiles from a 5-tile market (3 face-up + 2 face-down) OR play tiles to score; playing does not refill your rack
-- **Per-player corner flags** — Each player has a flag on a true corner; any cover of a flag cell scores triple-word; own-flag capture ends the game; opponent steals can end on a second steal; leftover scoring on closer ends transfers opponent rack value
+- **Per-player corner flags** — A *flag* is a player's goal square: the true corner they own, scoring a triple-word multiplier for whoever covers it. Each player has one; any cover of a flag cell scores triple-word; own-flag capture ends the game; opponent steals can end on a second steal; leftover scoring on closer ends transfers opponent rack value
 - **Public rack count, hidden letters** — Opponent (and AI) rack letters stay hidden; tile count is public as 0–6 facedown backs with empty slots plus a readable count number
 
 The crossword-on-a-grid mechanic is shared with games like Scrabble and Words With Friends, but Word Heist's five-tile market, asymmetric opening deal (P1=2, P2=3), random first player, per-player flag scoring, and custom tile set make it a different game.

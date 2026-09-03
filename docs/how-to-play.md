@@ -4,7 +4,7 @@
 
 ## Overview
 
-Word Heist is a **two-player** word game. Each player has a coloured flag on a true corner of a **9×9 board** (phone v0.1 — the default playtest). Drawing from the market builds a better rack for later. Playing tiles scores points immediately — and covering a flag can end the game or steal your opponent's flag. If you're ahead on points, you might capture your own flag for a triple-word bonus and win. If you're behind, keep building and hunt your opponent's flag twice before they self-capture or outscore you.
+Word Heist is a **two-player** word game. Each player has a coloured *flag* — their goal square, a true corner that scores a triple-word multiplier for whoever covers it — on a **9×9 board** (phone v0.1 — the default playtest). Drawing from the market builds a better rack for later. Playing tiles scores points immediately — and covering a flag can end the game or steal your opponent's flag. If you're ahead on points, you might capture your own flag for a triple-word bonus and win. If you're behind, keep building and hunt your opponent's flag twice before they self-capture or outscore you.
 
 ## Play Modes
 
