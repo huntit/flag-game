@@ -63,6 +63,40 @@
   pointer-events: none;
 }
 
+/* ---- Grooves ------------------------------------------------------------
+   A slot is a shallow well cut into the surface, drawn whether or not a tile
+   is in it. Recessed rather than raised: a tile in a groove reads as sitting
+   down in the market, and an empty groove reads as a place waiting to be
+   filled rather than as a gap. The rim showing around each tile is the whole
+   effect — see --market-well-rim, which is why a slot is wider than a tile. */
+
+.market-slot {
+  position: relative;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--market-slot-size);
+  aspect-ratio: 1;
+  border-radius: calc(var(--market-slot-size) * 0.2);
+  background-color: color-mix(in srgb, var(--color-ink) 10%, transparent);
+  box-shadow:
+    inset 0 2px 3px color-mix(in srgb, var(--color-ink) 26%, transparent),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.6);
+}
+
+/* The two face-down places are cut a shade deeper, so the pair still reads as
+   its own part of the row once the tiles in them have been taken. */
+.market-slot.is-face-down {
+  background-color: color-mix(in srgb, var(--color-ink) 12%, transparent);
+}
+
+/* The tile sits inside its well, leaving the rim visible all round. */
+.market-slot .tray-tile {
+  width: var(--tile-size);
+  height: var(--tile-size);
+}
+
 /* Market tiles lie flat: the same tile stock as the rack, barely raised. */
 .market-tile {
   box-shadow:
@@ -83,10 +117,6 @@
   background-size: 100% 100%;
   background-position: center;
   background-repeat: no-repeat;
-}
-
-.market-slot-empty.is-face-down {
-  background-color: color-mix(in srgb, var(--color-ink) 4%, transparent);
 }
 
 .market-tile .tile-face {
@@ -176,7 +206,7 @@
      as the board, which is the crowding the side column exists to undo. */
   .market-panel .market-tray {
     display: grid;
-    grid-template-columns: repeat(var(--market-cols), var(--tile-size));
+    grid-template-columns: repeat(var(--market-cols), var(--market-slot-size));
     gap: var(--market-gap);
     width: var(--market-grid-w);
     justify-content: center;

@@ -66,6 +66,14 @@
 
   /* ---- One tile size for the whole game ------------------------------- */
   --tile-gap: clamp(3px, calc(var(--board-size) * 0.014), 9px);
+  /* A market slot is a well the tile sits down into, so it is a little wider
+     than the tile — the rim showing around each tile is what makes it read as
+     a groove rather than a tile with a border.
+     Derived from the board, NEVER from --tile-size: --market-fit subtracts
+     this rim and then feeds --tile-size, so taking the rim from --tile-size
+     would make the two define each other and CSS drops the whole chain. */
+  --market-well-rim: clamp(2px, calc(var(--board-size) * 0.007), 4px);
+  --market-slot-size: calc(var(--tile-size) + (2 * var(--market-well-rim)));
   --tray-pad: calc(var(--tile-gap) + 2px);
   /* The bag and its count, reserved out of the market row. The bag stacks its
      count underneath so this stays a narrow, predictable column. */
@@ -78,8 +86,8 @@
   /* …and the whole market across, beside the bag. One gap per slot: the
      slots-1 between tiles, plus the one between the bag and the first tile. */
   --market-fit: calc(
-    (var(--board-size) - var(--bag-block) - (var(--market-slots, 5) * var(--tile-gap))) /
-      var(--market-slots, 5)
+    (var(--board-size) - var(--bag-block) - (var(--market-slots, 5) * var(--tile-gap)) -
+      (2 * var(--market-slots, 5) * var(--market-well-rim))) / var(--market-slots, 5)
   );
   --tile-size: min(
     var(--rack-fit),
@@ -399,7 +407,8 @@
        the tile budget wherever the card lays its contents out in a row. */
     --market-pad-x: 48px;
     --market-grid-w: calc(
-      (var(--market-cols) * var(--tile-size)) + ((var(--market-cols) - 1) * var(--market-gap))
+      (var(--market-cols) * var(--market-slot-size)) +
+        ((var(--market-cols) - 1) * var(--market-gap))
     );
 
     /* Scores, log and market all live in the side column, so none of them
@@ -643,10 +652,15 @@
         ((var(--rack-slots, 6) - 1) * var(--tile-gap))) / var(--rack-slots, 6)
     );
     /* The market shares its card with the bag on one end and Draw 2 on the
-       other, so both come out of the tiles' budget here. */
+       other, so both come out of the tiles' budget here — the tightest budget
+       in the app. A full-depth rim would be paid for out of the tap target, so
+       the grooves are cut shallower in this shell alone. */
+    --market-well-rim: 2px;
+
     --market-fit: calc(
       (var(--board-size) - var(--market-pad-x) - var(--bag-block) - var(--ctl-w) -
-        (var(--market-slots, 5) * var(--tile-gap))) / var(--market-slots, 5)
+        (var(--market-slots, 5) * var(--tile-gap)) -
+        (2 * var(--market-slots, 5) * var(--market-well-rim))) / var(--market-slots, 5)
     );
     --tile-size: min(
       var(--rack-fit),

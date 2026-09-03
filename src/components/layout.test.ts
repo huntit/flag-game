@@ -108,6 +108,49 @@ describe('no-scroll phone shell', () => {
     expect(gameCss).toMatch(/@media \(orientation: landscape\)/);
   });
 
+  it('seats every market tile in a groove, drawn whether or not it is filled', () => {
+    // A card with wells cut into it reads as the thing tiles come from. A row
+    // of tiles with nothing under them reads as tiles that happen to be
+    // adjacent — and once the bag stops refilling, as fewer places than there
+    // are.
+    const market = read('./Market.tsx');
+    expect(market).toMatch(/capacity - market\.length/);
+    expect(market).toMatch(/'market-slot'/);
+
+    const slot = marketCss.match(/\n\.market-slot\s*\{[\s\S]*?\n\}/)?.[0] ?? '';
+    expect(slot).toMatch(/width:\s*var\(--market-slot-size\)/);
+    // Recessed, not raised: the inset shadow is what makes it a groove.
+    expect(slot).toMatch(/box-shadow:\s*\n?\s*inset/);
+    // The tile sits inside the well, leaving the rim showing all round.
+    expect(marketCss).toMatch(/\.market-slot \.tray-tile\s*\{[^}]*width:\s*var\(--tile-size\)/s);
+    // The card's grid steps by whole slots, or the rims fall outside it.
+    expect(marketCss).toMatch(/grid-template-columns:\s*repeat\(var\(--market-cols\), var\(--market-slot-size\)\)/);
+  });
+
+  it('budgets the market grooves in every shell that sizes tiles', () => {
+    // A well is the tile plus a rim either side, so N slots cost 2N rims. Any
+    // shell that redefines --market-fit and forgets them overflows its row by
+    // that much.
+    const budgets = gameCss.match(/--market-fit:[\s\S]*?;/g) ?? [];
+    expect(budgets.length).toBeGreaterThan(1);
+    for (const budget of budgets) {
+      expect(budget).toMatch(/2 \* var\(--market-slots[^)]*\) \* var\(--market-well-rim\)/);
+    }
+
+    const shell = gameCss.match(/\.play-shell\s*\{[\s\S]*?\n\}/)?.[0] ?? '';
+    expect(shell).toMatch(
+      /--market-slot-size:\s*calc\(var\(--tile-size\) \+ \(2 \* var\(--market-well-rim\)\)\)/,
+    );
+    // The rim is measured off the board. Taking it off --tile-size would make
+    // the two define each other — --market-fit subtracts the rim and then
+    // feeds --tile-size — and CSS drops a circular chain silently, which on
+    // the phone means tiles wider than the screen.
+    expect(shell).toMatch(/--market-well-rim:\s*clamp\([^)]*var\(--board-size\)/);
+    for (const rim of gameCss.match(/--market-well-rim:[^;]*;/g) ?? []) {
+      expect(rim).not.toMatch(/var\(--tile-size\)/);
+    }
+  });
+
   it('budgets the market and rack from the variant, never a hard-coded count', () => {
     // The 9×9 game deals 6 rack slots and 5 market slots; the 11×11 game deals
     // 7 and 6. Writing either number into the maths gives one of the two
@@ -241,7 +284,14 @@ describe('the large shell (wide desktop windows and tablets)', () => {
     expect(large).toMatch(/--market-cols:\s*\d/);
     expect(read('./Market.css')).toMatch(/grid-template-columns:\s*repeat\(var\(--market-cols/);
     // Still one tile size: the card changes where a tile sits, not its size.
-    expect(read('./Market.css')).toMatch(/\.market-panel \.market-tray\s*\{[^}]*var\(--tile-size\)/s);
+    // The grid steps by whole grooves; the tile inside one is the same tile
+    // that sits on the rack.
+    expect(read('./Market.css')).toMatch(
+      /\.market-panel \.market-tray\s*\{[^}]*var\(--market-slot-size\)/s,
+    );
+    expect(read('./Market.css')).toMatch(
+      /\.market-slot \.tray-tile\s*\{[^}]*width:\s*var\(--tile-size\)/s,
+    );
     // The market wrapper collapses on the phone, so the row keeps its place
     // in the single column.
     const phone = gameCss.slice(0, gameCss.indexOf('@media'));
