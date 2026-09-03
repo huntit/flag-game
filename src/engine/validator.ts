@@ -6,8 +6,9 @@
 // word only — TWS for whoever covers a flag cell (own or steal).
 
 import type { Board, Position, PlacedTile, Tile, Letter } from './types';
-import { getBoardTile, setBoardTile, isValidPosition, positionEquals, isFirstWord } from './game';
-import { CENTRE_STAR, FLAG_POSTS, BOARD_SIZE, MIN_WORD_LENGTH } from './types';
+import { getBoardTile, setBoardTile, isOnBoard, isValidPosition, positionEquals, isFirstWord } from './game';
+import { MIN_WORD_LENGTH } from './types';
+import { centreStar, flagPosts } from './variants';
 import type { Dictionary } from './dictionary';
 
 export interface WordInfo {
@@ -66,7 +67,7 @@ export function readWord(board: Board, pos: Position, horizontal: boolean): Word
   let start = pos;
   while (true) {
     const previous = step(start, horizontal, -1);
-    if (!isValidPosition(previous) || !getBoardTile(board, previous)) break;
+    if (!isOnBoard(board, previous) || !getBoardTile(board, previous)) break;
     start = previous;
   }
 
@@ -74,7 +75,7 @@ export function readWord(board: Board, pos: Position, horizontal: boolean): Word
   let word = '';
   let score = 0;
   let cursor = start;
-  while (isValidPosition(cursor)) {
+  while (isOnBoard(board, cursor)) {
     const tile = getBoardTile(board, cursor);
     if (!tile) break;
     positions.push(cursor);
@@ -106,7 +107,7 @@ export function findWordsFormed(
   placements: Placement[],
   dictionary: Dictionary
 ): { words: WordInfo[]; valid: boolean; reason?: string } {
-  const layout = describeLayout(placements);
+  const layout = describeLayout(placements, board.length);
   if (!layout.valid) {
     return { words: [], valid: false, reason: layout.reason };
   }
@@ -171,14 +172,15 @@ export function findWordsFormed(
 }
 
 function describeLayout(
-  placements: Placement[]
+  placements: Placement[],
+  boardSize: number
 ): { valid: true; horizontal: boolean | null } | { valid: false; reason: string } {
   if (placements.length === 0) {
     return { valid: false, reason: 'No tiles placed' };
   }
 
   for (const placement of placements) {
-    if (!isValidPosition(placement.position)) {
+    if (!isValidPosition(placement.position, boardSize)) {
       return { valid: false, reason: 'Placement is off the board' };
     }
   }
@@ -211,7 +213,7 @@ function attachesToBoard(board: Board, placements: Placement[]): boolean {
       { row, col: col - 1 },
       { row, col: col + 1 },
     ];
-    return neighbours.some(n => isValidPosition(n) && getBoardTile(board, n));
+    return neighbours.some(n => isOnBoard(board, n) && getBoardTile(board, n));
   });
 }
 
@@ -225,7 +227,8 @@ export interface FlagContext {
 function applyFlagMultipliers(
   words: WordInfo[],
   placements: Placement[],
-  flags: FlagContext
+  flags: FlagContext,
+  boardSize: number
 ): {
   words: WordInfo[];
   totalScore: number;
@@ -236,6 +239,7 @@ function applyFlagMultipliers(
   const opponentId = flags.playerId === 'P1' ? 'P2' : 'P1';
   const ownCorner = flags.flags[flags.playerId];
   const oppCorner = flags.flags[opponentId];
+  const posts = flagPosts(boardSize);
 
   let capturesOwnFlag = false;
   let capturesOpponentFlag = false;
@@ -243,7 +247,7 @@ function applyFlagMultipliers(
   let multiplier: 1 | 2 | 3 = 1;
 
   for (const placement of placements) {
-    if (ownCorner && positionEquals(placement.position, FLAG_POSTS[ownCorner])) {
+    if (ownCorner && positionEquals(placement.position, posts[ownCorner])) {
       capturesOwnFlag = true;
       capturingWord = wordContainingPosition(words, placement.position);
       multiplier = 3;
@@ -253,7 +257,7 @@ function applyFlagMultipliers(
 
   if (!capturesOwnFlag) {
     for (const placement of placements) {
-      if (oppCorner && positionEquals(placement.position, FLAG_POSTS[oppCorner])) {
+      if (oppCorner && positionEquals(placement.position, posts[oppCorner])) {
         capturesOpponentFlag = true;
         capturingWord = wordContainingPosition(words, placement.position);
         multiplier = 3;
@@ -307,12 +311,12 @@ export function validatePlay(
     return { valid: false, reason: 'No tiles placed' };
   }
 
-  if (placements.length > BOARD_SIZE) {
+  if (placements.length > board.length) {
     return { valid: false, reason: 'Too many tiles for one line' };
   }
 
   for (const placement of placements) {
-    if (!isValidPosition(placement.position)) {
+    if (!isOnBoard(board, placement.position)) {
       return { valid: false, reason: 'Placement is off the board' };
     }
     if (getBoardTile(board, placement.position)) {
@@ -324,7 +328,7 @@ export function validatePlay(
   }
 
   if (isFirstWord(board)) {
-    if (!placements.some(p => positionEquals(p.position, CENTRE_STAR))) {
+    if (!placements.some(p => positionEquals(p.position, centreStar(board.length)))) {
       return { valid: false, reason: 'First word must cover the centre star' };
     }
   } else if (!attachesToBoard(board, placements)) {
@@ -336,7 +340,7 @@ export function validatePlay(
     return { valid: false, reason: result.reason };
   }
 
-  const flagResult = applyFlagMultipliers(result.words, placements, flagContext);
+  const flagResult = applyFlagMultipliers(result.words, placements, flagContext, board.length);
   const captures = flagResult.capturesOwnFlag || flagResult.capturesOpponentFlag;
 
   return {

@@ -122,3 +122,46 @@ export function describeMove(state: GameState, ctx: SeatNameContext): MoveLogEnt
 export function firstPlayerLogEntry(text: string): MoveLogEntry {
   return { text, system: true };
 }
+
+/** The move that ended the game, split so the score can be drawn in the score colour. */
+export interface FinalMove {
+  /** "Hunter plays", "Hunter draws 2 and discards 2", "Hunter passes". */
+  lead: string;
+  /** A play only: the words it made, and what they were worth. */
+  words?: string;
+  score?: number;
+  /** The whole line as plain text — the accessible announcement. */
+  text: string;
+}
+
+/**
+ * "Hunter plays END for 12" — what the last player actually did, named in the
+ * present tense so the end screen reads as the moment the game stopped rather
+ * than a report filed afterwards. Scores are split out because every score in
+ * the game is drawn in the score colour, this one included.
+ */
+export function describeFinalMove(state: GameState, ctx: SeatNameContext): FinalMove | null {
+  const last = state.moveHistory[state.moveHistory.length - 1];
+  if (!last) return null;
+
+  const name = seatDisplayName(last.player, ctx);
+
+  if (last.action.type === 'play' && state.lastPlay) {
+    const words = joinWords(state.lastPlay.words);
+    const score = state.lastPlay.totalScore;
+    const lead = `${name} plays`;
+    return { lead, words, score, text: `${lead} ${playSummaryText(words, score)}` };
+  }
+
+  if (last.action.type === 'draw') {
+    const discards = last.action.discardTiles?.length ?? 0;
+    const lead =
+      discards > 0
+        ? `${name} draws 2 and discards ${discards}`
+        : `${name} draws 2 from the market`;
+    return { lead, text: lead };
+  }
+
+  const lead = `${name} passes`;
+  return { lead, text: lead };
+}

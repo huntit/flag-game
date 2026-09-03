@@ -7,24 +7,36 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
 import { Dictionary, isLoadableWord } from './dictionary';
-import { MIN_WORD_LENGTH, MAX_WORD_LENGTH, BOARD_SIZE } from './types';
+import { MIN_WORD_LENGTH } from './types';
+import { MAX_BOARD_SIZE, PHONE_9, TABLET_11 } from './variants';
+
+// The list is filtered to the board it is being loaded for, so these say which.
+const BOARD_SIZE = PHONE_9.boardSize;
 
 const WORDS_PATH = resolve(__dirname, '../../data/words.txt');
 
 describe('load filter', () => {
-  it('accepts word lengths 2 through 9', () => {
+  it('accepts word lengths 2 through the board it is loaded for', () => {
     expect(MIN_WORD_LENGTH).toBe(2);
-    expect(MAX_WORD_LENGTH).toBe(9);
-    expect(MAX_WORD_LENGTH).toBe(BOARD_SIZE);
+    expect(MAX_BOARD_SIZE).toBe(TABLET_11.boardSize);
 
-    expect(isLoadableWord('AT')).toBe(true);
-    expect(isLoadableWord('ABCDEFGHI')).toBe(true); // 9
+    expect(isLoadableWord('AT', BOARD_SIZE)).toBe(true);
+    expect(isLoadableWord('ABCDEFGHI', BOARD_SIZE)).toBe(true); // 9
+  });
+
+  it('takes its ceiling from the variant, not from a module constant', () => {
+    // A 10-letter word cannot be played on a 9×9 board and is not worth the
+    // heap on a phone; on the 11×11 board it is a legal play.
+    expect(isLoadableWord('ABCDEFGHIJ', PHONE_9.boardSize)).toBe(false);
+    expect(isLoadableWord('ABCDEFGHIJ', TABLET_11.boardSize)).toBe(true);
+    expect(isLoadableWord('ABCDEFGHIJK', TABLET_11.boardSize)).toBe(true); // 11
+    expect(isLoadableWord('ABCDEFGHIJKL', TABLET_11.boardSize)).toBe(false); // 12
   });
 
   it('rejects words that cannot fit on the board or are not A-Z', () => {
     expect(isLoadableWord('A')).toBe(false);
-    expect(isLoadableWord('ABCDEFGHIJ')).toBe(false); // 10
-    expect(isLoadableWord('ABCDEFGHIJK')).toBe(false); // 11
+    expect(isLoadableWord('ABCDEFGHIJ', BOARD_SIZE)).toBe(false); // 10
+    expect(isLoadableWord('ABCDEFGHIJK', BOARD_SIZE)).toBe(false); // 11
     expect(isLoadableWord('CO-OP')).toBe(false);
     expect(isLoadableWord("DON'T")).toBe(false);
     expect(isLoadableWord('')).toBe(false);
@@ -89,24 +101,28 @@ describe('data/words.txt', () => {
   it('keeps the full word list in the repo', () => {
     // The file must not be trimmed to the playable subset.
     expect(allLines.length).toBe(175030);
-    expect(allLines.some(word => word.trim().length > MAX_WORD_LENGTH)).toBe(true);
+    expect(allLines.some(word => word.trim().length > MAX_BOARD_SIZE)).toBe(true);
   });
 
-  it('loads only the words that fit the board', () => {
-    const dictionary = Dictionary.fromText(raw);
-    expect(dictionary.size()).toBeLessThan(143261);
-    expect(dictionary.size()).toBeGreaterThan(100000);
+  it('loads only the words that fit the board it was loaded for', () => {
+    const phone = Dictionary.fromText(raw, PHONE_9.boardSize);
+    expect(phone.size()).toBeLessThan(143261);
+    expect(phone.size()).toBeGreaterThan(100000);
+
+    // The bigger board adds the 10- and 11-letter words, and nothing else.
+    const tablet = Dictionary.fromText(raw, TABLET_11.boardSize);
+    expect(tablet.size()).toBeGreaterThan(phone.size());
   });
 
   it('validates real words a player would try', () => {
-    const dictionary = Dictionary.fromText(raw);
+    const dictionary = Dictionary.fromText(raw, BOARD_SIZE);
     for (const word of ['AT', 'CAT', 'STAR', 'QUARTZ', 'JAZZY', 'FLAG', 'ZA', 'QI', 'OX']) {
       expect(dictionary.isValid(word), `${word} should be a word`).toBe(true);
     }
   });
 
   it('rejects non-words and words too long for the board', () => {
-    const dictionary = Dictionary.fromText(raw);
+    const dictionary = Dictionary.fromText(raw, BOARD_SIZE);
     for (const word of ['CD', 'AO', 'TG', 'ZQX', 'ASDFG']) {
       expect(dictionary.isValid(word), `${word} should not be a word`).toBe(false);
     }

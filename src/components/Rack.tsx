@@ -4,13 +4,14 @@
 // lie flat on the table with no tray behind them.
 
 import type { Tile } from '../engine/types';
-import { RACK_MAX } from '../engine/types';
 import { TileFace } from './TileFace';
 import { ScoreCard } from './GameInfo';
 import './Rack.css';
 
 interface RackProps {
   tiles: Tile[];
+  /** Rack cap for the variant in play — 6 on the 9×9, 7 on the 11×11. */
+  capacity: number;
   label: string;
   playerColor: 'P1' | 'P2';
   selectedTileId: string | null;
@@ -27,6 +28,7 @@ interface RackProps {
 
 export function Rack({
   tiles,
+  capacity,
   label,
   playerColor,
   selectedTileId,
@@ -39,7 +41,7 @@ export function Rack({
   onTilePointerDown,
 }: RackProps) {
   const available = tiles.filter(tile => !placedTileIds.includes(tile.id));
-  const emptySlots = Math.max(0, RACK_MAX - available.length);
+  const emptySlots = Math.max(0, capacity - available.length);
 
   return (
     <div className={`rack-row-inner is-${playerColor.toLowerCase()}`}>
@@ -96,16 +98,25 @@ interface OpponentRackProps {
   name: string;
   playerColor: 'P1' | 'P2';
   count: number;
+  capacity: number;
   score: number;
   isTheirTurn: boolean;
 }
 
-export function OpponentRack({ name, playerColor, count, score, isTheirTurn }: OpponentRackProps) {
+export function OpponentRack({
+  name,
+  playerColor,
+  count,
+  capacity,
+  score,
+  isTheirTurn,
+}: OpponentRackProps) {
   return (
     <ScoreCard
       name={name}
       score={score}
       rackCount={count}
+      rackCapacity={capacity}
       isActive={isTheirTurn}
       playerColor={playerColor}
       variant="opponent"

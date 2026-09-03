@@ -31,17 +31,23 @@ import { Dictionary } from './dictionary';
 import { validatePlay } from './validator';
 import type { GameState, TileData, Tile } from './types';
 import {
-  BOARD_SIZE,
-  CENTRE_STAR,
-  FLAG_POSTS,
-  MARKET_SLOTS,
-  MARKET_FACE_UP,
-  MARKET_FACE_DOWN,
   DRAW_COUNT,
-  RACK_MAX,
   P1_STARTING_RACK_TILES,
   P2_STARTING_RACK_TILES,
 } from './types';
+import { PHONE_9, TABLET_11, centreStar, flagPosts, marketSlots } from './variants';
+
+// These tests exercise the phone default. Board size, rack cap and market
+// shape belong to a rule set now, so they are read from it rather than from
+// module constants; the 11×11 variant is covered separately.
+const BOARD_SIZE = PHONE_9.boardSize;
+const RACK_MAX = PHONE_9.rackMax;
+const MARKET_FACE_UP = PHONE_9.marketFaceUp;
+const MARKET_FACE_DOWN = PHONE_9.marketFaceDown;
+const MARKET_SLOTS = marketSlots(PHONE_9);
+const CENTRE_STAR = centreStar(BOARD_SIZE);
+const FLAG_POSTS = flagPosts(BOARD_SIZE);
+
 
 const mockTileData: TileData = {
   source: { values: 'test', counts: 'test' },
@@ -88,7 +94,7 @@ afterEach(() => {
 });
 
 describe('board geometry', () => {
-  it('is a 9x9 board with centre at (5,5) and true corners only', () => {
+  it('is a 9×9 board with centre at (5,5) and true corners only', () => {
     expect(BOARD_SIZE).toBe(9);
     expect(CENTRE_STAR).toEqual({ row: 5, col: 5 });
     expect(FLAG_POSTS.NW).toEqual({ row: 1, col: 1 });
@@ -99,19 +105,78 @@ describe('board geometry', () => {
 });
 
 describe('flag setup', () => {
-  it('places P1 on a random corner and P2 diagonally opposite', () => {
-    setRandomSource(mulberry32(42));
+  it('always opens with P1 in the north-west and P2 in the south-east', () => {
+    // Fixed, not drawn. Both players learn one board instead of re-reading
+    // which diagonal they are on each game, and the corner a player defends is
+    // the one nearest their own score card.
+    for (const seed of [42, 7, 1, 999]) {
+      setRandomSource(mulberry32(seed));
+      const state = initializeGame(mockTileData);
+      expect(state.flags.P1).toBe('NW');
+      expect(state.flags.P2).toBe('SE');
+    }
+  });
+
+  it('keeps the two flags diagonally opposite', () => {
     const state = initializeGame(mockTileData);
-    expect(state.flags.P1).toBeTruthy();
     expect(state.flags.P2).toBe(diagonalCorner(state.flags.P1!));
   });
 
-  it('leaves the other two corners as spares', () => {
-    setRandomSource(mulberry32(7));
+  it('leaves NE and SW as the spare corners', () => {
     const state = initializeGame(mockTileData);
     const spares = spareCorners(state.flags.P1!, state.flags.P2!);
-    expect(spares).toHaveLength(2);
+    expect(spares.sort()).toEqual(['NE', 'SW']);
     expect(state.flags.P1).not.toBe(state.flags.P2);
+  });
+});
+
+describe('rule sets', () => {
+  it('deals the phone game by default: 9×9, rack 6, market 3+2', () => {
+    const state = initializeGame(mockTileData);
+    expect(state.rules).toEqual(PHONE_9);
+    expect(state.board).toHaveLength(9);
+    expect(state.board[0]).toHaveLength(9);
+    expect(state.market).toHaveLength(5);
+    expect(state.market.filter(s => s.faceUp)).toHaveLength(3);
+  });
+
+  it('deals the tablet game on request: 11×11, rack 7, market 4+2', () => {
+    const state = initializeGame(mockTileData, TABLET_11);
+    expect(state.rules).toEqual(TABLET_11);
+    expect(state.board).toHaveLength(11);
+    expect(state.board[0]).toHaveLength(11);
+    expect(state.market).toHaveLength(6);
+    expect(state.market.filter(s => s.faceUp)).toHaveLength(4);
+  });
+
+  it('derives each variant\'s geometry from its own board size', () => {
+    // A variant cannot declare corners that do not match its board, because
+    // it does not declare them at all.
+    expect(centreStar(9)).toEqual({ row: 5, col: 5 });
+    expect(centreStar(11)).toEqual({ row: 6, col: 6 });
+    expect(flagPosts(11).SE).toEqual({ row: 11, col: 11 });
+    expect(flagPosts(9).SE).toEqual({ row: 9, col: 9 });
+  });
+
+  it('opens both variants with the same P1=2 / P2=3 deal', () => {
+    // Locked in the spec: the opening deal compensates first move and is not
+    // scaled with the rack.
+    for (const rules of [PHONE_9, TABLET_11]) {
+      const state = initializeGame(mockTileData, rules);
+      expect(state.players[0].rack).toHaveLength(P1_STARTING_RACK_TILES);
+      expect(state.players[1].rack).toHaveLength(P2_STARTING_RACK_TILES);
+    }
+  });
+
+  it('caps the rack at the variant in play, not a fixed number', () => {
+    const phone = initializeGame(mockTileData);
+    const tablet = initializeGame(mockTileData, TABLET_11);
+    phone.players[0].rack = getMarketTiles(phone.market).slice(0, 1);
+    // A full phone rack is 6; a full tablet rack is 7.
+    phone.players[0].rack = Array.from({ length: 6 }, (_, i) => tile(`p${i}`, 'A'));
+    tablet.players[0].rack = Array.from({ length: 6 }, (_, i) => tile(`t${i}`, 'A'));
+    expect(isExchangeDraw(phone)).toBe(true);
+    expect(isExchangeDraw(tablet)).toBe(false);
   });
 });
 

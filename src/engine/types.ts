@@ -1,5 +1,7 @@
 // Core game types for Flag
 
+import type { RuleSet } from './variants';
+
 export type Letter = 'A' | 'B' | 'C' | 'D' | 'E' | 'F' | 'G' | 'H' | 'I' | 'J' | 'K' | 'L' | 'M' |
                      'N' | 'O' | 'P' | 'Q' | 'R' | 'S' | 'T' | 'U' | 'V' | 'W' | 'X' | 'Y' | 'Z';
 
@@ -24,11 +26,6 @@ export type Position = {
 
 export type FlagPost = 'NW' | 'NE' | 'SE' | 'SW';
 
-export const BOARD_SIZE = 9;
-export const RACK_MAX = 6;
-export const MARKET_FACE_UP = 3;
-export const MARKET_FACE_DOWN = 2;
-export const MARKET_SLOTS = MARKET_FACE_UP + MARKET_FACE_DOWN;
 export const DRAW_COUNT = 2;
 /** Three consecutive Exchange turns (full-rack Draw 2 + Discard 2), counted across both players. */
 export const MAX_CONSECUTIVE_EXCHANGES = 3;
@@ -41,17 +38,10 @@ export const SEAT_COLOR_NAMES = {
   P2: 'Terracotta',
 } as const;
 export const MIN_WORD_LENGTH = 2;
-export const MAX_WORD_LENGTH = 9;
 
-/** True corners (1-indexed). No inland posts. Phone v0.1 9×9. */
-export const FLAG_POSTS: Record<FlagPost, Position> = {
-  NW: { row: 1, col: 1 },
-  NE: { row: 1, col: 9 },
-  SE: { row: 9, col: 9 },
-  SW: { row: 9, col: 1 },
-};
-
-export const CENTRE_STAR: Position = { row: 5, col: 5 };
+// Board size, rack cap, market shape and the geometry that follows from them
+// (centre star, true corners) belong to a rule set, not to the module: see
+// ./variants.ts. A live game carries its own in `GameState.rules`.
 
 export const PLAYER_COLORS = {
   P1: '#56867C',
@@ -66,7 +56,8 @@ export const THEME_COLORS = {
 
 export type BoardCell = PlacedTile | null;
 
-export type Board = BoardCell[][]; // BOARD_SIZE×BOARD_SIZE, 0-indexed internally, display 1-indexed
+// Square, sized by the game's rule set. 0-indexed internally, displayed 1-indexed.
+export type Board = BoardCell[][];
 
 export interface Player {
   id: 'P1' | 'P2';
@@ -135,6 +126,8 @@ export const LEFTOVER_END_REASONS: readonly EndReason[] = [
 ];
 
 export interface GameState {
+  /** The board and rack sizes this game was dealt with; fixed for its lifetime. */
+  rules: RuleSet;
   board: Board;
   players: [Player, Player];
   currentPlayer: 0 | 1;

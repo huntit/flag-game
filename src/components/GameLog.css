@@ -1,0 +1,43 @@
+/* Game Log panel. Where it sits is Game.css's business (the side column of the
+   large shell); this file only says what it looks like. It is hidden by
+   default, so a shell with no room for it simply never turns it on. */
+
+.game-log-panel {
+  display: none;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+  width: 100%;
+  border-radius: 12px;
+  background-color: var(--color-bg-light);
+  border: 1px solid color-mix(in srgb, var(--color-ink) 10%, transparent);
+  overflow: hidden;
+}
+
+.game-log-heading {
+  flex: 0 0 auto;
+  margin: 0;
+  padding: 9px 12px;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--color-text-dim);
+}
+
+/* A fixed window, not a panel that stretches to whatever is left: the height
+   comes from --log-h so the market below it is anchored to the same place all
+   game, however many moves have been played. The list inside scrolls. */
+.game-log-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  height: var(--log-h);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid color-mix(in srgb, var(--color-ink) 9%, transparent);
+}
+
+.game-log-panel:focus-within {
+  border-color: color-mix(in srgb, var(--color-chrome) 40%, transparent);
+}

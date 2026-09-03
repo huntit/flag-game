@@ -3,7 +3,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { TileData, GameState, GameAction, Tile, Position, Letter } from '../engine/types';
-import { DRAW_COUNT, RACK_MAX, SEAT_COLOR_NAMES } from '../engine/types';
+import { DRAW_COUNT, SEAT_COLOR_NAMES } from '../engine/types';
+import { marketSlots } from '../engine/variants';
 import type { Dictionary } from '../engine/dictionary';
 import {
   getBoardTile,
@@ -22,11 +23,12 @@ import Market from './Market';
 import { ScoreCard } from './GameInfo';
 import { TileFace } from './TileFace';
 import HomeLink from './HomeLink';
-import SidePanel from './SidePanel';
+import GameLog from './GameLog';
 import GameOverOverlay from './GameOverOverlay';
 import PassThePhone from './PassThePhone';
 import BlankPicker from './BlankPicker';
 import { useTileDrag } from './useTileDrag';
+import { useLargeShell, ruleSetForShell } from './useShell';
 import {
   pickHumanSeat,
   soloFirstPlayerBanner,
@@ -38,11 +40,12 @@ import {
   firstPlayerLogEntry,
   joinWords,
   playSummaryText,
+  describeFinalMove,
   type MoveLogEntry,
   type SeatNameContext,
 } from '../moveLog';
 import './Game.css';
-import './SidePanel.css';
+import './GameLog.css';
 
 interface GameProps {
   tileData: TileData;
@@ -131,8 +134,16 @@ function ToastLine({ toast }: { toast: StatusToast }) {
 }
 
 function Game({ tileData, dictionary, mode, aiOpponent, onBackToMenu }: GameProps) {
+  // Which shell is up decides where Draw 2 is rendered and — at the moment a
+  // game is dealt — which rule set it is dealt with. The game then carries its
+  // own rules on the state, so rotating a tablet or dragging a window narrower
+  // mid-game re-flows the layout without touching the board being played.
+  const isLargeShell = useLargeShell();
   const [humanSeat, setHumanSeat] = useState<0 | 1>(() => pickHumanSeat(Math.random));
-  const [gameState, setGameState] = useState<GameState>(() => initializeGame(tileData));
+  const [gameState, setGameState] = useState<GameState>(() =>
+    initializeGame(tileData, ruleSetForShell(isLargeShell))
+  );
+  const rules = gameState.rules;
   const [moveLog, setMoveLog] = useState<MoveLogEntry[]>([]);
   const [selectedRackTileId, setSelectedRackTileId] = useState<string | null>(null);
   const [selectedMarketIds, setSelectedMarketIds] = useState<string[]>([]);
@@ -254,7 +265,7 @@ function Game({ tileData, dictionary, mode, aiOpponent, onBackToMenu }: GameProp
 
   const requiredDiscards =
     selectedMarketIds.length === DRAW_COUNT
-      ? Math.max(0, viewer.rack.length + DRAW_COUNT - RACK_MAX)
+      ? Math.max(0, viewer.rack.length + DRAW_COUNT - rules.rackMax)
       : 0;
 
   const drawAction: GameAction = useMemo(
@@ -645,6 +656,33 @@ function Game({ tileData, dictionary, mode, aiOpponent, onBackToMenu }: GameProp
     hint,
   ]);
 
+  /**
+   * Drawing acts on the market, so the button belongs beside it: in the market
+   * panel wherever the market has its own card, and in the actions row on the
+   * phone where the market row has no room for it. One node either way — two
+   * buttons doing the same job would put a duplicate in the a11y tree.
+   */
+  const drawOrPassButton = canPassNow ? (
+    <button
+      type="button"
+      className="control control-solid action-pass"
+      data-pass-stuck-only="true"
+      onClick={handlePass}
+    >
+      Pass
+    </button>
+  ) : (
+    <button
+      type="button"
+      className={`control control-solid action-draw ${exchangeWarning ? 'is-swap-warning' : ''}`}
+      onClick={handleDraw}
+      disabled={!canDrawNow}
+      aria-label={exchangeWarning ? `${drawButtonLabel}. ${EXCHANGE_WARNING}` : drawButtonLabel}
+    >
+      {drawButtonLabel}
+    </button>
+  );
+
   if (awaitingHandover) {
     return (
       <PassThePhone
@@ -658,7 +696,21 @@ function Game({ tileData, dictionary, mode, aiOpponent, onBackToMenu }: GameProp
   }
 
   return (
-    <div className={`play-shell ${drag.isDragging ? 'is-dragging' : ''}`}>
+    <div
+      className={`play-shell ${drag.isDragging ? 'is-dragging' : ''}`}
+      /* The three counts the layout is built from, published once at the top
+         of the tree so every row below budgets itself against the same rule
+         set. A 9x9 game deals 6 rack slots and 5 market slots, an 11x11 game
+         7 and 6; reading either number out of module scope would give one of
+         the two variants tiles that do not fit the row they are in. */
+      style={
+        {
+          '--board-cells': rules.boardSize,
+          '--rack-slots': rules.rackMax,
+          '--market-slots': marketSlots(rules),
+        } as React.CSSProperties
+      }
+    >
       <header className="play-header">
         <HomeLink variant="play" onNavigate={onBackToMenu} />
       </header>
@@ -669,6 +721,7 @@ function Game({ tileData, dictionary, mode, aiOpponent, onBackToMenu }: GameProp
             name={seatLabel(0)}
             score={p1.score}
             rackCount={p1.rack.length}
+            rackCapacity={rules.rackMax}
             isActive={activeIndex === 0}
             playerColor="P1"
             variant={viewerIndex === 0 ? 'you' : 'opponent'}
@@ -677,13 +730,32 @@ function Game({ tileData, dictionary, mode, aiOpponent, onBackToMenu }: GameProp
             name={seatLabel(1)}
             score={p2.score}
             rackCount={p2.rack.length}
+            rackCapacity={rules.rackMax}
             isActive={activeIndex === 1}
             playerColor="P2"
             variant={viewerIndex === 1 ? 'you' : 'opponent'}
           />
         </div>
 
-        <SidePanel entries={moveLog} />
+        <GameLog entries={moveLog} />
+
+        {/* The market. Wherever it has room for a card of its own it takes
+            one, under the log and away from the rack — the clearest way to
+            say "these tiles are not yours yet". On the phone the wrapper
+            collapses and the row takes its own place in the single column. */}
+        <div className="market-panel">
+          <div className="market-row">
+            <Market
+              market={gameState.market}
+              capacity={marketSlots(rules)}
+              selectedTileIds={selectedMarketIds}
+              bagCount={gameState.bag.length}
+              disabled={!interactive}
+              onTileClick={handleMarketTileClick}
+            />
+          </div>
+          {isLargeShell && <div className="market-actions">{drawOrPassButton}</div>}
+        </div>
       </div>
 
       <div className="play-main">
@@ -706,19 +778,10 @@ function Game({ tileData, dictionary, mode, aiOpponent, onBackToMenu }: GameProp
         </div>
 
         <div className="dock">
-          <div className="market-row">
-            <Market
-              market={gameState.market}
-              selectedTileIds={selectedMarketIds}
-              bagCount={gameState.bag.length}
-              disabled={!interactive}
-              onTileClick={handleMarketTileClick}
-            />
-          </div>
-
           <div className="rack-row">
             <Rack
               tiles={viewer.rack}
+              capacity={rules.rackMax}
               label={youLabel}
               playerColor={viewerColor}
               selectedTileId={selectedRackTileId}
@@ -746,26 +809,7 @@ function Game({ tileData, dictionary, mode, aiOpponent, onBackToMenu }: GameProp
 
             <span className="actions-spacer" />
 
-            {canPassNow ? (
-              <button
-                type="button"
-                className="control control-solid action-pass"
-                data-pass-stuck-only="true"
-                onClick={handlePass}
-              >
-                Pass
-              </button>
-            ) : (
-              <button
-                type="button"
-                className={`control control-solid action-draw ${exchangeWarning ? 'is-swap-warning' : ''}`}
-                onClick={handleDraw}
-                disabled={!canDrawNow}
-                aria-label={exchangeWarning ? `${drawButtonLabel}. ${EXCHANGE_WARNING}` : drawButtonLabel}
-              >
-                {drawButtonLabel}
-              </button>
-            )}
+            {!isLargeShell && drawOrPassButton}
 
             <button
               type="button"
@@ -815,6 +859,7 @@ function Game({ tileData, dictionary, mode, aiOpponent, onBackToMenu }: GameProp
       {gameState.gameOver && (
         <GameOverOverlay
           gameState={gameState}
+          finalMove={describeFinalMove(gameState, seatCtx)}
           youLabel={youLabel}
           otherLabel={otherLabel}
           viewerIndex={viewerIndex}
@@ -824,7 +869,7 @@ function Game({ tileData, dictionary, mode, aiOpponent, onBackToMenu }: GameProp
             firstLogAdded.current = false;
             setMoveLog([]);
             setHumanSeat(pickHumanSeat(Math.random));
-            commit(initializeGame(tileData));
+            commit(initializeGame(tileData, ruleSetForShell(isLargeShell)));
           }}
           onBackToMenu={onBackToMenu}
         />

@@ -1,4 +1,4 @@
-@import './SidePanel.css';
+@import './GameLog.css';
 
 /* Play screen shell — phone-first, no vertical page scroll.
  *
@@ -9,9 +9,14 @@
  * The player-interaction area is three plain rows rather than a mixed bag of
  * tiles and buttons:
  *
- *   market   bag + five tiles lying on the table
- *   rack     your six tiles standing in a seat-coloured rail
+ *   market   bag + the variant's tiles lying on the table
+ *   rack     your tiles standing in a seat-coloured rail
  *   actions  every button, one family, one baseline
+ *
+ * Slot counts are NOT written into this file. --board-cells, --rack-slots and
+ * --market-slots are set on the shell by Game.tsx from the rule set the game
+ * was dealt with, so the 9×9 phone game and the 11×11 tablet game share every
+ * line of the maths below and the CSS can never disagree with the board.
  *
  * Tiles are ONE size everywhere. --tile-size is the largest square that fits
  * both rows and still sits sensibly against a board cell, so a tile looks the
@@ -36,6 +41,11 @@
      instead (see .actions-row). */
   --shell-pad-x: 0px;
   --shell-pad-y: 3px;
+  /* One width for every turn-ending button, so Draw 2 and Play match rather
+     than each sizing to its own label. The market card subtracts it from the
+     tiles' budget, so it has to be defined here, above every shell that
+     reads it — an undefined var makes CSS drop the whole calc. */
+  --ctl-w: clamp(78px, calc(var(--board-size) * 0.25), 132px);
 
   --chrome-h: calc(
     var(--header-h) + var(--scores-h) + var(--market-h) + var(--rack-h) + var(--actions-h) +
@@ -52,20 +62,33 @@
     calc(var(--shell-w) - (2 * var(--shell-pad-x))),
     calc(var(--app-h) - var(--chrome-h))
   );
-  --cell: calc(var(--board-size) / 9);
+  --cell: calc(var(--board-size) / var(--board-cells, 9));
 
   /* ---- One tile size for the whole game ------------------------------- */
   --tile-gap: clamp(3px, calc(var(--board-size) * 0.014), 9px);
+  /* A market slot is a well the tile sits down into, so it is a little wider
+     than the tile — the rim showing around each tile is what makes it read as
+     a groove rather than a tile with a border.
+     Derived from the board, NEVER from --tile-size: --market-fit subtracts
+     this rim and then feeds --tile-size, so taking the rim from --tile-size
+     would make the two define each other and CSS drops the whole chain. */
+  --market-well-rim: clamp(2px, calc(var(--board-size) * 0.007), 4px);
+  --market-slot-size: calc(var(--tile-size) + (2 * var(--market-well-rim)));
   --tray-pad: calc(var(--tile-gap) + 2px);
   /* The bag and its count, reserved out of the market row. The bag stacks its
      count underneath so this stays a narrow, predictable column. */
   --bag-block: clamp(40px, calc(var(--board-size) * 0.115), 76px);
-  /* Widest a tile can be and still fit six across the rack… */
+  /* Widest a tile can be and still fit the whole rack across… */
   --rack-fit: calc(
-    (var(--board-size) - (2 * var(--tray-pad)) - (5 * var(--tile-gap))) / 6
+    (var(--board-size) - (2 * var(--tray-pad)) -
+      ((var(--rack-slots, 6) - 1) * var(--tile-gap))) / var(--rack-slots, 6)
   );
-  /* …and five across the market beside the bag. */
-  --market-fit: calc((var(--board-size) - var(--bag-block) - (5 * var(--tile-gap))) / 5);
+  /* …and the whole market across, beside the bag. One gap per slot: the
+     slots-1 between tiles, plus the one between the bag and the first tile. */
+  --market-fit: calc(
+    (var(--board-size) - var(--bag-block) - (var(--market-slots, 5) * var(--tile-gap)) -
+      (2 * var(--market-slots, 5) * var(--market-well-rim))) / var(--market-slots, 5)
+  );
   --tile-size: min(
     var(--rack-fit),
     var(--market-fit),
@@ -110,6 +133,7 @@
    desktop, where they become the two columns. */
 .play-main,
 .play-side,
+.market-panel,
 .dock {
   display: contents;
 }
@@ -215,6 +239,14 @@
 
 .actions-row .control {
   --ctl-h: calc(var(--actions-h) * 0.86);
+}
+
+/* Draw 2 and Play are the same move-ending weight, so they are the same
+   width. Shuffle stays a round icon and keeps its own. */
+.actions-row .control-solid {
+  width: var(--ctl-w);
+  min-width: var(--ctl-w);
+  padding: 0 8px;
 }
 
 .action-draw.is-swap-warning:not(:disabled) {
@@ -324,142 +356,119 @@
   letter-spacing: 0.02em;
 }
 
-/* ---- Tablet landscape --------------------------------------------------
-   Board on the left, the whole player area stacked beside it. */
 
-@media (orientation: landscape) and (min-width: 640px) and (pointer: coarse) {
+/* ---- The large shell ---------------------------------------------------
+ * Two columns: the board and the things you act with on the left, and a side
+ * column of score cards, the Game Log and the market on the right.
+ *
+ * Claimed by two kinds of window, and the query says exactly which: a wide
+ * fine-pointer desktop window, and a tablet — coarse-pointer, but roomy in
+ * BOTH orientations. The second half is min-width AND min-height on purpose.
+ * A phone in landscape is wide (a 16 Pro Max is 932pt across) but is never
+ * 700pt tall, so a width-only query would hand a phone the tablet layout —
+ * and, because useShell.ts is gated on this same pair of queries, the 11×11
+ * board with it.
+ *
+ * Keep this query in step with LARGE_SHELL_QUERY in useShell.ts. Layout and
+ * rule set are two halves of one decision; layout.test.ts locks them together.
+ */
+
+@media (min-width: 900px) and (pointer: fine), (min-width: 700px) and (min-height: 700px) {
   .play-shell {
-    --shell-max-w: 1200px;
-    --side-w: min(460px, 42vw);
-    --board-size: min(
-      calc(var(--shell-w) - var(--side-w) - (2 * var(--shell-pad-x)) - 16px),
-      calc(var(--app-h) - (2 * var(--shell-pad-y)) - var(--safe-top) - var(--safe-bottom) - 2px)
-    );
-    /* The rows beside the board budget their tiles against the side column. */
-    --rack-fit: calc((var(--side-w) - (2 * var(--tray-pad)) - (5 * var(--tile-gap))) / 6);
-    --market-fit: calc((var(--side-w) - var(--bag-block) - (5 * var(--tile-gap))) / 5);
-
-    max-width: var(--shell-max-w);
-    grid-template-columns: var(--board-size) minmax(0, 1fr);
-    grid-template-rows:
-      var(--header-h)
-      var(--scores-h)
-      var(--market-h)
-      var(--rack-h)
-      var(--actions-h)
-      var(--status-h)
-      minmax(0, 1fr);
-    grid-template-areas:
-      'stage header'
-      'stage scores'
-      'stage market'
-      'stage rack'
-      'stage actions'
-      'stage status'
-      'stage log';
-    column-gap: 16px;
-    align-content: start;
-  }
-
-  /* A wide landscape tablet has room to spare beside the board, so the move
-     log fills it rather than leaving the column half empty. */
-  .play-shell .side-panel {
-    display: flex;
-    grid-area: log;
-    min-height: 0;
-    min-width: 0;
-    width: 100%;
-    padding-top: var(--shell-gap);
-  }
-
-  .play-shell .stage {
-    grid-row: 1 / -1;
-    align-items: flex-start;
-  }
-
-  .play-shell .play-header {
-    grid-column: 2;
-  }
-
-  .play-header,
-  .scores-row,
-  .market-row,
-  .status-row,
-  .actions-row,
-  .rack-row {
-    width: auto;
-    max-width: none;
-    justify-self: stretch;
-  }
-}
-
-/* ---- Desktop -----------------------------------------------------------
-   Wide fine-pointer windows only. The score cards and the move log move into
-   a right-hand column, which buys the board back the height they were using
-   and gives the log somewhere to live that is not a floating button. */
-
-@media (min-width: 900px) and (pointer: fine) {
-  .play-shell {
-    --header-h: 48px;
-    --scores-h: clamp(56px, calc(var(--app-h) * 0.078), 76px);
+    /* A taller header row, which is how the wordmark gets bigger: the lockup
+       is sized from --header-h, so the row is the only place to say it. */
+    --header-h: clamp(56px, calc(var(--app-h) * 0.085), 76px);
+    --scores-h: clamp(52px, calc(var(--app-h) * 0.072), 72px);
     --market-h: clamp(56px, calc(var(--app-h) * 0.082), 84px);
     --rack-h: clamp(58px, calc(var(--app-h) * 0.085), 88px);
     --actions-h: 48px;
     --status-h: 34px;
     --shell-gap: 10px;
-    --shell-pad-x: 20px;
-    --shell-pad-y: 12px;
-    /* Hard cap: tiles stop growing once the window is big enough. */
-    --tile: 68px;
-    --log-w: 300px;
+    /* Trimmed hard: every pixel of side padding is a pixel off the board, and
+       a window this wide has nothing to gain from a wide margin. */
+    --shell-pad-x: 8px;
+    --shell-pad-y: 10px;
+    --col-gap: 16px;
 
-    /* Scores live in the side column, so they cost the board nothing. */
+    /* Hard cap: tiles stop growing once the window is big enough. A mouse
+       needs a smaller target than a thumb, so this sits under the phone's. */
+    --tile: 62px;
+    /* The side column. Wide enough for a log line to read without wrapping
+       every entry, narrow enough that the board keeps the rest. */
+    --side-w: clamp(236px, 26vw, 320px);
+    --ctl-w: 116px;
+
+    /* The market has its own card here, so it stops competing with the rack
+       for the board's width and gets a grid of its own. That grid's width is
+       the card's inner column: heading, bag, tiles and button all share it. */
+    --market-cols: 3;
+    --market-gap: 8px;
+    /* Horizontal padding plus inner gaps of the market card, reserved out of
+       the tile budget wherever the card lays its contents out in a row. */
+    --market-pad-x: 48px;
+    --market-grid-w: calc(
+      (var(--market-cols) * var(--market-slot-size)) +
+        ((var(--market-cols) - 1) * var(--market-gap))
+    );
+
+    /* Scores, log and market all live in the side column, so none of them
+       cost the board any height. */
     --chrome-h: calc(
-      var(--header-h) + var(--market-h) + var(--rack-h) + var(--actions-h) + var(--status-h) +
-        (5 * var(--shell-gap)) + (2 * var(--shell-pad-y)) + var(--safe-top) +
+      var(--header-h) + var(--rack-h) + var(--actions-h) + var(--status-h) +
+        (4 * var(--shell-gap)) + (2 * var(--shell-pad-y)) + var(--safe-top) +
         var(--safe-bottom) + 2px
     );
 
     --shell-max-w: none;
-    --board-max: 660px;
-    --board-size: min(var(--board-max), calc(var(--app-h) - var(--chrome-h)));
+    --board-max: 720px;
+    --board-w-budget: calc(
+      100vw - var(--safe-left) - var(--safe-right) - (2 * var(--shell-pad-x)) -
+        var(--side-w) - var(--col-gap)
+    );
+    --board-size: min(
+      var(--board-max),
+      var(--board-w-budget),
+      calc(var(--app-h) - var(--chrome-h))
+    );
+
+    /* Rack tiles answer to the board's width; the market sizes itself against
+       its own card below, so it no longer holds --tile-size down. */
     --tile-size: min(
       var(--rack-fit),
-      var(--market-fit),
       calc(var(--rack-h) * 0.82),
-      calc(var(--market-h) * 0.9),
-      calc(var(--cell) * 1.4),
+      calc(var(--cell) * 1.3),
       var(--tile)
     );
 
     max-width: none;
     width: 100%;
     margin: 0;
-    grid-template-columns: 1fr auto var(--log-w) 1fr;
-    grid-template-rows: minmax(0, 1fr);
-    grid-template-areas: none;
-    align-content: start;
+    grid-template-columns: var(--board-size) var(--side-w);
+    grid-template-rows: var(--header-h) minmax(0, 1fr);
+    grid-template-areas:
+      'header header'
+      'main   side';
+    column-gap: var(--col-gap);
+    row-gap: var(--shell-gap);
     justify-content: center;
-    column-gap: 24px;
-    row-gap: 0;
+    align-content: start;
   }
 
-  /* Centre column: wordmark, board, market, rack, actions, status. */
-  .play-main {
+  /* Left column: board, rack, actions, status — stacked in that order, every
+     row pinned to the board's own width so they share one left and one right
+     edge from the board down to the toast. */
+  .play-shell .play-main {
+    grid-area: main;
     display: grid;
-    grid-column: 2;
-    grid-row: 1;
     width: var(--board-size);
     grid-template-columns: var(--board-size);
     grid-template-rows:
       var(--board-size)
-      var(--market-h)
       var(--rack-h)
       var(--actions-h)
       var(--status-h);
     grid-template-areas:
       'stage'
-      'market'
       'rack'
       'actions'
       'status';
@@ -472,37 +481,24 @@
   }
 
   .play-shell .play-header {
-    grid-column: 2;
-    grid-row: 1;
-    align-self: start;
+    grid-area: header;
+    align-self: center;
     height: var(--header-h);
-    width: var(--board-size);
+    width: 100%;
     justify-self: center;
-    /* Sits above the play column, which starts below it. */
-    margin-bottom: 0;
   }
 
-  .play-main {
-    margin-top: calc(var(--header-h) + var(--shell-gap));
-  }
-
-  .play-shell .side-panel {
-    display: flex;
-    flex: 1 1 auto;
-  }
-
-  /* Right column: both score cards, then the move log. */
-  .play-side {
+  /* Right column: score cards, then the Game Log, then the market. The log is
+     between them on purpose — it is the record of what the cards above it are
+     counting, and it is read far more often than the market is touched. */
+  .play-shell .play-side {
+    grid-area: side;
     display: flex;
     flex-direction: column;
-    grid-column: 3;
-    grid-row: 1;
     min-height: 0;
     min-width: 0;
     gap: var(--shell-gap);
     align-self: stretch;
-    margin-top: calc(var(--header-h) + var(--shell-gap));
-    max-height: calc(var(--app-h) - var(--header-h) - (3 * var(--shell-gap)) - (2 * var(--shell-pad-y)));
   }
 
   .play-shell .scores-row {
@@ -520,8 +516,19 @@
     flex: 0 0 var(--scores-h);
   }
 
+  /* The log takes the height the column has left over, and stops there: the
+     market below it is anchored to the same place all game. */
+  .play-shell .game-log-panel {
+    display: flex;
+    flex: 1 1 auto;
+    min-height: 96px;
+  }
+
+  .play-shell .game-log-body {
+    height: auto;
+  }
+
   .play-shell .stage,
-  .play-shell .market-row,
   .play-shell .rack-row,
   .play-shell .actions-row,
   .play-shell .status-row {
@@ -535,11 +542,6 @@
     align-self: start;
   }
 
-  .play-shell .market-row {
-    grid-area: market;
-    height: var(--market-h);
-  }
-
   .play-shell .rack-row {
     grid-area: rack;
     height: var(--rack-h);
@@ -548,6 +550,9 @@
   .play-shell .actions-row {
     grid-area: actions;
     height: var(--actions-h);
+    /* Shuffle and Play land on the board's own edges. The phone keeps its
+       inset because there the board runs to the bezel. */
+    padding: 0;
   }
 
   .play-shell .status-row {
@@ -555,6 +560,219 @@
     height: var(--status-h);
   }
 
+  /* ---- Market card -----------------------------------------------------
+     Its own card at the foot of the side column: heading, bag, a grid of
+     tiles, and the button that acts on them. Nothing about it echoes the
+     rack, which is the point — one is a shared pool, the other is your hand. */
+
+  .play-shell .market-panel {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex: 0 0 auto;
+    gap: 10px;
+    padding: 12px;
+    border-radius: 12px;
+    background-color: var(--color-bg-light);
+    border: 1px solid color-mix(in srgb, var(--color-ink) 10%, transparent);
+  }
+
+  .play-shell .market-row {
+    width: 100%;
+    max-width: none;
+    height: auto;
+    justify-self: stretch;
+    /* The card's inner column stands at its natural height. Left stretching,
+       the tray is stretched a second time after the row's height has already
+       been derived from it, and the extra height overflows the card in both
+       directions — the heading rides above the top edge and Draw 2 lands on
+       the bottom row of tiles. */
+    align-items: flex-start;
+  }
+
+  /* Draw 2 shares the card's inner column and hangs on its right edge, just as
+     Play hangs on the board's. Same pill, same width, same idea. */
+  .play-shell .market-actions {
+    width: var(--market-grid-w);
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  .play-shell .market-panel .control {
+    width: var(--ctl-w);
+    min-width: var(--ctl-w);
+    --ctl-h: 41px;
+  }
+}
+
+/* ---- Large shell, landscape tablet -------------------------------------
+ * A landscape tablet is wide and short: the board eats the height, and the
+ * side column has width to spare. So the two tile rows come out of the
+ * columns entirely and sit across the bottom of the screen, where both
+ * thumbs already are — market on the left under the board, your rack and its
+ * buttons on the right. Each control still sits under the thing it acts on.
+ *
+ * Fine-pointer windows are excluded: a landscape desktop window is the same
+ * shape but is not held, and there is no reason to push its controls away
+ * from the board.
+ */
+
+@media (orientation: landscape) and (pointer: coarse) and (min-width: 700px) and (min-height: 700px) {
+  .play-shell {
+    /* The bottom band is the market card's height; the board is sized from
+       what is left rather than from the column rows. */
+    --dock-h: clamp(104px, calc(var(--app-h) * 0.2), 168px);
+    --chrome-h: calc(
+      var(--header-h) + var(--dock-h) + (2 * var(--shell-gap)) + (2 * var(--shell-pad-y)) +
+        var(--safe-top) + var(--safe-bottom) + 2px
+    );
+    --board-size: min(
+      var(--board-max),
+      var(--board-w-budget),
+      calc(var(--app-h) - var(--chrome-h))
+    );
+
+    grid-template-columns: var(--board-size) minmax(0, 1fr);
+    grid-template-rows: var(--header-h) minmax(0, 1fr) var(--dock-h);
+    grid-template-areas:
+      'header header'
+      'stage  side'
+      'market dock';
+
+    /* The two tile rows are out of the columns now, so they budget themselves
+       against the halves of the bottom band rather than against the board.
+       --dock-w is the exact width the grid gives the right-hand half: it is
+       what --board-w-budget subtracts, arrived at from the other direction. */
+    --dock-w: calc(
+      100vw - var(--safe-left) - var(--safe-right) - (2 * var(--shell-pad-x)) -
+        var(--board-size) - var(--col-gap)
+    );
+    --rack-fit: calc(
+      (var(--dock-w) - (2 * var(--tray-pad)) -
+        ((var(--rack-slots, 6) - 1) * var(--tile-gap))) / var(--rack-slots, 6)
+    );
+    /* The market shares its card with the bag on one end and Draw 2 on the
+       other, so both come out of the tiles' budget here — the tightest budget
+       in the app. A full-depth rim would be paid for out of the tap target, so
+       the grooves are cut shallower in this shell alone. */
+    --market-well-rim: 2px;
+
+    --market-fit: calc(
+      (var(--board-size) - var(--market-pad-x) - var(--bag-block) - var(--ctl-w) -
+        (var(--market-slots, 5) * var(--tile-gap)) -
+        (2 * var(--market-slots, 5) * var(--market-well-rim))) / var(--market-slots, 5)
+    );
+    --tile-size: min(
+      var(--rack-fit),
+      var(--market-fit),
+      calc(var(--rack-h) * 0.82),
+      calc(var(--cell) * 1.3),
+      var(--tile)
+    );
+  }
+
+  /* Every row is a direct grid item here, so the market can leave the side
+     column and the rack can leave the board column. */
+  .play-shell .play-main,
+  .play-shell .play-side {
+    display: contents;
+  }
+
+  .play-shell .stage {
+    grid-area: stage;
+    width: var(--board-size);
+    max-width: var(--board-size);
+    align-self: start;
+    justify-self: start;
+  }
+
+  .play-shell .scores-row {
+    grid-area: side;
+    align-self: start;
+    flex-direction: row;
+    width: 100%;
+    height: var(--scores-h);
+  }
+
+  .play-shell .scores-row .score-card {
+    height: var(--scores-h);
+    flex: 1 1 0;
+  }
+
+  /* The log fills the column under the cards, and the toast sits at its foot
+     where the eye already is when reading the log. */
+  .play-shell .game-log-panel {
+    grid-area: side;
+    align-self: stretch;
+    margin-top: calc(var(--scores-h) + var(--shell-gap));
+    margin-bottom: calc(var(--status-h) + var(--shell-gap));
+    min-height: 0;
+  }
+
+  .play-shell .status-row {
+    grid-area: side;
+    align-self: end;
+    width: 100%;
+    max-width: none;
+    height: var(--status-h);
+  }
+
+  /* ---- The bottom band ------------------------------------------------- */
+
+  .play-shell .market-panel {
+    grid-area: market;
+    width: var(--board-size);
+    max-width: var(--board-size);
+    height: 100%;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 12px;
+  }
+
+  .play-shell .market-row {
+    flex: 1 1 auto;
+    min-width: 0;
+    height: 100%;
+  }
+
+  .play-shell .market-actions {
+    width: auto;
+    flex: 0 0 auto;
+  }
+
+  /* Your rack and the buttons that act on it, stacked at the bottom right. */
+  .play-shell .dock {
+    grid-area: dock;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: var(--shell-gap);
+    min-width: 0;
+  }
+
+  .play-shell .rack-row,
+  .play-shell .actions-row {
+    width: 100%;
+    max-width: none;
+    justify-self: stretch;
+  }
+
+  .play-shell .rack-row {
+    height: var(--rack-h);
+  }
+
+  .play-shell .actions-row {
+    height: var(--actions-h);
+    padding: 0;
+  }
+
+}
+
+/* ---- Desktop-only affordances ------------------------------------------ */
+
+@media (min-width: 900px) and (pointer: fine) {
   .control-solid:hover:not(:disabled) {
     background-color: color-mix(in srgb, var(--color-chrome) 88%, black);
     box-shadow: var(--control-shadow-hover);

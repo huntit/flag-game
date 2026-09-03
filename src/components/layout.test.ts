@@ -8,6 +8,17 @@ import { resolve } from 'path';
 
 const read = (file: string) => readFileSync(resolve(__dirname, file), 'utf-8');
 
+/**
+ * The same file with its comments removed. Locks that ban a construct outright
+ * have to read code, not prose: the comment explaining WHY a file must never
+ * sniff the user agent contains the words "user-agent", and a naive grep over
+ * the raw source fails the very file that documents the rule.
+ */
+const readCode = (file: string) =>
+  read(file)
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/(^|[^:])\/\/.*$/gm, '$1');
+
 const appCss = read('../App.css');
 const gameCss = read('./Game.css');
 const boardCss = read('./Board.css');
@@ -93,45 +104,141 @@ describe('no-scroll phone shell', () => {
     expect(read('./Game.tsx')).toMatch(/statusToasts\[0\]/);
   });
 
-  it('has a landscape layout for iPad that keeps the controls on screen', () => {
+  it('has a landscape layout for the tablet that keeps the controls on screen', () => {
     expect(gameCss).toMatch(/@media \(orientation: landscape\)/);
   });
-});
 
-const desktopBlock = (css: string) =>
-  css.match(/@media \(min-width:\s*900px\) and \(pointer:\s*fine\)[\s\S]*/)?.[0] ?? '';
+  it('seats every market tile in a groove, drawn whether or not it is filled', () => {
+    // A card with wells cut into it reads as the thing tiles come from. A row
+    // of tiles with nothing under them reads as tiles that happen to be
+    // adjacent — and once the bag stops refilling, as fewer places than there
+    // are.
+    const market = read('./Market.tsx');
+    expect(market).toMatch(/capacity - market\.length/);
+    expect(market).toMatch(/'market-slot'/);
 
-describe('desktop layout (wide fine-pointer windows only)', () => {
-  const desktop = desktopBlock(gameCss);
+    const slot = marketCss.match(/\n\.market-slot\s*\{[\s\S]*?\n\}/)?.[0] ?? '';
+    expect(slot).toMatch(/width:\s*var\(--market-slot-size\)/);
+    // Recessed, not raised: the inset shadow is what makes it a groove.
+    expect(slot).toMatch(/box-shadow:\s*\n?\s*inset/);
+    // The tile sits inside the well, leaving the rim showing all round.
+    expect(marketCss).toMatch(/\.market-slot \.tray-tile\s*\{[^}]*width:\s*var\(--tile-size\)/s);
+    // The card's grid steps by whole slots, or the rims fall outside it.
+    expect(marketCss).toMatch(/grid-template-columns:\s*repeat\(var\(--market-cols\), var\(--market-slot-size\)\)/);
+  });
 
-  it('gates desktop rules on min-width and pointer:fine, never a user-agent', () => {
-    expect(desktop.length).toBeGreaterThan(80);
-    expect(gameCss).toMatch(/@media \(min-width:\s*900px\) and \(pointer:\s*fine\)/);
-    expect(read('./Rack.css')).toMatch(/@media \(min-width:\s*900px\) and \(pointer:\s*fine\)/);
-    expect(read('./Market.css')).toMatch(/@media \(min-width:\s*900px\) and \(pointer:\s*fine\)/);
-    expect(read('./Board.css')).toMatch(/@media \(min-width:\s*900px\) and \(pointer:\s*fine\)/);
+  it('budgets the market grooves in every shell that sizes tiles', () => {
+    // A well is the tile plus a rim either side, so N slots cost 2N rims. Any
+    // shell that redefines --market-fit and forgets them overflows its row by
+    // that much.
+    const budgets = gameCss.match(/--market-fit:[\s\S]*?;/g) ?? [];
+    expect(budgets.length).toBeGreaterThan(1);
+    for (const budget of budgets) {
+      expect(budget).toMatch(/2 \* var\(--market-slots[^)]*\) \* var\(--market-well-rim\)/);
+    }
 
-    for (const source of ['Game.tsx', 'Game.css', 'Rack.css', 'Market.css', 'Board.css', '../App.tsx']) {
-      expect(read(`./${source}`), source).not.toMatch(/navigator\.userAgent|user-agent/i);
+    const shell = gameCss.match(/\.play-shell\s*\{[\s\S]*?\n\}/)?.[0] ?? '';
+    expect(shell).toMatch(
+      /--market-slot-size:\s*calc\(var\(--tile-size\) \+ \(2 \* var\(--market-well-rim\)\)\)/,
+    );
+    // The rim is measured off the board. Taking it off --tile-size would make
+    // the two define each other — --market-fit subtracts the rim and then
+    // feeds --tile-size — and CSS drops a circular chain silently, which on
+    // the phone means tiles wider than the screen.
+    expect(shell).toMatch(/--market-well-rim:\s*clamp\([^)]*var\(--board-size\)/);
+    for (const rim of gameCss.match(/--market-well-rim:[^;]*;/g) ?? []) {
+      expect(rim).not.toMatch(/var\(--tile-size\)/);
     }
   });
 
-  it('caps board and tile size so they do not grow with the window', () => {
-    expect(desktop).toMatch(/--board-max:\s*\d+px/);
-    expect(desktop).toMatch(/--board-size:\s*min\(/);
-    expect(desktop).toMatch(/var\(--board-max\)/);
-    expect(desktop).toMatch(/--log-w:\s*\d+px/);
-    // A hard pixel ceiling, so tiles stop growing once the window is big.
-    expect(desktop).toMatch(/--tile:\s*\d+px/);
-    expect(desktop).toMatch(/--tile-size:\s*min\([\s\S]*var\(--tile\)/);
+  it('budgets the market and rack from the variant, never a hard-coded count', () => {
+    // The 9×9 game deals 6 rack slots and 5 market slots; the 11×11 game deals
+    // 7 and 6. Writing either number into the maths gives one of the two
+    // variants tiles that do not fit the row they are in.
+    const shell = gameCss.match(/\.play-shell\s*\{[\s\S]*?\n\}/)?.[0] ?? '';
+    expect(shell).toMatch(/--rack-fit:[\s\S]*var\(--rack-slots/);
+    expect(shell).toMatch(/--market-fit:[\s\S]*var\(--market-slots/);
+    expect(shell).toMatch(/--cell:\s*calc\(var\(--board-size\) \/ var\(--board-cells/);
+    expect(boardCss).toMatch(/grid-template-columns:\s*repeat\(var\(--board-cells/);
+    expect(boardCss).toMatch(/grid-template-rows:\s*repeat\(var\(--board-cells/);
+    expect(boardCss).not.toMatch(/repeat\(\d+,\s*1fr\)/);
+
+    // …and the three counts come from the game's own rule set, set once.
+    const game = read('./Game.tsx');
+    expect(game).toMatch(/'--board-cells':\s*rules\.boardSize/);
+    expect(game).toMatch(/'--rack-slots':\s*rules\.rackMax/);
+    expect(game).toMatch(/'--market-slots':\s*marketSlots\(rules\)/);
+  });
+});
+
+const largeShellBlock = (css: string) =>
+  css.match(
+    /@media \(min-width:\s*900px\) and \(pointer:\s*fine\), \(min-width:\s*700px\) and \(min-height:\s*700px\)[\s\S]*/
+  )?.[0] ?? '';
+
+const landscapeTabletBlock = (css: string) =>
+  css.match(
+    /@media \(orientation: landscape\) and \(pointer:\s*coarse\) and \(min-width:\s*700px\) and \(min-height:\s*700px\)\s*\{[\s\S]*/
+  )?.[0] ?? '';
+
+describe('the large shell (wide desktop windows and tablets)', () => {
+  const large = largeShellBlock(gameCss);
+
+  it('gates the shell on viewport and pointer, never a user-agent', () => {
+    expect(large.length).toBeGreaterThan(80);
+
+    for (const source of ['Game.tsx', 'Game.css', 'Rack.css', 'Market.css', 'Board.css', '../App.tsx', './useShell.ts']) {
+      expect(readCode(`./${source}`), source).not.toMatch(/navigator\.userAgent|user-agent/i);
+    }
   });
 
-  it('forces tiles square so they cannot stretch with a 1fr sidebar', () => {
+  it('claims a tablet in both orientations without ever claiming a phone', () => {
+    // A phone in landscape is wide — a 16 Pro Max is 932pt across — so a
+    // width-only query hands a phone the tablet layout the moment it is turned
+    // sideways, and with it the 11×11 board. min-height is what stops that.
+    expect(gameCss).toMatch(
+      /@media \(min-width: 900px\) and \(pointer: fine\), \(min-width: 700px\) and \(min-height: 700px\)/
+    );
+    const hook = read('./useShell.ts');
+    expect(hook).toMatch(/LARGE_SHELL_MIN = 700/);
+    expect(hook).toMatch(/min-width: \$\{LARGE_SHELL_MIN\}px\) and \(min-height: \$\{LARGE_SHELL_MIN\}px/);
+    expect(hook).toMatch(/DESKTOP_QUERY = '\(min-width: 900px\) and \(pointer: fine\)'/);
+  });
+
+  it('keeps the CSS shell and the rule set gated on the same queries', () => {
+    // Layout and board size are two halves of one decision. If the CSS says
+    // "large" while useShell says "phone", the shell lays out an 11×11 column
+    // around a 9×9 board.
+    const hook = read('./useShell.ts');
+    expect(hook).toMatch(/LARGE_SHELL_QUERY = `\$\{DESKTOP_QUERY\}, \$\{TABLET_QUERY\}`/);
+    expect(hook).toMatch(/ruleSetForShell/);
+    expect(hook).toMatch(/large \? TABLET_11 : PHONE_9/);
+    expect(read('./Game.tsx')).toMatch(/initializeGame\(tileData, ruleSetForShell\(isLargeShell\)\)/);
+  });
+
+  it('caps board and tile size so they do not grow with the window', () => {
+    expect(large).toMatch(/--board-max:\s*\d+px/);
+    expect(large).toMatch(/--board-size:\s*min\(/);
+    expect(large).toMatch(/var\(--board-max\)/);
+    expect(large).toMatch(/--side-w:\s*clamp\(/);
+    // A hard pixel ceiling, so tiles stop growing once the window is big.
+    expect(large).toMatch(/--tile:\s*\d+px/);
+    expect(large).toMatch(/--tile-size:\s*min\([\s\S]*var\(--tile\)/);
+  });
+
+  it('leaves the board room for the side column instead of overlapping it', () => {
+    // The board is capped by the width the side column does not take, so a
+    // narrow tablet shrinks the board rather than pushing the log off-screen.
+    expect(large).toMatch(/--board-w-budget:[\s\S]*var\(--side-w\)/);
+    expect(large).toMatch(/--board-size:\s*min\([\s\S]*var\(--board-w-budget\)/);
+  });
+
+  it('forces tiles square so they cannot stretch with the column', () => {
     const tileRule =
       read('./Rack.css').match(/\.tray-tile,\s*\n\.tray-slot-empty\s*\{[\s\S]*?\n\}/)?.[0] ?? '';
     expect(tileRule).toMatch(/aspect-ratio:\s*1/);
     expect(tileRule).toMatch(/width:\s*var\(--tile-size\)/);
-    expect(desktop).toMatch(/grid-template-rows:[\s\S]*var\(--rack-h\)/);
+    expect(large).toMatch(/grid-template-rows:[\s\S]*var\(--rack-h\)/);
   });
 
   it('sizes rack and market tiles from one shared --tile-size', () => {
@@ -148,20 +255,103 @@ describe('desktop layout (wide fine-pointer windows only)', () => {
     expect(marketTileRule).not.toMatch(/width:|aspect-ratio:/);
   });
 
-  it('centres a play column with a score-card and log column beside it', () => {
-    // Board, market, rack and actions stack in the middle; the score cards and
-    // the move log move into their own column so they cost the board no height.
-    expect(desktop).toMatch(/grid-template-columns:\s*1fr auto var\(--log-w\) 1fr/);
-    expect(desktop).toMatch(/\.play-main/);
-    expect(desktop).toMatch(/--board-max:\s*6[0-9]\dpx/);
-    expect(desktop).toMatch(/grid-template-areas:[\s\S]*'status'/);
-    expect(desktop).toMatch(/grid-template-areas:[\s\S]*'rack'/);
-    expect(desktop).toMatch(/grid-template-areas:[\s\S]*'actions'/);
-    expect(desktop).toMatch(/\.play-side[\s\S]*grid-column:\s*3/);
+  it('puts the board in one column and the cards, log and market in the other', () => {
+    expect(large).toMatch(/grid-template-columns:\s*var\(--board-size\) var\(--side-w\)/);
+    expect(large).toMatch(/grid-template-areas:\s*\n\s*'header header'\n\s*'main   side'/);
+    expect(large).toMatch(/\.play-main[\s\S]*grid-area:\s*main/);
+    expect(large).toMatch(/\.play-side[\s\S]*grid-area:\s*side/);
+    // Left column stacks board, rack, actions, status — nothing else.
+    expect(large).toMatch(/grid-template-areas:[\s\S]*'stage'[\s\S]*'rack'[\s\S]*'actions'[\s\S]*'status'/);
     expect(read('./Game.tsx')).toMatch(/className="market-row"/);
     expect(read('./Game.tsx')).toMatch(/action-draw/);
     expect(read('./Game.tsx')).toMatch(/action-shuffle/);
-    expect(desktop).toMatch(/\.market-row[\s\S]*max-width:\s*var\(--board-size\)/);
+  });
+
+  it('orders the side column score cards, then Game Log, then market', () => {
+    // The log is between them on purpose: it is the record of what the cards
+    // above it are counting.
+    const game = read('./Game.tsx');
+    const side = game.slice(game.indexOf('<div className="play-side">'), game.indexOf('<div className="play-main">'));
+    expect(side.indexOf('scores-row')).toBeGreaterThan(-1);
+    expect(side.indexOf('<GameLog')).toBeGreaterThan(side.indexOf('scores-row'));
+    expect(side.indexOf('market-panel')).toBeGreaterThan(side.indexOf('<GameLog'));
+  });
+
+  it('gives the market its own card so it stops competing with the rack', () => {
+    // The market is a shared pool, the rack is your hand. Putting them in
+    // different columns is the clearest way to say so.
+    expect(large).toMatch(/\.play-shell \.market-panel\s*\{[^}]*display:\s*flex/s);
+    expect(large).toMatch(/--market-cols:\s*\d/);
+    expect(read('./Market.css')).toMatch(/grid-template-columns:\s*repeat\(var\(--market-cols/);
+    // Still one tile size: the card changes where a tile sits, not its size.
+    // The grid steps by whole grooves; the tile inside one is the same tile
+    // that sits on the rack.
+    expect(read('./Market.css')).toMatch(
+      /\.market-panel \.market-tray\s*\{[^}]*var\(--market-slot-size\)/s,
+    );
+    expect(read('./Market.css')).toMatch(
+      /\.market-slot \.tray-tile\s*\{[^}]*width:\s*var\(--tile-size\)/s,
+    );
+    // The market wrapper collapses on the phone, so the row keeps its place
+    // in the single column.
+    const phone = gameCss.slice(0, gameCss.indexOf('@media'));
+    expect(phone).toMatch(/\.market-panel,\n\.dock \{\n\s*display:\s*contents/);
+  });
+
+  it('hangs the market card heading, bag, grid and button on one inner column', () => {
+    const marketCss = read('./Market.css');
+    expect(marketCss).toMatch(/\.market-panel \.market-head\s*\{[^}]*width:\s*var\(--market-grid-w\)/s);
+    expect(marketCss).toMatch(/\.market-panel \.market-head\s*\{[^}]*justify-content:\s*space-between/s);
+    expect(marketCss).toMatch(/\.market-panel \.market-tray\s*\{[^}]*width:\s*var\(--market-grid-w\)/s);
+    expect(large).toMatch(/\.play-shell \.market-actions\s*\{[^}]*width:\s*var\(--market-grid-w\)/s);
+    expect(large).toMatch(/\.play-shell \.market-actions\s*\{[^}]*justify-content:\s*flex-end/s);
+
+    // Heading first, bag second, so the bag sits top-right of the card.
+    const market = read('./Market.tsx');
+    expect(market.indexOf('market-heading')).toBeLessThan(market.indexOf('market-bag'));
+    // Market.css alone owns the heading's visibility — declaring it in both
+    // files once let bundle order hide it everywhere.
+    expect(marketCss).toMatch(/\.market-heading\s*\{\s*display:\s*none/);
+    expect(gameCss).not.toMatch(/\.market-heading\s*\{[^}]*display:/s);
+  });
+
+  it('renders Draw once, in the column that holds the market', () => {
+    // Two buttons doing the same job would put a duplicate in the a11y tree,
+    // so the single node moves rather than being duplicated and hidden.
+    const game = read('./Game.tsx');
+    expect(game).toMatch(/const drawOrPassButton =/);
+    expect(game).toMatch(/\{isLargeShell && <div className="market-actions">\{drawOrPassButton\}<\/div>\}/);
+    expect(game).toMatch(/\{!isLargeShell && drawOrPassButton\}/);
+    expect((game.match(/action-draw/g) ?? []).length).toBe(1);
+    expect((game.match(/action-pass/g) ?? []).length).toBe(1);
+  });
+
+  it('gives Draw and Play one width, and puts the buttons on real edges', () => {
+    const shell = gameCss.match(/\.play-shell\s*\{[\s\S]*?\n\}/)?.[0] ?? '';
+    expect(shell).toMatch(/--ctl-w:/);
+    expect(gameCss).toMatch(/\.actions-row \.control-solid\s*\{[^}]*width:\s*var\(--ctl-w\)/s);
+    expect(large).toMatch(/--ctl-w:\s*\d+px/);
+    expect(large).toMatch(/\.market-panel \.control\s*\{[^}]*width:\s*var\(--ctl-w\)/s);
+    // No inset here: Shuffle and Play land on the board's own edges.
+    expect(large).toMatch(/\.play-shell \.actions-row\s*\{[^}]*padding:\s*0/s);
+  });
+
+  it('draws the wordmark bigger than the phone does, from the header row', () => {
+    // The lockup is sized from --header-h, so the row is the only place to
+    // say it should be larger.
+    const phone = gameCss.slice(0, gameCss.indexOf('@media'));
+    const phoneMax = Number(phone.match(/--header-h:\s*clamp\([^,]+,[^,]+,\s*(\d+)px\)/)?.[1]);
+    const largeMax = Number(large.match(/--header-h:\s*clamp\([^,]+,[^,]+,\s*(\d+)px\)/)?.[1]);
+    expect(phoneMax).toBeGreaterThan(0);
+    expect(largeMax).toBeGreaterThan(phoneMax);
+    expect(read('./HomeLink.css')).toMatch(/\.home-link\.is-play \.home-link-img\s*\{[^}]*var\(--header-h\)/s);
+  });
+
+  it('keeps the side padding tight so the board gets the width', () => {
+    // Every pixel of side padding is a pixel off the board.
+    const pad = Number(large.match(/--shell-pad-x:\s*(\d+)px/)?.[1]);
+    expect(pad).toBeGreaterThanOrEqual(0);
+    expect(pad).toBeLessThanOrEqual(12);
   });
 
   it('keeps the phone shell as the un-queried default', () => {
@@ -171,6 +361,44 @@ describe('desktop layout (wide fine-pointer windows only)', () => {
     expect(phone).toMatch(/grid-template-areas:[\s\S]*'rack'/);
     expect(phone).not.toMatch(/pointer:\s*fine/);
     expect(phone).not.toMatch(/--board-max:/);
+  });
+});
+
+describe('landscape tablet: market and rack across the bottom', () => {
+  const landscape = landscapeTabletBlock(gameCss);
+
+  it('is gated on a held device, so a landscape desktop window is unaffected', () => {
+    expect(landscape.length).toBeGreaterThan(80);
+    expect(gameCss).toMatch(
+      /@media \(orientation: landscape\) and \(pointer: coarse\) and \(min-width: 700px\) and \(min-height: 700px\)/
+    );
+  });
+
+  it('drops both tile rows into one band along the bottom of the screen', () => {
+    // A landscape tablet is wide and short: the board takes the height and the
+    // side column has width to spare, so the rows the player touches come out
+    // of the columns and sit where both thumbs already are.
+    expect(landscape).toMatch(/grid-template-areas:\s*\n\s*'header header'\n\s*'stage  side'\n\s*'market dock'/);
+    expect(landscape).toMatch(/--dock-h:\s*clamp\(/);
+    expect(landscape).toMatch(/\.play-shell \.market-panel\s*\{[^}]*grid-area:\s*market/s);
+    expect(landscape).toMatch(/\.play-shell \.dock\s*\{[^}]*grid-area:\s*dock/s);
+    // Both wrappers collapse so the market can leave the side column and the
+    // rack can leave the board column.
+    expect(landscape).toMatch(/\.play-shell \.play-main,\n\s*\.play-shell \.play-side \{\n\s*display:\s*contents/);
+  });
+
+  it('budgets the rack against the band it is actually in', () => {
+    // Sizing it against the board would leave the tiles far too small: the
+    // rack is in the other half of the screen now.
+    expect(landscape).toMatch(/--dock-w:[\s\S]*var\(--board-size\)/);
+    expect(landscape).toMatch(/--rack-fit:[\s\S]*var\(--dock-w\)/);
+    expect(landscape).toMatch(/--market-fit:[\s\S]*var\(--ctl-w\)/);
+  });
+
+  it('keeps the score cards, log and toast in the column beside the board', () => {
+    expect(landscape).toMatch(/\.play-shell \.scores-row\s*\{[^}]*grid-area:\s*side/s);
+    expect(landscape).toMatch(/\.play-shell \.game-log-panel\s*\{[^}]*grid-area:\s*side/s);
+    expect(landscape).toMatch(/\.play-shell \.status-row\s*\{[^}]*grid-area:\s*side/s);
   });
 });
 
@@ -319,33 +547,42 @@ describe('opponent rack tiles', () => {
   });
 });
 
-describe('desktop move log', () => {
-  const desktop = desktopBlock(gameCss);
-  const sidePanelCss = read('./SidePanel.css');
+describe('Game Log', () => {
+  const large = largeShellBlock(gameCss);
+  const gameLogCss = read('./GameLog.css');
   const moveLogCss = read('./MoveLog.css');
 
-  it('renders a collapsible RHS panel at pointer:fine + min-width 900', () => {
-    expect(read('./Game.tsx')).toMatch(/SidePanel/);
-    expect(desktop).toMatch(/grid-template-columns:\s*1fr auto var\(--log-w\) 1fr/);
-    expect(desktop).toMatch(/\.play-side[\s\S]*grid-column:\s*3/);
-    // The panel is hidden by default and switched on only by a shell that has
+  it('is named Game Log and sits between the score cards and the market', () => {
+    const panel = read('./GameLog.tsx');
+    expect(panel).toMatch(/Game Log/);
+    expect(panel).not.toMatch(/Move log/i);
+    expect(read('./Game.tsx')).toMatch(/<GameLog entries=\{moveLog\} \/>/);
+    // The panel is hidden by default and switched on only by a shell with
     // somewhere to put it, so a narrow phone can never show it.
-    expect(sidePanelCss).toMatch(/\.side-panel\s*\{[^}]*display:\s*none/s);
-    expect(desktop).toMatch(/\.side-panel\s*\{[^}]*display:\s*flex/s);
-    expect(moveLogCss).toMatch(/\.move-log-list[\s\S]*overflow-y:\s*auto/);
+    expect(gameLogCss).toMatch(/\.game-log-panel\s*\{[^}]*display:\s*none/s);
+    expect(large).toMatch(/\.game-log-panel\s*\{[^}]*display:\s*flex/s);
   });
 
-  it('opens and closes with a standard disclosure, not a LOG / HIDE LOG button', () => {
-    const panel = read('./SidePanel.tsx');
-    expect(panel).toMatch(/aria-expanded=\{expanded\}/);
-    expect(panel).toMatch(/aria-controls="side-panel-log"/);
-    expect(panel).toMatch(/disclosure-toggle/);
-    expect(panel).toMatch(/disclosure-chevron/);
-    // The control is titled with what it opens, and stays titled either way.
-    expect(panel).toMatch(/Move log/);
-    expect(panel).not.toMatch(/Hide log/);
-    expect(sidePanelCss).toMatch(/aria-expanded='true'\]\s*\.disclosure-chevron/);
-    expect(sidePanelCss).toMatch(/\.disclosure-chevron\s*\{[^}]*transition:\s*transform/s);
+  it('has no disclosure: no toggle, no chevron, nothing to collapse', () => {
+    // Its height is fixed by the shell rather than by how many moves have been
+    // played, so collapsing it would only ever leave a hole in the column.
+    const panel = readCode('./GameLog.tsx');
+    expect(panel).not.toMatch(/aria-expanded|aria-controls|disclosure|chevron/i);
+    expect(panel).not.toMatch(/useState/);
+    expect(readCode('./GameLog.css')).not.toMatch(/chevron|disclosure/i);
+    expect(existsSync(resolve(__dirname, './SidePanel.tsx'))).toBe(false);
+    expect(existsSync(resolve(__dirname, './SidePanel.css'))).toBe(false);
+    expect(read('./Game.tsx')).not.toMatch(/SidePanel/);
+  });
+
+  it('is a fixed window that follows the newest line but scrolls back', () => {
+    // A stable height keeps the market below it anchored to the same place all
+    // game; the list inside is what moves.
+    expect(gameLogCss).toMatch(/\.game-log-body\s*\{[^}]*height:\s*var\(--log-h\)/s);
+    expect(gameLogCss).toMatch(/\.game-log-body\s*\{[^}]*overflow:\s*hidden/s);
+    expect(moveLogCss).toMatch(/\.move-log-list[\s\S]*overflow-y:\s*auto/);
+    const log = read('./MoveLog.tsx');
+    expect(log).toMatch(/scrollTop = list\.scrollHeight/);
   });
 });
 
@@ -413,11 +650,16 @@ describe('opponent score card', () => {
 });
 
 describe('board rendering', () => {
-  it('draws a 9x9 grid sized to the computed board size', () => {
-    expect(boardCss).toMatch(/grid-template-columns:\s*repeat\(9, 1fr\)/);
-    expect(boardCss).toMatch(/grid-template-rows:\s*repeat\(9, 1fr\)/);
+  it('draws a square grid of the variant\'s own size, sized to the board', () => {
+    // The track count follows the rule set the game was dealt with, so one
+    // grid serves the 9x9 phone game and the 11x11 large-shell game. Writing
+    // either number in here would silently give the other variant a grid with
+    // the wrong number of cells.
+    expect(boardCss).toMatch(/grid-template-columns:\s*repeat\(var\(--board-cells/);
+    expect(boardCss).toMatch(/grid-template-rows:\s*repeat\(var\(--board-cells/);
     expect(boardCss).toMatch(/width:\s*var\(--board-size\)/);
     expect(boardCss).toMatch(/height:\s*var\(--board-size\)/);
+    expect(read('./Board.tsx')).toMatch(/'--board-cells':\s*size/);
   });
 
   it('fills each cell with the tile and draws its edge inside, never clipped', () => {
@@ -541,9 +783,10 @@ describe('score cards', () => {
     expect(css).toMatch(/\.score-card[\s\S]*flex-direction:\s*column/s);
     expect(css).not.toMatch(/\.score-backs\s*\{[^}]*overflow:\s*hidden/s);
     expect(css).toMatch(/score-pip\.is-empty/);
-    // Six slots always, so both cards line up and the count reads without
-    // being counted.
-    expect(read('./GameInfo.tsx')).toMatch(/length:\s*RACK_MAX/);
+    // A full rack's worth of slots always, so both cards line up and the count
+    // reads without being counted. The cap is the variant's, handed down as a
+    // prop rather than read out of module scope.
+    expect(read('./GameInfo.tsx')).toMatch(/length:\s*rackCapacity/);
   });
 
   it('bounds a mini-rack tile both ways so a short card cannot crop it', () => {
@@ -600,8 +843,8 @@ describe('market bag', () => {
   it('puts the two face-down slots on the end and refills them in place', () => {
     const game = read('../engine/game.ts');
     const deal = game.match(/function dealMarket[\s\S]*?\n\}/)?.[0] ?? '';
-    expect(deal).toMatch(/for \(let i = 0; i < MARKET_FACE_UP/);
-    expect(deal).toMatch(/for \(let i = 0; i < MARKET_FACE_DOWN/);
+    expect(deal).toMatch(/for \(let i = 0; i < rules\.marketFaceUp/);
+    expect(deal).toMatch(/for \(let i = 0; i < rules\.marketFaceDown/);
     expect(deal).not.toMatch(/random\(\)/);
     // A slot keeps its identity, so a replacement lands in the same position
     // with the same face-up or face-down state.
@@ -626,7 +869,7 @@ describe('chrome colour', () => {
     expect(gameCss).toMatch(/background-color:\s*var\(--color-chrome\)/);
     expect(gameCss).not.toMatch(/\.action-draw:not\(:disabled\)[^{]*\{[^}]*--color-p1/s);
     expect(gameCss).not.toMatch(/\.action-play:not\(:disabled\)[^{]*\{[^}]*--color-p2/s);
-    expect(read('./SidePanel.css')).toMatch(/--color-chrome/);
+    expect(read('./GameLog.css')).toMatch(/--color-chrome/);
     expect(read('../../public/tile-back.svg')).not.toMatch(/#56867C/i);
     expect(read('../../public/tile-back.svg')).not.toMatch(/#CB6B49/i);
     expect(read('../../public/tile-back.svg')).not.toMatch(/M50 20 L80 50/);

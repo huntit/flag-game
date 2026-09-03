@@ -2,7 +2,8 @@
 // identified by its data-row / data-col (see useTileDrag).
 
 import type { Board as BoardModel, FlagPost, Position } from '../engine/types';
-import { FLAG_POSTS, CENTRE_STAR, BOARD_SIZE, SEAT_COLOR_NAMES } from '../engine/types';
+import { SEAT_COLOR_NAMES } from '../engine/types';
+import { centreStar, flagPosts } from '../engine/variants';
 import { getBoardTile, positionEquals, isFirstWord } from '../engine/game';
 import { effectiveLetter, tileScore } from '../engine/validator';
 import { TileFace } from './TileFace';
@@ -34,20 +35,21 @@ interface BoardProps {
   seatNames?: { P1: string; P2: string };
 }
 
-function trueCornerAt(position: Position): FlagPost | null {
+function trueCornerAt(position: Position, posts: Record<FlagPost, Position>): FlagPost | null {
   for (const corner of ['NW', 'NE', 'SE', 'SW'] as const) {
-    if (positionEquals(position, FLAG_POSTS[corner])) return corner;
+    if (positionEquals(position, posts[corner])) return corner;
   }
   return null;
 }
 
 function cornerFlagOwner(
   position: Position,
-  flags: { P1: FlagPost | null; P2: FlagPost | null }
+  flags: { P1: FlagPost | null; P2: FlagPost | null },
+  posts: Record<FlagPost, Position>
 ): 'P1' | 'P2' | null {
   for (const player of ['P1', 'P2'] as const) {
     const corner = flags[player];
-    if (corner && positionEquals(position, FLAG_POSTS[corner])) return player;
+    if (corner && positionEquals(position, posts[corner])) return player;
   }
   return null;
 }
@@ -63,8 +65,13 @@ function Board({
   onTilePointerDown,
   seatNames,
 }: BoardProps) {
+  // The board is square and carries its own geometry, so a 9×9 and an 11×11
+  // game render through the same component with nothing to keep in sync.
+  const size = board.length;
+  const centre = centreStar(size);
+  const posts = flagPosts(size);
   const showCentreStar = isFirstWord(board) && pendingPlacements.length === 0;
-  const cornerPositions = Object.values(FLAG_POSTS);
+  const cornerPositions: Position[] = Object.values(posts);
 
   const renderCell = (row: number, col: number) => {
     const position = { row, col };
@@ -72,9 +79,9 @@ function Board({
     const pending = pendingPlacements.find(p => positionEquals(p.position, position));
 
     const isCorner = cornerPositions.some(p => positionEquals(p, position));
-    const trueCorner = trueCornerAt(position);
-    const flagOwner = cornerFlagOwner(position, flags);
-    const isCentre = positionEquals(position, CENTRE_STAR);
+    const trueCorner = trueCornerAt(position, posts);
+    const flagOwner = cornerFlagOwner(position, flags, posts);
+    const isCentre = positionEquals(position, centre);
     const isHighlighted = highlight.some(p => positionEquals(p, position));
     const isDropTarget = Boolean(dropTarget && positionEquals(dropTarget, position));
 
@@ -154,11 +161,14 @@ function Board({
   return (
     <div
       className="board"
-      data-board-size={BOARD_SIZE}
-      data-centre={`${CENTRE_STAR.row},${CENTRE_STAR.col}`}
+      data-board-size={size}
+      data-centre={`${centre.row},${centre.col}`}
+      /* The grid is drawn from the board's own size rather than a fixed
+         repeat(), so one rule serves both variants. */
+      style={{ '--board-cells': size } as React.CSSProperties}
     >
-      {Array.from({ length: BOARD_SIZE }, (_, row) =>
-        Array.from({ length: BOARD_SIZE }, (_, col) => renderCell(row + 1, col + 1))
+      {Array.from({ length: size }, (_, row) =>
+        Array.from({ length: size }, (_, col) => renderCell(row + 1, col + 1))
       )}
     </div>
   );

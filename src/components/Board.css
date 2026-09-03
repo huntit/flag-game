@@ -1,12 +1,17 @@
 /* Board grid. Cells are separated by the grid gap, so a tile can fill its
-   cell edge-to-edge and still show its whole border — nothing is clipped. */
+   cell edge-to-edge and still show its whole border — nothing is clipped.
+
+   The track count comes from --board-cells, which Board.tsx sets from the
+   board it was handed. One rule serves the 9×9 phone game and the 11×11
+   tablet game, and the grid can never disagree with the board it is drawing.
+   The fallback keeps the phone board square if the variable never arrives. */
 
 .board {
   width: var(--board-size);
   height: var(--board-size);
   display: grid;
-  grid-template-columns: repeat(9, 1fr);
-  grid-template-rows: repeat(9, 1fr);
+  grid-template-columns: repeat(var(--board-cells, 9), 1fr);
+  grid-template-rows: repeat(var(--board-cells, 9), 1fr);
   gap: max(1px, calc(var(--cell) * 0.035));
   padding: max(2px, calc(var(--cell) * 0.05));
   background-color: var(--color-board);

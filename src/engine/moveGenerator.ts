@@ -4,10 +4,11 @@
 // whether Pass is available).
 
 import type { Board, Tile, Position, WordPlacement, Letter, GameState } from './types';
-import { getBoardTile, isFirstWord, isValidPosition, emptySpareCorners } from './game';
+import { getBoardTile, isFirstWord, isOnBoard, emptySpareCorners } from './game';
 import { validatePlay, effectiveLetter, type Placement, type FlagContext } from './validator';
 import type { Dictionary, PrefixRange } from './dictionary';
-import { CENTRE_STAR, BOARD_SIZE, MIN_WORD_LENGTH, RACK_MAX } from './types';
+import { MIN_WORD_LENGTH } from './types';
+import { centreStar } from './variants';
 
 const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('') as Letter[];
 
@@ -63,7 +64,7 @@ function crossChecks(
   const delta = horizontal ? { row: 1, col: 0 } : { row: 0, col: 1 };
 
   let cursor = { row: pos.row - delta.row, col: pos.col - delta.col };
-  while (isValidPosition(cursor)) {
+  while (isOnBoard(board, cursor)) {
     const letter = boardLetter(board, cursor);
     if (!letter) break;
     before.unshift(letter);
@@ -71,7 +72,7 @@ function crossChecks(
   }
 
   cursor = { row: pos.row + delta.row, col: pos.col + delta.col };
-  while (isValidPosition(cursor)) {
+  while (isOnBoard(board, cursor)) {
     const letter = boardLetter(board, cursor);
     if (!letter) break;
     after.push(letter);
@@ -117,7 +118,8 @@ export function generateLegalPlays(
   const flagContext = buildFlagContext(state, playerId);
   const first = isFirstWord(board);
   const pool = buildPool(rack);
-  const maxTiles = Math.min(pool.size, RACK_MAX);
+  const size = board.length;
+  const maxTiles = Math.min(pool.size, state.rules.rackMax);
   const crossCache = new Map<string, Set<string> | null>();
   const seen = new Set<string>();
 
@@ -145,14 +147,14 @@ export function generateLegalPlays(
   };
 
   for (const horizontal of [true, false]) {
-    for (let line = 1; line <= BOARD_SIZE; line++) {
-      for (let start = 1; start <= BOARD_SIZE - (MIN_WORD_LENGTH - 1); start++) {
+    for (let line = 1; line <= size; line++) {
+      for (let start = 1; start <= size - (MIN_WORD_LENGTH - 1); start++) {
         const beforeSpan = cellOf(line, start - 1, horizontal);
-        if (isValidPosition(beforeSpan) && boardLetter(board, beforeSpan)) continue;
+        if (isOnBoard(board, beforeSpan) && boardLetter(board, beforeSpan)) continue;
 
-        for (let end = start + MIN_WORD_LENGTH - 1; end <= BOARD_SIZE; end++) {
+        for (let end = start + MIN_WORD_LENGTH - 1; end <= size; end++) {
           const afterSpan = cellOf(line, end + 1, horizontal);
-          if (isValidPosition(afterSpan) && boardLetter(board, afterSpan)) continue;
+          if (isOnBoard(board, afterSpan) && boardLetter(board, afterSpan)) continue;
 
           const span: Position[] = [];
           for (let i = start; i <= end; i++) span.push(cellOf(line, i, horizontal));
@@ -190,7 +192,8 @@ function spanIsPlayable(
   first: boolean
 ): boolean {
   if (first) {
-    return span.some(pos => pos.row === CENTRE_STAR.row && pos.col === CENTRE_STAR.col);
+    const centre = centreStar(board.length);
+    return span.some(pos => pos.row === centre.row && pos.col === centre.col);
   }
 
   if (span.length !== empties.length) return true;
@@ -202,7 +205,7 @@ function spanIsPlayable(
       { row: pos.row, col: pos.col - 1 },
       { row: pos.row, col: pos.col + 1 },
     ];
-    return neighbours.some(n => isValidPosition(n) && boardLetter(board, n));
+    return neighbours.some(n => isOnBoard(board, n) && boardLetter(board, n));
   });
 }
 

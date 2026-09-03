@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import { loadTileData, loadDictionary } from './data/loader';
 import { Dictionary } from './engine/dictionary';
 import type { TileData } from './engine/types';
+import { PHONE_9, TABLET_11 } from './engine/variants';
+import { deviceSupportsLargeBoard } from './components/useShell';
 import Menu from './components/Menu';
 import Game from './components/Game';
 import OnlineMode from './components/OnlineMode';
@@ -23,8 +25,16 @@ function App() {
     let cancelled = false;
 
     async function loadData() {
+      // Longest word the biggest board this device can reach will ever hold.
+      const maxWordLength = deviceSupportsLargeBoard()
+        ? TABLET_11.boardSize
+        : PHONE_9.boardSize;
+
       try {
-        const [tiles, dict] = await Promise.all([loadTileData(), loadDictionary()]);
+        const [tiles, dict] = await Promise.all([
+          loadTileData(),
+          loadDictionary(maxWordLength),
+        ]);
         if (cancelled) return;
         setTileData(tiles);
         setDictionary(dict);

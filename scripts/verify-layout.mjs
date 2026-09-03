@@ -58,7 +58,8 @@ for (const t of targets) {
       ...rect(b),
     }));
     const rackTile = document.querySelector('.rack-row .tray-tile');
-    const marketTile = document.querySelector('.market-row .tray-tile');
+    const marketTiles = [...document.querySelectorAll('.market-row .tray-tile')];
+    const marketTile = marketTiles[0];
     const board = document.querySelector('.board');
     const cell = document.querySelector('.board-cell');
     const actionsEl = document.querySelector('.action-play') || document.querySelector('.rack-row');
@@ -112,6 +113,11 @@ for (const t of targets) {
       // an empty rack is still legible as "holding nothing".
       pipsPerCard: [...document.querySelectorAll('.score-card')].map(
         card => card.querySelectorAll('.score-pip').length
+      ),
+      // The 9x9 game holds 6, the 11x11 game 7. Read the count the shell is
+      // laying itself out against rather than hard-coding either one.
+      rackSlots: Number(
+        getComputedStyle(document.querySelector('.play-shell')).getPropertyValue('--rack-slots')
       ),
       // A mini-rack tile is square and must sit wholly inside its card. A card
       // with less leftover height than width used to clip the bottom off every
@@ -230,7 +236,7 @@ for (const t of targets) {
       toastCount: toasts.length,
       shuffleOverlapsTile: shuffle && lastRack ? overlaps(rect(shuffle), rect(lastRack)) : false,
       playOverlapsTile: play && lastRack ? overlaps(rect(play), rect(lastRack)) : false,
-      drawOverlapsMarket: draw && marketTile ? overlaps(rect(draw), rect(marketTile)) : false,
+      drawOverlapsMarket: draw ? marketTiles.some(t => overlaps(rect(draw), rect(t))) : false,
       backsOverlapName: youName && youBacks.some(b => overlaps(rect(b), rect(youName))),
       backsOverlapScore: youScore && youBacks.some(b => overlaps(rect(b), rect(youScore))),
       emptyCornerToken: [...document.querySelectorAll('img')].some(img =>
@@ -264,7 +270,9 @@ for (const t of targets) {
   // A rack can legitimately be empty mid-game, so assert the slot row rather
   // than the fill: six slots per card, always.
   for (const count of m.pipsPerCard) {
-    if (count !== 6) problems.push(`score card shows ${count} rack slots, expected 6`);
+    if (count !== m.rackSlots) {
+      problems.push(`score card shows ${count} rack slots, expected ${m.rackSlots}`);
+    }
   }
   if (m.miniRack) {
     const { w, h, rowH, cardBottom, rowBottom } = m.miniRack;
@@ -309,7 +317,14 @@ for (const t of targets) {
   // board's left and right edges. This is what catches a control or the tile
   // bag quietly eating the width the tile maths reserved for it. Rows placed
   // BESIDE the board (tablet landscape, desktop side column) are exempt.
-  const underBoard = box => box && box.top >= m.board.bottom - 2;
+  const overlapsBox = (a, b) =>
+    a && b && a.left < b.right - 0.5 && a.right > b.left + 0.5 &&
+    a.top < b.bottom - 0.5 && a.bottom > b.top + 0.5;
+  const underBoard = box =>
+    box &&
+    box.top >= m.board.bottom - 2 &&
+    box.left < m.board.right - 1 &&
+    box.right > m.board.left + 1;
   const checkWidth = (label, box) => {
     if (!underBoard(box)) return;
     if (box.left < m.board.left - 1.5) {
@@ -381,8 +396,12 @@ for (const t of targets) {
   if (!/^\d+$/.test(m.bagCountText)) problems.push(`bag count missing: "${m.bagCountText}"`);
   if (m.avatarCount > 0) problems.push(`avatars should be gone, found ${m.avatarCount}`);
   if (m.emptyPipCount < 1) problems.push('empty score-card pips missing');
-  if (m.statusRow && m.rackRow && m.statusRow.top + 1 < m.rackRow.bottom) {
-    problems.push('toast strip is not below the rack');
+  // The status strip exists so a toast can never cover the rack. On the phone
+  // and desktop it sits under the rack; the landscape dock puts it in the side
+  // column above the rack instead. Ordering is the layout's business — not
+  // overlapping is the rule.
+  if (m.statusRow && m.rackRow && overlapsBox(m.statusRow, m.rackRow)) {
+    problems.push('toast strip overlaps the rack');
   }
   if (m.marketRow && m.marketRow.bottom > m.innerH) problems.push('market below the fold');
   if (m.rackRow && m.rackRow.bottom > m.innerH) problems.push('rack below the fold');

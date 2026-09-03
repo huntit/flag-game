@@ -137,17 +137,27 @@ async function drawTwo() {
   await page.waitForTimeout(1500); // let the AI take its turn
 }
 
+// The board is the variant's, not a constant: the phone game is 9x9 with its
+// centre star at (5,5), the large-shell game 11x11 with it at (6,6). An opening
+// play has to cover the star, so every opening cell here is placed relative to
+// it — hard-coding (6,6) made every opening attempt illegal on the phone.
+const boardSize = await page.evaluate(() =>
+  Number(getComputedStyle(document.querySelector('.play-shell')).getPropertyValue('--board-cells'))
+);
+const mid = (boardSize + 1) / 2;
+console.log(`board: ${boardSize}x${boardSize}, centre star at ${mid},${mid}`);
+
 let played = null;
 for (let round = 0; round < 10 && !played; round++) {
   const occupied = (await readState()).boardTiles;
 
   if (occupied.length === 0) {
     for (const cells of [
-      [[6, 6], [6, 7]],
-      [[6, 5], [6, 6]],
-      [[6, 6], [7, 6]],
-      [[5, 6], [6, 6]],
-      [[6, 5], [6, 6], [6, 7]],
+      [[mid, mid], [mid, mid + 1]],
+      [[mid, mid - 1], [mid, mid]],
+      [[mid, mid], [mid + 1, mid]],
+      [[mid - 1, mid], [mid, mid]],
+      [[mid, mid - 1], [mid, mid], [mid, mid + 1]],
     ]) {
       played = await tryWord(cells);
       if (played) break;
@@ -158,7 +168,7 @@ for (let round = 0; round < 10 && !played; round++) {
       for (const [dr, dc] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) {
         const r = t.row + dr;
         const c = t.col + dc;
-        if (r < 1 || r > 11 || c < 1 || c > 11) continue;
+        if (r < 1 || r > boardSize || c < 1 || c > boardSize) continue;
         if (occupied.some(o => o.row === r && o.col === c)) continue;
         if (spots.some(([sr, sc]) => sr === r && sc === c)) continue;
         spots.push([r, c]);

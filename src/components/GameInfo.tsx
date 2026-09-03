@@ -1,15 +1,16 @@
 // Score cards: FIRST player left, SECOND player right (true P1/P2 seat order).
 // A player is identified by their name in their own colour — no avatars.
-// The mini-rack below is a scale model of their real rack: six slots, filled
-// with tile backs for the tiles they hold.
+// The mini-rack below is a scale model of their real rack: one slot per tile
+// the variant lets them hold, filled with tile backs for the tiles they have.
 
-import { RACK_MAX } from '../engine/types';
 import './GameInfo.css';
 
 interface ScoreCardProps {
   name: string;
   score: number;
   rackCount: number;
+  /** Slots to draw — the variant's rack cap, so both cards line up. */
+  rackCapacity: number;
   isActive: boolean;
   playerColor: 'P1' | 'P2';
   variant?: 'you' | 'opponent';
@@ -19,11 +20,12 @@ export function ScoreCard({
   name,
   score,
   rackCount,
+  rackCapacity,
   isActive,
   playerColor,
   variant = 'you',
 }: ScoreCardProps) {
-  const shown = Math.max(0, Math.min(RACK_MAX, rackCount));
+  const shown = Math.max(0, Math.min(rackCapacity, rackCount));
 
   return (
     <div
@@ -45,7 +47,7 @@ export function ScoreCard({
         </span>
       </div>
       <div className="score-backs" aria-label={`${name} holds ${rackCount} tiles`}>
-        {Array.from({ length: RACK_MAX }, (_, i) => (
+        {Array.from({ length: rackCapacity }, (_, i) => (
           <span
             key={`pip-${i}`}
             className={`score-pip ${
@@ -64,16 +66,25 @@ interface GameInfoProps {
   youLabel: string;
   yourScore: number;
   rackCount: number;
+  rackCapacity: number;
   isYourTurn: boolean;
   playerColor: 'P1' | 'P2';
 }
 
-function GameInfo({ youLabel, yourScore, rackCount, isYourTurn, playerColor }: GameInfoProps) {
+function GameInfo({
+  youLabel,
+  yourScore,
+  rackCount,
+  rackCapacity,
+  isYourTurn,
+  playerColor,
+}: GameInfoProps) {
   return (
     <ScoreCard
       name={youLabel}
       score={yourScore}
       rackCount={rackCount}
+      rackCapacity={rackCapacity}
       isActive={isYourTurn}
       playerColor={playerColor}
       variant="you"
