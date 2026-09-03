@@ -201,4 +201,17 @@
       0 4px 9px rgba(44, 58, 61, 0.2);
   }
 
+  /* Shuffle/Clear, standing beside your own tiles rather than lost among the
+     turn-ending buttons: a mouse is already up here to use it. */
+  .rack-row-inner {
+    gap: var(--shell-gap, 4px);
+  }
+
+  .rack-trailing {
+    flex: 0 0 auto;
+  }
+
+  .rack-trailing .control {
+    --ctl-h: calc(var(--rack-h) * 0.62);
+  }
 }

@@ -24,6 +24,9 @@ interface RackProps {
   disabled: boolean;
   onTileClick: (tile: Tile) => void;
   onTilePointerDown?: (event: React.PointerEvent, tileId: string) => void;
+  /** Rendered to the right of the tiles — the desktop shell's Shuffle/Clear
+   *  button, which has no room of its own on that pointer's actions row. */
+  trailingButton?: React.ReactNode;
 }
 
 export function Rack({
@@ -39,6 +42,7 @@ export function Rack({
   disabled,
   onTileClick,
   onTilePointerDown,
+  trailingButton,
 }: RackProps) {
   const available = tiles.filter(tile => !placedTileIds.includes(tile.id));
   const emptySlots = Math.max(0, capacity - available.length);
@@ -90,6 +94,7 @@ export function Rack({
           />
         ))}
       </div>
+      {trailingButton && <div className="rack-trailing">{trailingButton}</div>}
     </div>
   );
 }
