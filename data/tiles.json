@@ -1,0 +1,48 @@
+{
+  "source": {
+    "values": "Word Eagle TILE_SETS.wwf (huntit/web-apps/wordgame/index.html lines ~997-1002)",
+    "counts": "Phone v0.1 ~⅔ Words With Friends English bag (69 tiles, 1 blank). Values unchanged WWF."
+  },
+  "note": "Flag phone v0.1 uses a 69-tile mix (~⅔ WWF English) paired with Word Eagle's WWF letter values. NOT NYT Crossplay bag. NOT Scrabble bag. Large 11×11 layout keeps the 104-tile WWF bag as a lab reference only.",
+  "defaultSet": "wwf",
+  "bagSize": 69,
+  "blankCount": 1,
+  "countsPending": false,
+  "tileSets": {
+    "wwf": {
+      "description": "Phone v0.1 ~⅔ Words With Friends English (69 tiles, 1 blank)",
+      "tiles": [
+        { "letter": "A", "count": 6, "value": 1 },
+        { "letter": "B", "count": 1, "value": 4 },
+        { "letter": "C", "count": 1, "value": 4 },
+        { "letter": "D", "count": 3, "value": 2 },
+        { "letter": "E", "count": 9, "value": 1 },
+        { "letter": "F", "count": 1, "value": 4 },
+        { "letter": "G", "count": 2, "value": 3 },
+        { "letter": "H", "count": 3, "value": 3 },
+        { "letter": "I", "count": 5, "value": 1 },
+        { "letter": "J", "count": 1, "value": 10 },
+        { "letter": "K", "count": 1, "value": 5 },
+        { "letter": "L", "count": 3, "value": 2 },
+        { "letter": "M", "count": 1, "value": 4 },
+        { "letter": "N", "count": 4, "value": 2 },
+        { "letter": "O", "count": 5, "value": 1 },
+        { "letter": "P", "count": 1, "value": 4 },
+        { "letter": "Q", "count": 1, "value": 10 },
+        { "letter": "R", "count": 4, "value": 1 },
+        { "letter": "S", "count": 3, "value": 1 },
+        { "letter": "T", "count": 5, "value": 1 },
+        { "letter": "U", "count": 3, "value": 2 },
+        { "letter": "V", "count": 1, "value": 5 },
+        { "letter": "W", "count": 1, "value": 4 },
+        { "letter": "X", "count": 1, "value": 8 },
+        { "letter": "Y", "count": 1, "value": 3 },
+        { "letter": "Z", "count": 1, "value": 10 }
+      ],
+      "blanks": {
+        "count": 1,
+        "value": 0
+      }
+    }
+  }
+}

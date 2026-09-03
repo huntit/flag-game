@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1007.0 360" width="1007.0" height="360">
+<rect width="100%" height="100%" fill="#F7F1E8"/>
+<g transform="translate(40,40) scale(0.2734375)">
+<rect x="150" y="150" width="348" height="348" rx="36" fill="#56867C" stroke="#3E635C" stroke-width="10"/>
+<rect x="526" y="150" width="348" height="348" rx="36" fill="#E8DFD2" stroke="#4A5568" stroke-width="10"/>
+<rect x="150" y="526" width="348" height="348" rx="36" fill="#E8DFD2" stroke="#4A5568" stroke-width="10"/>
+<rect x="526" y="526" width="348" height="348" rx="36" fill="#CB6B49" stroke="#A45336" stroke-width="10"/>
+</g>
+<text x="342" y="170.00" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-weight="700" font-size="176" fill="#2C3A3D">WORD</text>
+<text x="342" y="317.00" font-family="DejaVu Sans, Liberation Sans, Arial, sans-serif" font-weight="700" font-size="176" fill="#2C3A3D">HEIST</text>
+</svg>
