@@ -68,7 +68,7 @@
   --safe-left: env(safe-area-inset-left, 0px);
   --safe-right: env(safe-area-inset-right, 0px);
 
-  --tile-back-url: url('/flag-game/tile-back.svg');
+  --tile-back-url: url('/wordheist-game/tile-back.svg');
 }
 
 @supports (height: 100dvh) {

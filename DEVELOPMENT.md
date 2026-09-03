@@ -1,4 +1,4 @@
-# Flag v0 - Development & Deployment Guide
+# Word Heist v0 - Development & Deployment Guide
 
 ## Quick Start
 
@@ -38,7 +38,7 @@ This is what actually ships. Pushing to `main` runs `.github/workflows/deploy.ym
 which typechecks, runs unit tests, builds, checks the bundle is base-path correct,
 and then publishes `dist` to the `gh-pages` branch — the Pages source for this repo.
 
-Live at https://huntit.github.io/flag-game/. There is nothing to run by hand: merge
+Live at https://huntit.github.io/wordheist-game/. There is nothing to run by hand: merge
 to `main` and the deploy follows.
 
 ### Vercel
@@ -81,7 +81,7 @@ partykit deploy
 
 Configure the PartyKit URL in the app after deployment.
 
-## flag-sim CLI
+## wordheist-sim CLI
 
 Run headless AI vs AI simulations for game balance analysis:
 
@@ -127,6 +127,28 @@ npm run test -- --watch
 npm run test src/engine/engine.test.ts
 ```
 
+## Terminology: "flag"
+
+The game is Word Heist, but **flag** is still the name of the mechanic, and it
+stays that way for now.
+
+A flag is a **player's goal square: the true corner they own, which scores a
+triple-word multiplier for whoever covers it.** It is not a leftover of the old
+title — it is the thing you steal, and the tagline "steal the corner" describes
+taking your opponent's.
+
+So the rename stopped at the game's name. These all keep the word and are
+expected to:
+
+- `FlagPost` (the corner a flag sits on), `flags` on game state, `flagsLost`,
+  `cornerAtPosition`, `flagOwnerAtCorner`, `emptySpareCorners`
+- "Flag stolen — no spare corner" and the other end-of-game reasons
+- The flag multiplier in the validator, and the spec's flag-resolution rules
+
+If the mechanic is ever renamed, that is a deliberate design change with its own
+pass over the engine, the UI copy and the spec — not a search-and-replace to
+finish tidying up after the title change.
+
 ## Architecture
 
 ### Engine (`src/engine/`)
@@ -160,7 +182,7 @@ npm run test src/engine/engine.test.ts
 - `index.ts` - PartyKit Durable Object for remote multiplayer
 
 ### CLI (`src/cli/`)
-- `flag-sim.ts` - Headless simulation tool
+- `wordheist-sim.ts` - Headless simulation tool
 
 ## Layout and UI notes
 

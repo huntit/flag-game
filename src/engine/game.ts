@@ -24,7 +24,7 @@ function generateTileId(): TileId {
   return `tile_${tileIdCounter++}`;
 }
 
-// Randomness is pluggable so the flag-sim CLI can reproduce a game from a seed
+// Randomness is pluggable so the wordheist-sim CLI can reproduce a game from a seed
 // and tests can pin shuffles. Everything in the engine draws from here.
 let randomSource: () => number = Math.random;
 

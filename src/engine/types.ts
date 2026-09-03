@@ -1,4 +1,4 @@
-// Core game types for Flag
+// Core game types for Word Heist
 
 import type { RuleSet } from './variants';
 

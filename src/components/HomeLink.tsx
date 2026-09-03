@@ -13,7 +13,7 @@ function HomeLink({ variant, onNavigate }: HomeLinkProps) {
   return (
     <a
       className={`home-link is-${variant}`}
-      href="/flag-game/"
+      href="/wordheist-game/"
       onClick={e => {
         if (onNavigate) {
           e.preventDefault();

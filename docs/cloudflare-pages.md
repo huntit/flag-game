@@ -1,8 +1,8 @@
-# Flag prototype — Cloudflare Pages + GitHub autodeploy
+# Word Heist prototype — Cloudflare Pages + GitHub autodeploy
 
 **Note:** Checked against Cloudflare docs on 31 August 2026. The live host is Cloudflare Pages (`*.pages.dev`). GitHub is the source. Do not enable GitHub Pages.
 
-This guide shows how to host the Flag prototype on the existing free Cloudflare account, with GitHub connected so a push to main goes live automatically.
+This guide shows how to host the Word Heist prototype on the existing free Cloudflare account, with GitHub connected so a push to main goes live automatically.
 
 ## Naming clarification
 
@@ -28,7 +28,7 @@ c. Choose GitHub. Cloudflare will install/authorise the GitHub App named "Cloudf
 
 d. Install it on the huntit organisation, not a whole personal GitHub.
 
-e. When GitHub asks which repos: Only select repositories → huntit/flag-game (and any other Hunt IT repos that should be visible). Do not pick All repositories unless preferred.
+e. When GitHub asks which repos: Only select repositories → huntit/wordheist-game (and any other Hunt IT repos that should be visible). Do not pick All repositories unless preferred.
 
 f. Do not paste a GitHub personal access token into Cloudflare. The App is the official path.
 
@@ -38,12 +38,12 @@ GitHub org owners (or GitHub Apps Manager) can install the App on huntit. After 
 https://github.com/organizations/huntit/settings/installations
 → Cloudflare Workers and Pages → Only select repositories.
 
-### 3. Select huntit/flag-game
+### 3. Select huntit/wordheist-game
 
-Pick huntit/flag-game, then Install & Authorize / Begin setup.
+Pick huntit/wordheist-game, then Install & Authorize / Begin setup.
 
 If the repo is not in the list yet:
-- Create an empty huntit/flag-game repo on GitHub, or wait until the first push exists, then come back to this screen.
+- Create an empty huntit/wordheist-game repo on GitHub, or wait until the first push exists, then come back to this screen.
 - Cloudflare needs at least one branch pushed before the Production branch dropdown will populate. Push main first, then connect.
 
 ### 4. Build settings (Vite + React + TypeScript)
@@ -108,7 +108,7 @@ When wanted: project → Custom domains → Set up a domain. A subdomain needs a
 
 ### 8. What not to do
 
-- Do not enable GitHub Pages on huntit/flag-game.
+- Do not enable GitHub Pages on huntit/wordheist-game.
 - Do not paste a GitHub PAT into Cloudflare.
 - Do not put secrets in the frontend. Anything VITE_ is baked into the public JS bundle. Pages env vars are for the build (NODE_VERSION, public config), not for hiding API keys from the phone.
 - Do not create a second Cloudflare account.
@@ -160,4 +160,4 @@ Env vars after first deploy: Settings → Environment variables (Production vs P
 
 Delete the project: Settings → Delete project. Only if a custom domain was also added, remove the CNAME first.
 
-If the GitHub App install asks which repos, pick huntit/flag-game (and any other Hunt IT repos wanted), not All repositories unless preferred.
+If the GitHub App install asks which repos, pick huntit/wordheist-game (and any other Hunt IT repos wanted), not All repositories unless preferred.

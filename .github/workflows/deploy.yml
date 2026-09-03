@@ -37,7 +37,7 @@ jobs:
 
       - name: Check the bundle is base-path correct for Pages
         run: |
-          grep -q '/flag-game/assets/' dist/index.html
+          grep -q '/wordheist-game/assets/' dist/index.html
           test -s dist/data/words.txt
           test -s dist/data/tiles.json
 

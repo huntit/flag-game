@@ -1,7 +1,7 @@
 // Every menu mode must open and land on a playable, non-scrolling screen.
 import { chromium, devices } from 'playwright';
 
-const URL = process.env.FLAG_URL ?? 'http://localhost:4173/flag-game/';
+const URL = process.env.WORDHEIST_URL ?? 'http://localhost:4173/wordheist-game/';
 
 const modes = [
   { button: /vs Hunter/, opponent: 'Hunter' },

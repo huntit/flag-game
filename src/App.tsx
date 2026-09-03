@@ -54,7 +54,7 @@ function App() {
     return (
       <div className="screen">
         <div className="screen-panel">
-          <h1>Flag</h1>
+          <h1>Word Heist</h1>
           <p>Could not load the word list. Pull to refresh.</p>
           <p>{loadError}</p>
         </div>
@@ -66,7 +66,7 @@ function App() {
     return (
       <div className="screen">
         <div className="screen-panel">
-          <h1>Flag</h1>
+          <h1>Word Heist</h1>
           <p>Loading words…</p>
         </div>
       </div>
