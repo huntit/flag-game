@@ -782,4 +782,35 @@
     background-color: color-mix(in srgb, var(--color-chrome) 10%, transparent);
     box-shadow: inset 0 0 0 1.5px var(--color-chrome);
   }
+
+  /* Shuffle moves onto the rack here, so the status row's strip under the
+     actions row goes unused — the toast reads inline instead (below). That
+     leaves the same gap+status-h worth of room spare at the very bottom of
+     the side column too; reserving it there as padding, rather than letting
+     the Game Log's flex-grow eat it, is what pulls the market card level
+     with the actions row.
+     Draw 2 and Play are not quite the same distance from their own row's
+     bottom edge — Play sits centred in --actions-h with no padding under
+     it, Draw 2 sits above the market card's own 12px padding plus its 1px
+     border — so the reserved sliver is adjusted by that difference, not
+     left at the raw gap+status-h, to bring the two buttons level rather
+     than just the two cards. */
+  .play-shell .play-side {
+    padding-bottom: calc(
+      var(--shell-gap) + var(--status-h) - 13px + (var(--actions-h) * 0.07)
+    );
+  }
+
+  /* The toast, sharing the actions row rather than a strip of its own: it
+     takes the space Shuffle left behind and pushes Play to the board's own
+     right edge, same as before. */
+  .status-row--inline {
+    width: auto;
+    max-width: none;
+    justify-self: auto;
+    flex: 1 1 auto;
+    min-width: 0;
+    height: auto;
+    justify-content: flex-start;
+  }
 }

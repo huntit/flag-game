@@ -28,7 +28,7 @@ import GameOverOverlay from './GameOverOverlay';
 import PassThePhone from './PassThePhone';
 import BlankPicker from './BlankPicker';
 import { useTileDrag } from './useTileDrag';
-import { useLargeShell, ruleSetForShell } from './useShell';
+import { useLargeShell, useDesktopLayout, ruleSetForShell } from './useShell';
 import {
   pickHumanSeat,
   soloFirstPlayerBanner,
@@ -139,6 +139,9 @@ function Game({ tileData, dictionary, mode, aiOpponent, onBackToMenu }: GameProp
   // own rules on the state, so rotating a tablet or dragging a window narrower
   // mid-game re-flows the layout without touching the board being played.
   const isLargeShell = useLargeShell();
+  // Only a mouse-driven desktop window, never a tablet: a tablet keeps
+  // Shuffle on the actions row, where a thumb already is.
+  const isDesktopLayout = useDesktopLayout();
   const [humanSeat, setHumanSeat] = useState<0 | 1>(() => pickHumanSeat(Math.random));
   const [gameState, setGameState] = useState<GameState>(() =>
     initializeGame(tileData, ruleSetForShell(isLargeShell))
@@ -683,6 +686,31 @@ function Game({ tileData, dictionary, mode, aiOpponent, onBackToMenu }: GameProp
     </button>
   );
 
+  /**
+   * One button either way, moved rather than duplicated: on the rack, beside
+   * your own tiles, wherever the desktop shell has a mouse pointer and room
+   * on that row to spare; in the actions row everywhere else, where a thumb
+   * already is.
+   */
+  const shuffleOrClearButton = (
+    <button
+      type="button"
+      className="control control-outline control-round action-shuffle"
+      onClick={canClearNow ? handleClear : handleShuffle}
+      disabled={!canClearNow && !canShuffleNow}
+      aria-label={canClearNow ? 'Clear' : 'Shuffle your tiles'}
+      title={canClearNow ? 'Clear' : 'Shuffle your tiles'}
+    >
+      {canClearNow ? <ClearIcon /> : <ShuffleIcon />}
+    </button>
+  );
+
+  const toastNode = statusToasts[0] ? (
+    <div className={`toast ${statusToasts[0].kind}`} title={statusToasts[0].text}>
+      <ToastLine toast={statusToasts[0]} />
+    </div>
+  ) : null;
+
   if (awaitingHandover) {
     return (
       <PassThePhone
@@ -792,24 +820,22 @@ function Game({ tileData, dictionary, mode, aiOpponent, onBackToMenu }: GameProp
               disabled={!interactive}
               onTileClick={handleRackTileClick}
               onTilePointerDown={(event, tileId) => drag.begin(event, { kind: 'rack', tileId })}
+              trailingButton={isDesktopLayout ? shuffleOrClearButton : undefined}
             />
           </div>
 
           <div className="actions-row">
-            <button
-              type="button"
-              className="control control-outline control-round action-shuffle"
-              onClick={canClearNow ? handleClear : handleShuffle}
-              disabled={!canClearNow && !canShuffleNow}
-              aria-label={canClearNow ? 'Clear' : 'Shuffle your tiles'}
-              title={canClearNow ? 'Clear' : 'Shuffle your tiles'}
-            >
-              {canClearNow ? <ClearIcon /> : <ShuffleIcon />}
-            </button>
+            {!isDesktopLayout && shuffleOrClearButton}
 
-            <span className="actions-spacer" />
+            {!isDesktopLayout && <span className="actions-spacer" />}
 
             {!isLargeShell && drawOrPassButton}
+
+            {isDesktopLayout && (
+              <div className="status-row status-row--inline" aria-live="polite">
+                {toastNode}
+              </div>
+            )}
 
             <button
               type="button"
@@ -822,13 +848,11 @@ function Game({ tileData, dictionary, mode, aiOpponent, onBackToMenu }: GameProp
           </div>
         </div>
 
-        <div className="status-row" aria-live="polite">
-          {statusToasts[0] && (
-            <div className={`toast ${statusToasts[0].kind}`} title={statusToasts[0].text}>
-              <ToastLine toast={statusToasts[0]} />
-            </div>
-          )}
-        </div>
+        {!isDesktopLayout && (
+          <div className="status-row" aria-live="polite">
+            {toastNode}
+          </div>
+        )}
       </div>
 
       {/* The tile riding under the cursor. Fixed to the viewport and inert, so
